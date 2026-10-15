@@ -67,9 +67,13 @@ class MediaStoreDataSource @Inject constructor(
                 MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
             ),
         )
+        // DATE_TAKEN is NULL for many files (WhatsApp images, screenshots, downloads), which breaks
+        // ordering. DATE_ADDED is always set and matches the capture time for camera photos.
+        // MediaProvider rejects expressions like COALESCE in sort order, so a perfect
+        // "date taken, else modified" ordering will come later from our own index.
         putStringArray(
             ContentResolver.QUERY_ARG_SORT_COLUMNS,
-            arrayOf(MediaStore.MediaColumns.DATE_TAKEN, MediaStore.MediaColumns._ID),
+            arrayOf(MediaStore.MediaColumns.DATE_ADDED, MediaStore.MediaColumns._ID),
         )
         putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
     }
