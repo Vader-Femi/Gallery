@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Gallery</string>
+
+    <string name="nav_pictures">Pictures</string>
+    <string name="nav_albums">Albums</string>
+    <string name="nav_stories">Stories</string>
+
+    <string name="permission_title">Allow access to your photos and videos</string>
+    <string name="permission_body">Gallery needs permission to read the photos and videos on your device so it can show them. Nothing leaves your phone.</string>
+    <string name="permission_body_denied">Access was denied. Open settings and allow photos and videos to continue.</string>
+    <string name="permission_grant">Allow access</string>
+    <string name="permission_open_settings">Open settings</string>
 </resources>
