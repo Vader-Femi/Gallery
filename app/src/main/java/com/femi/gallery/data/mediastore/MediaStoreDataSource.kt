@@ -25,6 +25,19 @@ class MediaStoreDataSource @Inject constructor(
 
     val collectionUri: Uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
 
+    /**
+     * MediaProvider notifies on the per-type tables (images/video), not reliably on the generic
+     * files table, so we watch all of them.
+     */
+    val observedUris: List<Uri> = listOf(
+        collectionUri,
+        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
+        MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
+    )
+
+    /** Increases whenever anything in the volume's MediaStore changes. */
+    fun generation(): Long = MediaStore.getGeneration(context, MediaStore.VOLUME_EXTERNAL_PRIMARY)
+
     /** Total number of photos + videos (trashed and pending items are excluded by default). */
     suspend fun count(): Int = withContext(io) {
         resolver.query(collectionUri, arrayOf(MediaStore.Files.FileColumns._ID), queryArgs(), null)

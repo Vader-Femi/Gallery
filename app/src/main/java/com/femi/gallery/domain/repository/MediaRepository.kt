@@ -7,4 +7,7 @@ import kotlinx.coroutines.flow.Flow
 interface MediaRepository {
     /** All photos and videos on the device, newest first. Refreshes itself when MediaStore changes. */
     fun getPagedMedia(): Flow<PagingData<MediaItem>>
+
+    /** Cheap check (MediaStore generation counter); invalidates the list only if something changed. */
+    fun refreshIfChanged()
 }

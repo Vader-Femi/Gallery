@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 
@@ -33,6 +34,11 @@ fun PicturesScreen(
     viewModel: PicturesViewModel = hiltViewModel(),
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
+
+    LifecycleResumeEffect(viewModel) {
+        viewModel.onResumed()
+        onPauseOrDispose { }
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),

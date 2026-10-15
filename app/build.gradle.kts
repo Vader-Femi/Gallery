@@ -23,6 +23,8 @@ android {
 
     buildTypes {
         release {
+            // Local testing only: lets you run the (much faster) release build on your phone.
+            signingConfig = signingConfigs.getByName("debug")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")

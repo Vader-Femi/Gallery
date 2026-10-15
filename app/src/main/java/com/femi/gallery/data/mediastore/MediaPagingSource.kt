@@ -12,20 +12,26 @@ import com.femi.gallery.domain.model.MediaItem
  * Offset-based paging straight from MediaStore. Placeholders are enabled by reporting
  * [LoadResult.Page.itemsBefore]/[LoadResult.Page.itemsAfter], which lets the UI jump to any
  * position (fast scroller, date scrubber) without loading everything in between.
+ *
+ * A source is invalidated (and replaced by Paging) whenever MediaStore changes, so the total
+ * count is computed once per instance instead of on every page load.
  */
 class MediaPagingSource(
     private val dataSource: MediaStoreDataSource,
     private val context: Context,
 ) : PagingSource<Int, MediaItem>() {
 
+    private val generationAtCreation = dataSource.generation()
+    private var cachedTotal: Int? = null
+
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) = invalidate()
     }
 
     init {
-        context.contentResolver.registerContentObserver(
-            dataSource.collectionUri, true, observer,
-        )
+        dataSource.observedUris.forEach { uri ->
+            context.contentResolver.registerContentObserver(uri, true, observer)
+        }
         registerInvalidatedCallback {
             context.contentResolver.unregisterContentObserver(observer)
         }
@@ -33,8 +39,13 @@ class MediaPagingSource(
 
     override val jumpingSupported: Boolean = true
 
+    /** Fallback for missed notifications, e.g. changes made while the app was in the background. */
+    fun invalidateIfStale() {
+        if (!invalid && dataSource.generation() != generationAtCreation) invalidate()
+    }
+
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> = try {
-        val total = dataSource.count()
+        val total = cachedTotal ?: dataSource.count().also { cachedTotal = it }
         val offset = (params.key ?: 0).coerceIn(0, maxOf(0, total - 1))
         val items = dataSource.load(offset = offset, limit = params.loadSize)
         LoadResult.Page(

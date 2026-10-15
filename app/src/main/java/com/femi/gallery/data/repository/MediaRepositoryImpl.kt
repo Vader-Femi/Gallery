@@ -19,6 +19,13 @@ class MediaRepositoryImpl @Inject constructor(
     private val dataSource: MediaStoreDataSource,
 ) : MediaRepository {
 
+    @Volatile
+    private var currentSource: MediaPagingSource? = null
+
+    override fun refreshIfChanged() {
+        currentSource?.invalidateIfStale()
+    }
+
     override fun getPagedMedia(): Flow<PagingData<MediaItem>> = Pager(
         config = PagingConfig(
             pageSize = 120,
@@ -27,6 +34,8 @@ class MediaRepositoryImpl @Inject constructor(
             enablePlaceholders = true,
             jumpThreshold = 240,
         ),
-        pagingSourceFactory = { MediaPagingSource(dataSource, context) },
+        pagingSourceFactory = {
+            MediaPagingSource(dataSource, context).also { currentSource = it }
+        },
     ).flow
 }
