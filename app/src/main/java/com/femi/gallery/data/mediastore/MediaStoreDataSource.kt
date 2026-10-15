@@ -26,14 +26,12 @@ class MediaStoreDataSource @Inject constructor(
     val collectionUri: Uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
 
     /**
-     * MediaProvider notifies on the per-type tables (images/video), not reliably on the generic
-     * files table, so we watch all of them.
+     * MediaProvider notifies on volume-specific URIs ("external" vs "external_primary"), and
+     * camera apps often use a different one from the apps that save via MediaStore. Watching
+     * the whole provider authority catches every one of them; the only cost is an occasional
+     * extra refresh when non-photo media changes.
      */
-    val observedUris: List<Uri> = listOf(
-        collectionUri,
-        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
-        MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
-    )
+    val observedUris: List<Uri> = listOf(MediaStore.AUTHORITY_URI)
 
     /** Increases whenever anything in the volume's MediaStore changes. */
     fun generation(): Long = MediaStore.getGeneration(context, MediaStore.VOLUME_EXTERNAL_PRIMARY)
