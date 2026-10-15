@@ -71,11 +71,12 @@ class MediaStoreDataSource @Inject constructor(
         // ordering. DATE_ADDED is always set and matches the capture time for camera photos.
         // MediaProvider rejects expressions like COALESCE in sort order, so a perfect
         // "date taken, else modified" ordering will come later from our own index.
-        putStringArray(
-            ContentResolver.QUERY_ARG_SORT_COLUMNS,
-            arrayOf(MediaStore.MediaColumns.DATE_ADDED, MediaStore.MediaColumns._ID),
+        // Note: QUERY_ARG_SORT_COLUMNS/DIRECTION are ignored here (results came back oldest
+        // first), so we pass a plain SQL sort clause instead.
+        putString(
+            ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
+            "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC",
         )
-        putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
     }
 
     private class Columns(cursor: Cursor) {
