@@ -38,12 +38,32 @@ class MediaStoreDataSource @Inject constructor(
 
     /** Total number of photos + videos (trashed and pending items are excluded by default). */
     suspend fun count(): Int = withContext(io) {
-        resolver.query(collectionUri, arrayOf(MediaStore.Files.FileColumns._ID), queryArgs(), null)
-            ?.use { it.count } ?: 0
+        resolver.query(
+            collectionUri,
+            arrayOf(MediaStore.Files.FileColumns._ID),
+            queryArgs(sorted = false),
+            null,
+        )?.use { it.count } ?: 0
+    }
+
+    /** DATE_ADDED (epoch seconds) of every photo and video, newest first. Used to build day sections. */
+    suspend fun loadDatesAdded(): LongArray = withContext(io) {
+        resolver.query(
+            collectionUri,
+            arrayOf(MediaStore.MediaColumns.DATE_ADDED),
+            queryArgs(sorted = true),
+            null,
+        )?.use { cursor ->
+            val result = LongArray(cursor.count)
+            val column = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+            var i = 0
+            while (cursor.moveToNext() && i < result.size) result[i++] = cursor.getLong(column)
+            result
+        } ?: LongArray(0)
     }
 
     suspend fun load(offset: Int, limit: Int): List<MediaItem> = withContext(io) {
-        val args = queryArgs().apply {
+        val args = queryArgs(sorted = true).apply {
             putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
         }
@@ -55,7 +75,7 @@ class MediaStoreDataSource @Inject constructor(
         } ?: emptyList()
     }
 
-    private fun queryArgs(): Bundle = Bundle().apply {
+    private fun queryArgs(sorted: Boolean): Bundle = Bundle().apply {
         putString(
             ContentResolver.QUERY_ARG_SQL_SELECTION,
             "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)",
@@ -67,16 +87,18 @@ class MediaStoreDataSource @Inject constructor(
                 MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
             ),
         )
-        // DATE_TAKEN is NULL for many files (WhatsApp images, screenshots, downloads), which breaks
-        // ordering. DATE_ADDED is always set and matches the capture time for camera photos.
-        // MediaProvider rejects expressions like COALESCE in sort order, so a perfect
-        // "date taken, else modified" ordering will come later from our own index.
-        // Note: QUERY_ARG_SORT_COLUMNS/DIRECTION are ignored here (results came back oldest
-        // first), so we pass a plain SQL sort clause instead.
-        putString(
-            ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
-            "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC",
-        )
+        if (sorted) {
+            // DATE_TAKEN is NULL for many files (WhatsApp images, screenshots, downloads), which breaks
+            // ordering. DATE_ADDED is always set and matches the capture time for camera photos.
+            // MediaProvider rejects expressions like COALESCE in sort order, so a perfect
+            // "date taken, else modified" ordering will come later from our own index.
+            // Note: QUERY_ARG_SORT_COLUMNS/DIRECTION are ignored here (results came back oldest
+            // first), so we pass a plain SQL sort clause instead.
+            putString(
+                ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
+                "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC",
+            )
+        }
     }
 
     private class Columns(cursor: Cursor) {
