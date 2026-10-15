@@ -51,7 +51,7 @@ fun PicturesScreen(
     val gridState = rememberLazyGridState()
 
     // When a newer photo arrives, jump to it if the user is already near the top.
-    val newestId = items.peek(0)?.id
+    val newestId = if (items.itemCount > 0) items.peek(0)?.id else null
     LaunchedEffect(newestId) {
         if (newestId != null && gridState.firstVisibleItemIndex < 24) gridState.scrollToItem(0)
     }
