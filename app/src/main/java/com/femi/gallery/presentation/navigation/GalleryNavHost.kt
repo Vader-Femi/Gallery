@@ -6,6 +6,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.femi.gallery.presentation.pictures.PicturesScreen
 import com.femi.gallery.presentation.placeholder.PlaceholderScreen
 
 @Composable
@@ -18,9 +19,12 @@ fun GalleryNavHost(
         startDestination = GalleryDestination.Pictures.route,
         modifier = modifier,
     ) {
-        GalleryDestination.entries.forEach { destination ->
+        composable(GalleryDestination.Pictures.route) {
+            PicturesScreen()
+        }
+        // Replaced by real screens in later patches.
+        listOf(GalleryDestination.Albums, GalleryDestination.Stories).forEach { destination ->
             composable(destination.route) {
-                // Replaced by real screens in later patches.
                 PlaceholderScreen(title = stringResource(destination.label))
             }
         }
