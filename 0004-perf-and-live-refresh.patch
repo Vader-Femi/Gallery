@@ -1,0 +1,297 @@
+From afa7b455cbcdd1538bb0e26883ae0c97d96ab4b5 Mon Sep 17 00:00:00 2001
+From: Claude <claude@example.com>
+Date: Thu, 15 Oct 2026 08:12:49 +0000
+Subject: [PATCH] Patch 4: faster thumbnails and reliable live refresh
+
+- Load grid thumbnails via ContentResolver.loadThumbnail (system thumbnail cache)
+- Cache total count per PagingSource instead of counting on every page load
+- Observe images/video tables (not just files) and add a generation-based refresh on resume
+- Sign release builds with the debug key for local performance testing
+---
+ app/build.gradle.kts                          |  2 +
+ .../com/femi/gallery/GalleryApplication.kt    | 12 ++++-
+ .../data/image/MediaThumbnailFetcher.kt       | 51 +++++++++++++++++++
+ .../data/mediastore/MediaPagingSource.kt      | 19 +++++--
+ .../data/mediastore/MediaStoreDataSource.kt   | 13 +++++
+ .../data/repository/MediaRepositoryImpl.kt    | 11 +++-
+ .../domain/repository/MediaRepository.kt      |  3 ++
+ .../domain/usecase/RefreshMediaUseCase.kt     | 11 ++++
+ .../presentation/pictures/PicturesScreen.kt   |  6 +++
+ .../pictures/PicturesViewModel.kt             |  4 ++
+ 10 files changed, 126 insertions(+), 6 deletions(-)
+ create mode 100644 app/src/main/java/com/femi/gallery/data/image/MediaThumbnailFetcher.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/usecase/RefreshMediaUseCase.kt
+
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index 7954f93..6907ef9 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -23,6 +23,8 @@ android {
+ 
+     buildTypes {
+         release {
++            // Local testing only: lets you run the (much faster) release build on your phone.
++            signingConfig = signingConfigs.getByName("debug")
+             optimization {
+                 enable = true
+                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
+diff --git a/app/src/main/java/com/femi/gallery/GalleryApplication.kt b/app/src/main/java/com/femi/gallery/GalleryApplication.kt
+index 8a85a1b..58c4ceb 100644
+--- a/app/src/main/java/com/femi/gallery/GalleryApplication.kt
++++ b/app/src/main/java/com/femi/gallery/GalleryApplication.kt
+@@ -1,7 +1,17 @@
+ package com.femi.gallery
+ 
+ import android.app.Application
++import coil3.ImageLoader
++import coil3.PlatformContext
++import coil3.SingletonImageLoader
++import com.femi.gallery.data.image.MediaThumbnailFetcher
+ import dagger.hilt.android.HiltAndroidApp
+ 
+ @HiltAndroidApp
+-class GalleryApplication : Application()
++class GalleryApplication : Application(), SingletonImageLoader.Factory {
++
++    override fun newImageLoader(context: PlatformContext): ImageLoader =
++        ImageLoader.Builder(context)
++            .components { add(MediaThumbnailFetcher.Factory()) }
++            .build()
++}
+diff --git a/app/src/main/java/com/femi/gallery/data/image/MediaThumbnailFetcher.kt b/app/src/main/java/com/femi/gallery/data/image/MediaThumbnailFetcher.kt
+new file mode 100644
+index 0000000..788f1fc
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/data/image/MediaThumbnailFetcher.kt
+@@ -0,0 +1,51 @@
++package com.femi.gallery.data.image
++
++import android.content.ContentResolver
++import android.net.Uri
++import android.util.Size
++import coil3.ImageLoader
++import coil3.Uri as CoilUri
++import coil3.asImage
++import coil3.decode.DataSource
++import coil3.fetch.FetchResult
++import coil3.fetch.Fetcher
++import coil3.fetch.ImageFetchResult
++import coil3.request.Options
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.withContext
++
++/**
++ * Loads grid thumbnails through [ContentResolver.loadThumbnail] instead of decoding the full
++ * photo. Android keeps pre-generated thumbnails for every photo and video, so this is far
++ * cheaper than decoding 12MP+ JPEGs (or extracting video frames) while scrolling.
++ */
++class MediaThumbnailFetcher(
++    private val data: CoilUri,
++    private val options: Options,
++) : Fetcher {
++
++    override suspend fun fetch(): FetchResult = withContext(Dispatchers.IO) {
++        val bitmap = options.context.contentResolver.loadThumbnail(
++            Uri.parse(data.toString()),
++            Size(THUMBNAIL_SIZE, THUMBNAIL_SIZE),
++            null,
++        )
++        ImageFetchResult(
++            image = bitmap.asImage(),
++            isSampled = true,
++            dataSource = DataSource.DISK,
++        )
++    }
++
++    class Factory : Fetcher.Factory<CoilUri> {
++        override fun create(data: CoilUri, options: Options, imageLoader: ImageLoader): Fetcher? {
++            // Only MediaStore images and videos; everything else uses Coil's defaults.
++            if (data.scheme != "content" || data.authority != "media") return null
++            return MediaThumbnailFetcher(data, options)
++        }
++    }
++
++    private companion object {
++        const val THUMBNAIL_SIZE = 512
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/data/mediastore/MediaPagingSource.kt b/app/src/main/java/com/femi/gallery/data/mediastore/MediaPagingSource.kt
+index 88dda70..94f6d2b 100644
+--- a/app/src/main/java/com/femi/gallery/data/mediastore/MediaPagingSource.kt
++++ b/app/src/main/java/com/femi/gallery/data/mediastore/MediaPagingSource.kt
+@@ -12,20 +12,26 @@ import com.femi.gallery.domain.model.MediaItem
+  * Offset-based paging straight from MediaStore. Placeholders are enabled by reporting
+  * [LoadResult.Page.itemsBefore]/[LoadResult.Page.itemsAfter], which lets the UI jump to any
+  * position (fast scroller, date scrubber) without loading everything in between.
++ *
++ * A source is invalidated (and replaced by Paging) whenever MediaStore changes, so the total
++ * count is computed once per instance instead of on every page load.
+  */
+ class MediaPagingSource(
+     private val dataSource: MediaStoreDataSource,
+     private val context: Context,
+ ) : PagingSource<Int, MediaItem>() {
+ 
++    private val generationAtCreation = dataSource.generation()
++    private var cachedTotal: Int? = null
++
+     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+         override fun onChange(selfChange: Boolean) = invalidate()
+     }
+ 
+     init {
+-        context.contentResolver.registerContentObserver(
+-            dataSource.collectionUri, true, observer,
+-        )
++        dataSource.observedUris.forEach { uri ->
++            context.contentResolver.registerContentObserver(uri, true, observer)
++        }
+         registerInvalidatedCallback {
+             context.contentResolver.unregisterContentObserver(observer)
+         }
+@@ -33,8 +39,13 @@ class MediaPagingSource(
+ 
+     override val jumpingSupported: Boolean = true
+ 
++    /** Fallback for missed notifications, e.g. changes made while the app was in the background. */
++    fun invalidateIfStale() {
++        if (!invalid && dataSource.generation() != generationAtCreation) invalidate()
++    }
++
+     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> = try {
+-        val total = dataSource.count()
++        val total = cachedTotal ?: dataSource.count().also { cachedTotal = it }
+         val offset = (params.key ?: 0).coerceIn(0, maxOf(0, total - 1))
+         val items = dataSource.load(offset = offset, limit = params.loadSize)
+         LoadResult.Page(
+diff --git a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+index 5c46114..d455d17 100644
+--- a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
++++ b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+@@ -25,6 +25,19 @@ class MediaStoreDataSource @Inject constructor(
+ 
+     val collectionUri: Uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
+ 
++    /**
++     * MediaProvider notifies on the per-type tables (images/video), not reliably on the generic
++     * files table, so we watch all of them.
++     */
++    val observedUris: List<Uri> = listOf(
++        collectionUri,
++        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
++        MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
++    )
++
++    /** Increases whenever anything in the volume's MediaStore changes. */
++    fun generation(): Long = MediaStore.getGeneration(context, MediaStore.VOLUME_EXTERNAL_PRIMARY)
++
+     /** Total number of photos + videos (trashed and pending items are excluded by default). */
+     suspend fun count(): Int = withContext(io) {
+         resolver.query(collectionUri, arrayOf(MediaStore.Files.FileColumns._ID), queryArgs(), null)
+diff --git a/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt b/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
+index 49fd7b4..badc1dc 100644
+--- a/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
++++ b/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
+@@ -19,6 +19,13 @@ class MediaRepositoryImpl @Inject constructor(
+     private val dataSource: MediaStoreDataSource,
+ ) : MediaRepository {
+ 
++    @Volatile
++    private var currentSource: MediaPagingSource? = null
++
++    override fun refreshIfChanged() {
++        currentSource?.invalidateIfStale()
++    }
++
+     override fun getPagedMedia(): Flow<PagingData<MediaItem>> = Pager(
+         config = PagingConfig(
+             pageSize = 120,
+@@ -27,6 +34,8 @@ class MediaRepositoryImpl @Inject constructor(
+             enablePlaceholders = true,
+             jumpThreshold = 240,
+         ),
+-        pagingSourceFactory = { MediaPagingSource(dataSource, context) },
++        pagingSourceFactory = {
++            MediaPagingSource(dataSource, context).also { currentSource = it }
++        },
+     ).flow
+ }
+diff --git a/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt b/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
+index 2ad9972..364b86b 100644
+--- a/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
++++ b/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
+@@ -7,4 +7,7 @@ import kotlinx.coroutines.flow.Flow
+ interface MediaRepository {
+     /** All photos and videos on the device, newest first. Refreshes itself when MediaStore changes. */
+     fun getPagedMedia(): Flow<PagingData<MediaItem>>
++
++    /** Cheap check (MediaStore generation counter); invalidates the list only if something changed. */
++    fun refreshIfChanged()
+ }
+diff --git a/app/src/main/java/com/femi/gallery/domain/usecase/RefreshMediaUseCase.kt b/app/src/main/java/com/femi/gallery/domain/usecase/RefreshMediaUseCase.kt
+new file mode 100644
+index 0000000..4cceaca
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/usecase/RefreshMediaUseCase.kt
+@@ -0,0 +1,11 @@
++package com.femi.gallery.domain.usecase
++
++import com.femi.gallery.domain.repository.MediaRepository
++import javax.inject.Inject
++
++/** Reloads the media list if the device's media changed while we weren't looking. */
++class RefreshMediaUseCase @Inject constructor(
++    private val repository: MediaRepository,
++) {
++    operator fun invoke() = repository.refreshIfChanged()
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+index e8308c9..d2d8e85 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.unit.dp
+ import androidx.hilt.navigation.compose.hiltViewModel
++import androidx.lifecycle.compose.LifecycleResumeEffect
+ import androidx.paging.compose.collectAsLazyPagingItems
+ import coil3.compose.AsyncImage
+ 
+@@ -34,6 +35,11 @@ fun PicturesScreen(
+ ) {
+     val items = viewModel.media.collectAsLazyPagingItems()
+ 
++    LifecycleResumeEffect(viewModel) {
++        viewModel.onResumed()
++        onPauseOrDispose { }
++    }
++
+     LazyVerticalGrid(
+         columns = GridCells.Fixed(4),
+         modifier = modifier.fillMaxSize(),
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
+index 321dc27..e32375e 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
+@@ -6,6 +6,7 @@ import androidx.paging.PagingData
+ import androidx.paging.cachedIn
+ import com.femi.gallery.domain.model.MediaItem
+ import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
++import com.femi.gallery.domain.usecase.RefreshMediaUseCase
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import kotlinx.coroutines.flow.Flow
+ import javax.inject.Inject
+@@ -13,7 +14,10 @@ import javax.inject.Inject
+ @HiltViewModel
+ class PicturesViewModel @Inject constructor(
+     getPagedMedia: GetPagedMediaUseCase,
++    private val refreshMedia: RefreshMediaUseCase,
+ ) : ViewModel() {
+ 
+     val media: Flow<PagingData<MediaItem>> = getPagedMedia().cachedIn(viewModelScope)
++
++    fun onResumed() = refreshMedia()
+ }
+-- 
+2.43.0
+
