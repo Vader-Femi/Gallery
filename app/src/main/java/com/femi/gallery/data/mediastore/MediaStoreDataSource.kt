@@ -81,6 +81,7 @@ class MediaStoreDataSource @Inject constructor(
     private class Columns(cursor: Cursor) {
         val id = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
         val mediaType = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+        val displayName = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
         val mimeType = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
         val dateTaken = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN)
         val dateAdded = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
@@ -105,6 +106,7 @@ class MediaStoreDataSource @Inject constructor(
         return MediaItem(
             id = id,
             uri = ContentUris.withAppendedId(base, id).toString(),
+            displayName = getString(c.displayName).orEmpty(),
             mimeType = getString(c.mimeType).orEmpty(),
             type = if (isVideo) MediaType.Video else MediaType.Image,
             dateTakenMillis = getLong(c.dateTaken).takeIf { it > 0 } ?: addedMillis,
@@ -123,6 +125,7 @@ class MediaStoreDataSource @Inject constructor(
         val PROJECTION = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.Files.FileColumns.MEDIA_TYPE,
+            MediaStore.MediaColumns.DISPLAY_NAME,
             MediaStore.MediaColumns.MIME_TYPE,
             MediaStore.MediaColumns.DATE_TAKEN,
             MediaStore.MediaColumns.DATE_ADDED,

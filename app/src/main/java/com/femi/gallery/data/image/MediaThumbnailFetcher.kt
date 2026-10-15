@@ -2,6 +2,7 @@ package com.femi.gallery.data.image
 
 import android.content.ContentResolver
 import android.net.Uri
+import android.util.Log
 import android.util.Size
 import coil3.ImageLoader
 import coil3.Uri as CoilUri
@@ -24,17 +25,23 @@ class MediaThumbnailFetcher(
     private val options: Options,
 ) : Fetcher {
 
-    override suspend fun fetch(): FetchResult = withContext(Dispatchers.IO) {
-        val bitmap = options.context.contentResolver.loadThumbnail(
-            Uri.parse(data.toString()),
-            Size(THUMBNAIL_SIZE, THUMBNAIL_SIZE),
-            null,
-        )
-        ImageFetchResult(
-            image = bitmap.asImage(),
-            isSampled = true,
-            dataSource = DataSource.DISK,
-        )
+    override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
+        try {
+            val bitmap = options.context.contentResolver.loadThumbnail(
+                Uri.parse(data.toString()),
+                Size(THUMBNAIL_SIZE, THUMBNAIL_SIZE),
+                null,
+            )
+            ImageFetchResult(
+                image = bitmap.asImage(),
+                isSampled = true,
+                dataSource = DataSource.DISK,
+            )
+        } catch (e: Exception) {
+            // No system thumbnail (yet): log it and let Coil's default fetcher decode the file.
+            Log.w("MediaThumbnailFetcher", "loadThumbnail failed for $data", e)
+            null
+        }
     }
 
     class Factory : Fetcher.Factory<CoilUri> {

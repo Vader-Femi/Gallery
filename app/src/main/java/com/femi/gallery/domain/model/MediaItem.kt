@@ -4,6 +4,7 @@ data class MediaItem(
     val id: Long,
     /** content:// URI as a string, so the domain layer stays free of Android types. */
     val uri: String,
+    val displayName: String,
     val mimeType: String,
     val type: MediaType,
     /** Capture time, falling back to the date the file was added when EXIF/date taken is missing. */
