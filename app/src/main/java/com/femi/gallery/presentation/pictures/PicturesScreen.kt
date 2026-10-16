@@ -2,27 +2,42 @@ package com.femi.gallery.presentation.pictures
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
 import com.femi.gallery.presentation.selection.SelectionBars
-import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.WriteRequestHandler
+import com.femi.gallery.presentation.selection.libraryActions
 
 @Composable
 fun PicturesScreen(
     onMediaClick: (mediaIndex: Int) -> Unit,
+    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PicturesViewModel = hiltViewModel(),
 ) {
@@ -42,20 +57,38 @@ fun PicturesScreen(
     WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel.selection::clear)
 
     Box(modifier = modifier.fillMaxSize()) {
-        TimelineGrid(
-            items = items,
-            sections = sections,
-            zoom = zoom,
-            onMediaClick = { mediaIndex, item ->
-                if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex)
-            },
-            onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
-            onZoomIn = viewModel.timeline::zoomIn,
-            onZoomOut = viewModel.timeline::zoomOut,
-            topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
-            selectionActive = selectionState.active,
-            selectedIds = selectionState.ids,
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.nav_pictures),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onSearchClick) {
+                    Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.search_open))
+                }
+            }
+            TimelineGrid(
+                items = items,
+                sections = sections,
+                zoom = zoom,
+                onMediaClick = { mediaIndex, item ->
+                    if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex)
+                },
+                onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
+                onZoomIn = viewModel.timeline::zoomIn,
+                onZoomOut = viewModel.timeline::zoomOut,
+                modifier = Modifier.weight(1f),
+                selectionActive = selectionState.active,
+                selectedIds = selectionState.ids,
+            )
+        }
 
         if (selectionState.active) {
             SelectionBars(

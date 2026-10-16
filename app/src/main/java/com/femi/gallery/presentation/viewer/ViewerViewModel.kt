@@ -8,6 +8,8 @@ import androidx.paging.cachedIn
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.domain.search.SearchCriteria
+import com.femi.gallery.domain.search.SearchQueryParser
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetMediaDetailsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
@@ -44,11 +46,17 @@ class ViewerViewModel @Inject constructor(
     private val bucketId: Long? =
         savedStateHandle.get<Long>(BUCKET_ARG)?.takeIf { it != NO_BUCKET }
 
+    /** Set when opened from search results, so swiping stays inside those results. */
+    private val search: SearchCriteria? = savedStateHandle.get<String>(QUERY_ARG)
+        ?.let { SearchQueryParser.parse(it) }
+        ?.takeUnless { it.isEmpty }
+
     // Start loading around the tapped item so the pager can open on it immediately.
     val media: Flow<PagingData<MediaItem>> =
         getPagedMedia(
             initialKey = (startIndex - PRELOAD_BEFORE).coerceAtLeast(0),
             bucketId = bucketId,
+            search = search,
         ).cachedIn(viewModelScope)
 
     /** Favorite / trash for the photo on screen (the viewer has no multi-selection). */
@@ -79,6 +87,7 @@ class ViewerViewModel @Inject constructor(
     companion object {
         const val INDEX_ARG = "index"
         const val BUCKET_ARG = "bucketId"
+        const val QUERY_ARG = "query"
         private const val NO_BUCKET = Long.MIN_VALUE // keep in sync with GalleryRoutes.NO_BUCKET
         private const val PRELOAD_BEFORE = 120
     }

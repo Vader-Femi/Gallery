@@ -14,6 +14,8 @@ import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.model.MediaType
+import com.femi.gallery.domain.search.SearchCriteria
+import com.femi.gallery.domain.model.MediaType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -44,21 +46,21 @@ class MediaStoreDataSource @Inject constructor(
      * Total number of photos + videos (trashed and pending items are excluded by default),
      * optionally limited to one album ([bucketId]).
      */
-    suspend fun count(bucketId: Long? = null): Int = withContext(io) {
+    suspend fun count(bucketId: Long? = null, search: SearchCriteria? = null): Int = withContext(io) {
         resolver.query(
             collectionUri,
             arrayOf(MediaStore.Files.FileColumns._ID),
-            queryArgs(sorted = false, bucketId = bucketId),
+            queryArgs(sorted = false, bucketId = bucketId, search = search),
             null,
         )?.use { it.count } ?: 0
     }
 
     /** DATE_ADDED (epoch seconds) of every photo and video, newest first. Used to build day sections. */
-    suspend fun loadDatesAdded(bucketId: Long? = null): LongArray = withContext(io) {
+    suspend fun loadDatesAdded(bucketId: Long? = null, search: SearchCriteria? = null): LongArray = withContext(io) {
         resolver.query(
             collectionUri,
             arrayOf(MediaStore.MediaColumns.DATE_ADDED),
-            queryArgs(sorted = true, bucketId = bucketId),
+            queryArgs(sorted = true, bucketId = bucketId, search = search),
             null,
         )?.use { cursor ->
             val result = LongArray(cursor.count)
@@ -69,8 +71,13 @@ class MediaStoreDataSource @Inject constructor(
         } ?: LongArray(0)
     }
 
-    suspend fun load(offset: Int, limit: Int, bucketId: Long? = null): List<MediaItem> = withContext(io) {
-        val args = queryArgs(sorted = true, bucketId = bucketId).apply {
+    suspend fun load(
+        offset: Int,
+        limit: Int,
+        bucketId: Long? = null,
+        search: SearchCriteria? = null,
+    ): List<MediaItem> = withContext(io) {
+        val args = queryArgs(sorted = true, bucketId = bucketId, search = search).apply {
             putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
         }
@@ -146,13 +153,13 @@ class MediaStoreDataSource @Inject constructor(
         }
     }
 
-    suspend fun loadRefs(bucketId: Long? = null): List<MediaRef> = withContext(io) {
+    suspend fun loadRefs(bucketId: Long? = null, search: SearchCriteria? = null): List<MediaRef> = withContext(io) {
         val projection = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             MediaStore.MediaColumns.IS_FAVORITE,
         )
-        resolver.query(collectionUri, projection, queryArgs(sorted = true, bucketId = bucketId), null)
+        resolver.query(collectionUri, projection, queryArgs(sorted = true, bucketId = bucketId, search = search), null)
             ?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                 val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
@@ -183,6 +190,39 @@ class MediaStoreDataSource @Inject constructor(
         }
     }
 
+    /** Adds the conditions of [search] to a query; every condition must match. */
+    private fun appendSearch(search: SearchCriteria, selection: StringBuilder, args: MutableList<String>) {
+        search.terms.forEach { term ->
+            selection.append(
+                " AND (${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? OR ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} LIKE ?)",
+            )
+            args.add("%$term%")
+            args.add("%$term%")
+        }
+        if (search.dateRanges.isNotEmpty()) {
+            val column = MediaStore.MediaColumns.DATE_ADDED
+            selection.append(
+                search.dateRanges.joinToString(separator = " OR ", prefix = " AND (", postfix = ")") {
+                    "($column >= ? AND $column <= ?)"
+                },
+            )
+            search.dateRanges.forEach { range ->
+                args.add(range.first.toString())
+                args.add(range.last.toString())
+            }
+        }
+        search.mediaType?.let { type ->
+            selection.append(" AND ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?")
+            args.add(
+                when (type) {
+                    MediaType.Image -> MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+                    MediaType.Video -> MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                }.toString(),
+            )
+        }
+        if (search.favoritesOnly) selection.append(" AND ${MediaStore.MediaColumns.IS_FAVORITE} = 1")
+    }
+
     suspend fun createDeleteRequests(uris: List<String>): List<IntentSender> = withContext(io) {
         uris.chunked(WRITE_BATCH_SIZE).map { chunk ->
             MediaStore.createDeleteRequest(resolver, chunk.map(Uri::parse)).intentSender
@@ -198,7 +238,11 @@ class MediaStoreDataSource @Inject constructor(
         return ContentUris.withAppendedId(base, id)
     }
 
-    private fun queryArgs(sorted: Boolean, bucketId: Long? = null): Bundle = Bundle().apply {
+    private fun queryArgs(
+        sorted: Boolean,
+        bucketId: Long? = null,
+        search: SearchCriteria? = null,
+    ): Bundle = Bundle().apply {
         val selection = StringBuilder("${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)")
         val selectionArgs = mutableListOf(
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
@@ -214,6 +258,7 @@ class MediaStoreDataSource @Inject constructor(
                 selectionArgs.add(bucketId.toString())
             }
         }
+        if (search != null) appendSearch(search, selection, selectionArgs)
         putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection.toString())
         putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs.toTypedArray())
         if (sorted) {

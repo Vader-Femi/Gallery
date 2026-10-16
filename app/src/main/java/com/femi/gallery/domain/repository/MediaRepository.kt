@@ -7,11 +7,16 @@ import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
+import com.femi.gallery.domain.search.SearchCriteria
 import kotlinx.coroutines.flow.Flow
 
 interface MediaRepository {
     /** All photos and videos on the device, newest first. Refreshes itself when MediaStore changes. */
-    fun getPagedMedia(initialKey: Int? = null, bucketId: Long? = null): Flow<PagingData<MediaItem>>
+    fun getPagedMedia(
+        initialKey: Int? = null,
+        bucketId: Long? = null,
+        search: SearchCriteria? = null,
+    ): Flow<PagingData<MediaItem>>
 
     /** Device folders with cover and count, recomputed when MediaStore changes. */
     fun observeAlbums(): Flow<List<Album>>
@@ -20,10 +25,10 @@ interface MediaRepository {
     suspend fun getDetails(item: MediaItem): MediaDetails
 
     /** Per-day sections of the media list, recomputed when MediaStore changes. */
-    fun observeTimeline(bucketId: Long? = null): Flow<List<TimelineSection>>
+    fun observeTimeline(bucketId: Long? = null, search: SearchCriteria? = null): Flow<List<TimelineSection>>
 
     /** Ids, URIs and favorite flags of everything (optionally one album). */
-    suspend fun getAllRefs(bucketId: Long? = null): List<MediaRef>
+    suspend fun getAllRefs(bucketId: Long? = null, search: SearchCriteria? = null): List<MediaRef>
 
     /** Confirmation dialogs to move [uris] to / out of the system trash (kept for 30 days). */
     suspend fun createTrashRequests(uris: List<String>, trash: Boolean): List<WriteRequest>

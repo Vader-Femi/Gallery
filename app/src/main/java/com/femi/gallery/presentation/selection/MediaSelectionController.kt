@@ -4,6 +4,7 @@ import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.WriteRequest
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.domain.search.SearchCriteria
 import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
@@ -33,6 +34,8 @@ class MediaSelectionController(
     private val requestTrash: RequestTrashUseCase,
     private val requestFavorite: RequestFavoriteUseCase,
     private val requestDelete: RequestDeleteUseCase,
+    /** The active search, so "Select all" only selects matching items. */
+    private val currentSearch: () -> SearchCriteria? = { null },
 ) {
     private val selection = SelectionManager()
     val state = selection.state
@@ -47,7 +50,7 @@ class MediaSelectionController(
     fun clear() = selection.clear()
 
     fun selectAll() {
-        scope.launch { selection.selectAll(getAllRefs(bucketId)) }
+        scope.launch { selection.selectAll(getAllRefs(bucketId, currentSearch())) }
     }
 
     fun trashSelected() = trash(state.value.selected.values)

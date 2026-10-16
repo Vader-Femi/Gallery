@@ -13,6 +13,7 @@ import com.femi.gallery.presentation.albums.AlbumViewModel
 import com.femi.gallery.presentation.albums.AlbumsScreen
 import com.femi.gallery.presentation.pictures.PicturesScreen
 import com.femi.gallery.presentation.placeholder.PlaceholderScreen
+import com.femi.gallery.presentation.search.SearchScreen
 import com.femi.gallery.presentation.viewer.ViewerScreen
 import com.femi.gallery.presentation.viewer.ViewerViewModel
 
@@ -29,6 +30,7 @@ fun GalleryNavHost(
         composable(GalleryDestination.Pictures.route) {
             PicturesScreen(
                 onMediaClick = { mediaIndex -> navController.navigate(GalleryRoutes.viewer(mediaIndex)) },
+                onSearchClick = { navController.navigate(GalleryRoutes.SEARCH) },
             )
         }
         composable(GalleryDestination.Albums.route) {
@@ -47,6 +49,14 @@ fun GalleryNavHost(
                 },
             )
         }
+        composable(GalleryRoutes.SEARCH) {
+            SearchScreen(
+                onBack = { navController.popBackStack() },
+                onMediaClick = { mediaIndex, query ->
+                    navController.navigate(GalleryRoutes.viewer(mediaIndex, query = query))
+                },
+            )
+        }
         // Replaced by a real screen in a later patch.
         composable(GalleryDestination.Stories.route) {
             PlaceholderScreen(title = stringResource(GalleryDestination.Stories.label))
@@ -58,6 +68,11 @@ fun GalleryNavHost(
                 navArgument(ViewerViewModel.BUCKET_ARG) {
                     type = NavType.LongType
                     defaultValue = GalleryRoutes.NO_BUCKET
+                },
+                navArgument(ViewerViewModel.QUERY_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 },
             ),
         ) {

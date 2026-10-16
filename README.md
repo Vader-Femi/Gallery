@@ -38,6 +38,11 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] Album detail screen with the same timeline, zoom and fast scroller, scoped to one folder
 - [x] **Favorites** album and **Recycle bin**, shown only when they contain something
 
+**Search**
+- [x] Search button on the Pictures tab opens a search screen with suggestion chips
+- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`), **types** (`videos`, `photos`) and `favorites` — all combinable, e.g. `whatsapp videos 2025`
+- [x] Results use the same timeline, zoom, selection and viewer (swiping stays inside the results)
+
 **Viewer**
 - [x] Full-screen viewer with swipe between photos (stays inside the album you opened it from)
 - [x] **Pinch / double-tap zoom** with panning that hands back to the pager at the edges
@@ -61,7 +66,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 ### Still to do
 
 **Next up**
-- [ ] **Search** — by file name, date and place (then by content, see ML below)
+- [ ] **Search by place** (needs reverse geocoding) and by content (see ML below)
 - [ ] **Create, rename, move and copy** albums and photos (needs the same system write confirmations as trash)
 - [ ] **Hidden / locked folder** protected by biometrics
 - [ ] **Stories** tab — automatic collections by date and place, plus slideshow *(the tab exists as a placeholder)*
@@ -235,6 +240,7 @@ The app was built incrementally as a series of reviewable patches:
 | 15 | Zoom levels | Month and year views |
 | 16 | README | This document |
 | 17 | License | Released into the public domain (Unlicense) |
+| 18 | Search | File/folder/date/type search with the shared timeline |
 
 ---
 

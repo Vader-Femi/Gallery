@@ -19,6 +19,7 @@ import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
 import com.femi.gallery.domain.repository.MediaRepository
+import com.femi.gallery.domain.search.SearchCriteria
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
@@ -61,7 +62,11 @@ class MediaRepositoryImpl @Inject constructor(
         if (dataSource.generation() != indexedGeneration) refreshSignal.tryEmit(Unit)
     }
 
-    override fun getPagedMedia(initialKey: Int?, bucketId: Long?): Flow<PagingData<MediaItem>> = Pager(
+    override fun getPagedMedia(
+        initialKey: Int?,
+        bucketId: Long?,
+        search: SearchCriteria?,
+    ): Flow<PagingData<MediaItem>> = Pager(
         config = PagingConfig(
             pageSize = 120,
             initialLoadSize = 240,
@@ -71,13 +76,14 @@ class MediaRepositoryImpl @Inject constructor(
         ),
         initialKey = initialKey,
         pagingSourceFactory = {
-            MediaPagingSource(dataSource, context, bucketId).also { sources.add(it) }
+            MediaPagingSource(dataSource, context, bucketId, search).also { sources.add(it) }
         },
     ).flow
 
     override suspend fun getDetails(item: MediaItem): MediaDetails = exifReader.read(item)
 
-    override suspend fun getAllRefs(bucketId: Long?): List<MediaRef> = dataSource.loadRefs(bucketId)
+    override suspend fun getAllRefs(bucketId: Long?, search: SearchCriteria?): List<MediaRef> =
+        dataSource.loadRefs(bucketId, search)
 
     override suspend fun createTrashRequests(uris: List<String>, trash: Boolean): List<WriteRequest> =
         dataSource.createTrashRequests(uris, trash).map(::WriteRequest)
@@ -88,11 +94,11 @@ class MediaRepositoryImpl @Inject constructor(
     override suspend fun createFavoriteRequests(uris: List<String>, favorite: Boolean): List<WriteRequest> =
         dataSource.createFavoriteRequests(uris, favorite).map(::WriteRequest)
 
-    override fun observeTimeline(bucketId: Long?): Flow<List<TimelineSection>> =
+    override fun observeTimeline(bucketId: Long?, search: SearchCriteria?): Flow<List<TimelineSection>> =
         changeTriggers()
             .map {
                 indexedGeneration = dataSource.generation()
-                TimelineGrouper.group(dataSource.loadDatesAdded(bucketId))
+                TimelineGrouper.group(dataSource.loadDatesAdded(bucketId, search))
             }
             .distinctUntilChanged()
 

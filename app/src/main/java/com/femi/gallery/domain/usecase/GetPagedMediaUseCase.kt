@@ -3,6 +3,7 @@ package com.femi.gallery.domain.usecase
 import androidx.paging.PagingData
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.repository.MediaRepository
+import com.femi.gallery.domain.search.SearchCriteria
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -11,8 +12,11 @@ class GetPagedMediaUseCase @Inject constructor(
 ) {
     /**
      * [initialKey] is the media index to start loading around (used by the viewer).
-     * [bucketId] limits the list to one album.
+     * [bucketId] limits the list to one album and [search] to matching items.
      */
-    operator fun invoke(initialKey: Int? = null, bucketId: Long? = null): Flow<PagingData<MediaItem>> =
-        repository.getPagedMedia(initialKey, bucketId)
+    operator fun invoke(
+        initialKey: Int? = null,
+        bucketId: Long? = null,
+        search: SearchCriteria? = null,
+    ): Flow<PagingData<MediaItem>> = repository.getPagedMedia(initialKey, bucketId, search)
 }

@@ -8,6 +8,16 @@
     <string name="timeline_today">Today</string>
     <string name="timeline_yesterday">Yesterday</string>
 
+    <string name="search_hint">Search photos and videos</string>
+    <string name="search_clear">Clear search</string>
+    <string name="search_open">Search</string>
+    <string name="search_help">Try a file or folder name, a date like "october 2025" or "oct 15", or words like videos, photos and favorites. Combine them: "whatsapp videos 2025".</string>
+    <string name="search_no_results">No matching photos or videos</string>
+    <string name="search_suggestion_videos">Videos</string>
+    <string name="search_suggestion_favorites">Favorites</string>
+    <string name="search_suggestion_screenshots">Screenshots</string>
+    <string name="search_suggestion_yesterday">Yesterday</string>
+
     <string name="selection_count">%d selected</string>
     <string name="selection_none">Select items</string>
     <string name="selection_select_all">Select all</string>

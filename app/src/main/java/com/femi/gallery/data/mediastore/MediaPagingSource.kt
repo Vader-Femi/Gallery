@@ -7,6 +7,7 @@ import android.os.Looper
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.search.SearchCriteria
 
 /**
  * Offset-based paging straight from MediaStore. Placeholders are enabled by reporting
@@ -20,6 +21,7 @@ class MediaPagingSource(
     private val dataSource: MediaStoreDataSource,
     private val context: Context,
     private val bucketId: Long? = null,
+    private val search: SearchCriteria? = null,
 ) : PagingSource<Int, MediaItem>() {
 
     private val generationAtCreation = dataSource.generation()
@@ -46,9 +48,9 @@ class MediaPagingSource(
     }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> = try {
-        val total = cachedTotal ?: dataSource.count(bucketId).also { cachedTotal = it }
+        val total = cachedTotal ?: dataSource.count(bucketId, search).also { cachedTotal = it }
         val offset = (params.key ?: 0).coerceIn(0, maxOf(0, total - 1))
-        val items = dataSource.load(offset = offset, limit = params.loadSize, bucketId = bucketId)
+        val items = dataSource.load(offset = offset, limit = params.loadSize, bucketId = bucketId, search = search)
         LoadResult.Page(
             data = items,
             prevKey = if (offset == 0) null else maxOf(0, offset - params.loadSize),
