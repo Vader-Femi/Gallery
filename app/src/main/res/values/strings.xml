@@ -8,6 +8,12 @@
     <string name="timeline_today">Today</string>
     <string name="timeline_yesterday">Yesterday</string>
 
+    <string name="album_unnamed">Other</string>
+    <plurals name="album_item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+
     <string name="viewer_back">Back</string>
     <string name="viewer_share">Share</string>
     <string name="viewer_info">Details</string>

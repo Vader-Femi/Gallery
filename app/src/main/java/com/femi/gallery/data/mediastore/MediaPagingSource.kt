@@ -19,6 +19,7 @@ import com.femi.gallery.domain.model.MediaItem
 class MediaPagingSource(
     private val dataSource: MediaStoreDataSource,
     private val context: Context,
+    private val bucketId: Long? = null,
 ) : PagingSource<Int, MediaItem>() {
 
     private val generationAtCreation = dataSource.generation()
@@ -45,9 +46,9 @@ class MediaPagingSource(
     }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> = try {
-        val total = cachedTotal ?: dataSource.count().also { cachedTotal = it }
+        val total = cachedTotal ?: dataSource.count(bucketId).also { cachedTotal = it }
         val offset = (params.key ?: 0).coerceIn(0, maxOf(0, total - 1))
-        val items = dataSource.load(offset = offset, limit = params.loadSize)
+        val items = dataSource.load(offset = offset, limit = params.loadSize, bucketId = bucketId)
         LoadResult.Page(
             data = items,
             prevKey = if (offset == 0) null else maxOf(0, offset - params.loadSize),

@@ -9,7 +9,10 @@ import javax.inject.Inject
 class GetPagedMediaUseCase @Inject constructor(
     private val repository: MediaRepository,
 ) {
-    /** [initialKey] is the media index to start loading around (used by the viewer). */
-    operator fun invoke(initialKey: Int? = null): Flow<PagingData<MediaItem>> =
-        repository.getPagedMedia(initialKey)
+    /**
+     * [initialKey] is the media index to start loading around (used by the viewer).
+     * [bucketId] limits the list to one album.
+     */
+    operator fun invoke(initialKey: Int? = null, bucketId: Long? = null): Flow<PagingData<MediaItem>> =
+        repository.getPagedMedia(initialKey, bucketId)
 }

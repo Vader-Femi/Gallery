@@ -28,10 +28,16 @@ class ViewerViewModel @Inject constructor(
     /** Position of the tapped item in the full, newest-first media list. */
     val startIndex: Int = savedStateHandle.get<Int>(INDEX_ARG) ?: 0
 
+    /** Set when opened from an album, so swiping stays inside that album. */
+    private val bucketId: Long? =
+        savedStateHandle.get<Long>(BUCKET_ARG)?.takeIf { it != NO_BUCKET }
+
     // Start loading around the tapped item so the pager can open on it immediately.
     val media: Flow<PagingData<MediaItem>> =
-        getPagedMedia(initialKey = (startIndex - PRELOAD_BEFORE).coerceAtLeast(0))
-            .cachedIn(viewModelScope)
+        getPagedMedia(
+            initialKey = (startIndex - PRELOAD_BEFORE).coerceAtLeast(0),
+            bucketId = bucketId,
+        ).cachedIn(viewModelScope)
 
     private val _details = MutableStateFlow<MediaDetails?>(null)
     val details: StateFlow<MediaDetails?> = _details.asStateFlow()
@@ -50,6 +56,8 @@ class ViewerViewModel @Inject constructor(
 
     companion object {
         const val INDEX_ARG = "index"
+        const val BUCKET_ARG = "bucketId"
+        private const val NO_BUCKET = Long.MIN_VALUE // keep in sync with GalleryRoutes.NO_BUCKET
         private const val PRELOAD_BEFORE = 120
     }
 }

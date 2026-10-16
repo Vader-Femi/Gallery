@@ -11,6 +11,7 @@ import androidx.paging.PagingData
 import com.femi.gallery.data.exif.ExifReader
 import com.femi.gallery.data.mediastore.MediaPagingSource
 import com.femi.gallery.data.mediastore.MediaStoreDataSource
+import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.TimelineGrouper
@@ -58,7 +59,7 @@ class MediaRepositoryImpl @Inject constructor(
         if (dataSource.generation() != indexedGeneration) refreshSignal.tryEmit(Unit)
     }
 
-    override fun getPagedMedia(initialKey: Int?): Flow<PagingData<MediaItem>> = Pager(
+    override fun getPagedMedia(initialKey: Int?, bucketId: Long?): Flow<PagingData<MediaItem>> = Pager(
         config = PagingConfig(
             pageSize = 120,
             initialLoadSize = 240,
@@ -68,22 +69,31 @@ class MediaRepositoryImpl @Inject constructor(
         ),
         initialKey = initialKey,
         pagingSourceFactory = {
-            MediaPagingSource(dataSource, context).also { sources.add(it) }
+            MediaPagingSource(dataSource, context, bucketId).also { sources.add(it) }
         },
     ).flow
 
     override suspend fun getDetails(item: MediaItem): MediaDetails = exifReader.read(item)
 
+    override fun observeTimeline(bucketId: Long?): Flow<List<TimelineSection>> =
+        changeTriggers()
+            .map {
+                indexedGeneration = dataSource.generation()
+                TimelineGrouper.group(dataSource.loadDatesAdded(bucketId))
+            }
+            .distinctUntilChanged()
+
+    override fun observeAlbums(): Flow<List<Album>> =
+        changeTriggers()
+            .map { dataSource.loadAlbums() }
+            .distinctUntilChanged()
+
+    /** Emits once on start, then (debounced) whenever MediaStore changes or the app resumes after a change. */
     @OptIn(FlowPreview::class)
-    override fun observeTimeline(): Flow<List<TimelineSection>> =
+    private fun changeTriggers(): Flow<Unit> =
         merge(mediaChanges().debounce(CHANGE_DEBOUNCE_MS), refreshSignal)
             .onStart { emit(Unit) }
             .conflate()
-            .map {
-                indexedGeneration = dataSource.generation()
-                TimelineGrouper.group(dataSource.loadDatesAdded())
-            }
-            .distinctUntilChanged()
 
     private fun mediaChanges(): Flow<Unit> = callbackFlow {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {

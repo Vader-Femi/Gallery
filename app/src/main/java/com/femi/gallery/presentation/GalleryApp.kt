@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.femi.gallery.presentation.navigation.GalleryDestination
 import com.femi.gallery.presentation.navigation.GalleryNavHost
+import com.femi.gallery.presentation.navigation.GalleryRoutes
 import com.femi.gallery.presentation.permission.MediaPermissionViewModel
 import com.femi.gallery.presentation.permission.PermissionScreen
 
@@ -48,7 +49,8 @@ private fun GalleryScaffold() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
-    val isTopLevel = GalleryDestination.entries.any { destination ->
+    val isAlbumDetail = currentDestination?.route == GalleryRoutes.ALBUM
+    val isTopLevel = isAlbumDetail || GalleryDestination.entries.any { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     }
 
@@ -59,12 +61,18 @@ private fun GalleryScaffold() {
             if (isTopLevel) NavigationBar {
                 GalleryDestination.entries.forEach { destination ->
                     NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true,
+                        selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                            (isAlbumDetail && destination == GalleryDestination.Albums),
                         onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(GalleryDestination.Pictures.route) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                            if (isAlbumDetail && destination == GalleryDestination.Albums) {
+                                // Tapping Albums while inside an album goes back to the album list.
+                                navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
+                            } else {
+                                navController.navigate(destination.route) {
+                                    popUpTo(GalleryDestination.Pictures.route) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
                         },
                         icon = { Icon(destination.icon, contentDescription = null) },

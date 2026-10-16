@@ -8,5 +8,6 @@ import javax.inject.Inject
 class ObserveTimelineUseCase @Inject constructor(
     private val repository: MediaRepository,
 ) {
-    operator fun invoke(): Flow<List<TimelineSection>> = repository.observeTimeline()
+    operator fun invoke(bucketId: Long? = null): Flow<List<TimelineSection>> =
+        repository.observeTimeline(bucketId)
 }

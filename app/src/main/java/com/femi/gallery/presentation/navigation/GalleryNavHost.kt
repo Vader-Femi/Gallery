@@ -8,6 +8,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.femi.gallery.presentation.albums.AlbumScreen
+import com.femi.gallery.presentation.albums.AlbumViewModel
+import com.femi.gallery.presentation.albums.AlbumsScreen
 import com.femi.gallery.presentation.pictures.PicturesScreen
 import com.femi.gallery.presentation.placeholder.PlaceholderScreen
 import com.femi.gallery.presentation.viewer.ViewerScreen
@@ -28,15 +31,35 @@ fun GalleryNavHost(
                 onMediaClick = { mediaIndex -> navController.navigate(GalleryRoutes.viewer(mediaIndex)) },
             )
         }
-        // Replaced by real screens in later patches.
-        listOf(GalleryDestination.Albums, GalleryDestination.Stories).forEach { destination ->
-            composable(destination.route) {
-                PlaceholderScreen(title = stringResource(destination.label))
-            }
+        composable(GalleryDestination.Albums.route) {
+            AlbumsScreen(
+                onAlbumClick = { bucketId -> navController.navigate(GalleryRoutes.album(bucketId)) },
+            )
+        }
+        composable(
+            route = GalleryRoutes.ALBUM,
+            arguments = listOf(navArgument(AlbumViewModel.BUCKET_ARG) { type = NavType.LongType }),
+        ) {
+            AlbumScreen(
+                onBack = { navController.popBackStack() },
+                onMediaClick = { bucketId, mediaIndex ->
+                    navController.navigate(GalleryRoutes.viewer(mediaIndex, bucketId))
+                },
+            )
+        }
+        // Replaced by a real screen in a later patch.
+        composable(GalleryDestination.Stories.route) {
+            PlaceholderScreen(title = stringResource(GalleryDestination.Stories.label))
         }
         composable(
             route = GalleryRoutes.VIEWER,
-            arguments = listOf(navArgument(ViewerViewModel.INDEX_ARG) { type = NavType.IntType }),
+            arguments = listOf(
+                navArgument(ViewerViewModel.INDEX_ARG) { type = NavType.IntType },
+                navArgument(ViewerViewModel.BUCKET_ARG) {
+                    type = NavType.LongType
+                    defaultValue = GalleryRoutes.NO_BUCKET
+                },
+            ),
         ) {
             ViewerScreen(onBack = { navController.popBackStack() })
         }
