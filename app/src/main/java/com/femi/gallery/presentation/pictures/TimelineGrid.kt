@@ -56,7 +56,7 @@ private const val ContentTypeMedia = 1
 private const val ZoomStep = 1.25f
 
 /**
- * The day-grouped photo grid with pinch-to-zoom columns and a fast scroller. Shared by the
+ * The grouped photo grid with pinch-to-zoom levels (days, months, years) and a fast scroller. Shared by the
  * Pictures tab and album screens; callers own the paging items and column count.
  *
  * [topInset] reserves space at the top of the grid (e.g. for the status bar).
@@ -65,7 +65,7 @@ private const val ZoomStep = 1.25f
 fun TimelineGrid(
     items: LazyPagingItems<MediaItem>,
     sections: List<TimelineSection>,
-    columns: Int,
+    zoom: TimelineZoom,
     onMediaClick: (mediaIndex: Int, item: MediaItem) -> Unit,
     onMediaLongClick: (item: MediaItem) -> Unit,
     onZoomIn: () -> Unit,
@@ -91,7 +91,7 @@ fun TimelineGrid(
             .pinchToChangeColumns(onZoomIn = onZoomIn, onZoomOut = onZoomOut),
     ) {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            columns = GridCells.Fixed(zoom.columns),
             state = gridState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = topInset),
@@ -102,7 +102,7 @@ fun TimelineGrid(
                 count = layout.totalCount,
                 key = { gridIndex ->
                     if (layout.isHeader(gridIndex)) {
-                        "day-${layout.sections[layout.sectionIndexAt(gridIndex)].epochDay}"
+                        "${zoom.granularity}-${layout.sections[layout.sectionIndexAt(gridIndex)].epochDay}"
                     } else {
                         val mediaIndex = layout.mediaIndexAt(gridIndex)
                         items.peekOrNull(mediaIndex)?.id ?: (-mediaIndex - 1L)
@@ -117,7 +117,7 @@ fun TimelineGrid(
             ) { gridIndex ->
                 if (layout.isHeader(gridIndex)) {
                     val section = layout.sections[layout.sectionIndexAt(gridIndex)]
-                    DayHeader(text = labeler.dayLabel(section.epochDay))
+                    DayHeader(text = labeler.headerLabel(section.epochDay, zoom.granularity))
                 } else {
                     val mediaIndex = layout.mediaIndexAt(gridIndex)
                     val item = items.getOrNull(mediaIndex)
@@ -140,7 +140,7 @@ fun TimelineGrid(
                 if (layout.sections.isEmpty()) {
                     ""
                 } else {
-                    labeler.monthLabel(layout.sections[layout.sectionIndexAt(gridIndex)].epochDay)
+                    labeler.scrollLabel(layout.sections[layout.sectionIndexAt(gridIndex)].epochDay, zoom.granularity)
                 }
             },
         )

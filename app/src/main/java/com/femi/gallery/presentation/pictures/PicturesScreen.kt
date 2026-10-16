@@ -27,8 +27,8 @@ fun PicturesScreen(
     viewModel: PicturesViewModel = hiltViewModel(),
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
-    val sections by viewModel.sections.collectAsStateWithLifecycle()
-    val columns by viewModel.columns.collectAsStateWithLifecycle()
+    val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
+    val zoom by viewModel.timeline.zoom.collectAsStateWithLifecycle()
     val selectionState by viewModel.selection.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -45,13 +45,13 @@ fun PicturesScreen(
         TimelineGrid(
             items = items,
             sections = sections,
-            columns = columns,
+            zoom = zoom,
             onMediaClick = { mediaIndex, item ->
                 if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex)
             },
             onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
-            onZoomIn = viewModel::zoomIn,
-            onZoomOut = viewModel::zoomOut,
+            onZoomIn = viewModel.timeline::zoomIn,
+            onZoomOut = viewModel.timeline::zoomOut,
             topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
             selectionActive = selectionState.active,
             selectedIds = selectionState.ids,

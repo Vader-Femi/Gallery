@@ -46,8 +46,8 @@ fun AlbumScreen(
     viewModel: AlbumViewModel = hiltViewModel(),
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
-    val sections by viewModel.sections.collectAsStateWithLifecycle()
-    val columns by viewModel.columns.collectAsStateWithLifecycle()
+    val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
+    val zoom by viewModel.timeline.zoom.collectAsStateWithLifecycle()
     val title by viewModel.title.collectAsStateWithLifecycle()
     val selectionState by viewModel.selection.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -93,7 +93,7 @@ fun AlbumScreen(
             TimelineGrid(
                 items = items,
                 sections = sections,
-                columns = columns,
+                zoom = zoom,
                 onMediaClick = { mediaIndex, item ->
                     if (selectionState.active) {
                         viewModel.selection.toggle(item.toRef())
@@ -102,8 +102,8 @@ fun AlbumScreen(
                     }
                 },
                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
-                onZoomIn = viewModel::zoomIn,
-                onZoomOut = viewModel::zoomOut,
+                onZoomIn = viewModel.timeline::zoomIn,
+                onZoomOut = viewModel.timeline::zoomOut,
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,

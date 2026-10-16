@@ -1,6 +1,7 @@
 package com.femi.gallery.domain.model
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 object TimelineGrouper {
@@ -35,5 +36,31 @@ object TimelineGrouper {
         }
         sections.add(TimelineSection(currentDay, sectionStart, dateAddedSeconds.size - sectionStart))
         return sections
+    }
+
+    /**
+     * Merges day sections into months or years. Sections stay contiguous because the input is
+     * ordered, so neighbours with the same period just have their counts added.
+     */
+    fun regroup(daySections: List<TimelineSection>, granularity: TimelineGranularity): List<TimelineSection> {
+        if (granularity == TimelineGranularity.Day || daySections.isEmpty()) return daySections
+
+        val result = ArrayList<TimelineSection>()
+        for (section in daySections) {
+            val date = LocalDate.ofEpochDay(section.epochDay)
+            val periodStart = when (granularity) {
+                TimelineGranularity.Month -> date.withDayOfMonth(1)
+                TimelineGranularity.Year -> date.withDayOfYear(1)
+                TimelineGranularity.Day -> date
+            }.toEpochDay()
+
+            val last = result.lastOrNull()
+            if (last != null && last.epochDay == periodStart) {
+                result[result.lastIndex] = last.copy(count = last.count + section.count)
+            } else {
+                result.add(TimelineSection(periodStart, section.startIndex, section.count))
+            }
+        }
+        return result
     }
 }
