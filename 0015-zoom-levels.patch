@@ -1,0 +1,518 @@
+From ab461e5c255eae6a681f115ebbbcc272f4f857c8 Mon Sep 17 00:00:00 2001
+From: Claude <claude@example.com>
+Date: Fri, 16 Oct 2026 11:43:49 +0000
+Subject: [PATCH] Patch 15: month and year zoom levels
+
+- Pinch steps: day (2-5 columns) -> month -> year; headers and fast-scroll bubble follow the level
+- Day sections are merged into months/years in memory (no extra query)
+- TimelineZoomState shared by Pictures and albums
+- Tests for regrouping and zoom steps
+---
+ .../gallery/domain/model/TimelineGrouper.kt   | 27 ++++++++++
+ .../gallery/domain/model/TimelineSection.kt   |  8 ++-
+ .../presentation/albums/AlbumScreen.kt        | 10 ++--
+ .../presentation/albums/AlbumViewModel.kt     | 20 ++-----
+ .../presentation/pictures/DayLabeler.kt       | 15 ++++++
+ .../presentation/pictures/PicturesScreen.kt   | 10 ++--
+ .../pictures/PicturesViewModel.kt             | 26 +--------
+ .../presentation/pictures/TimelineGrid.kt     | 12 ++---
+ .../presentation/pictures/TimelineZoom.kt     | 54 +++++++++++++++++++
+ .../domain/model/TimelineGrouperTest.kt       | 43 +++++++++++++++
+ .../presentation/pictures/TimelineZoomTest.kt | 25 +++++++++
+ 11 files changed, 192 insertions(+), 58 deletions(-)
+ create mode 100644 app/src/main/java/com/femi/gallery/presentation/pictures/TimelineZoom.kt
+ create mode 100644 app/src/test/java/com/femi/gallery/presentation/pictures/TimelineZoomTest.kt
+
+diff --git a/app/src/main/java/com/femi/gallery/domain/model/TimelineGrouper.kt b/app/src/main/java/com/femi/gallery/domain/model/TimelineGrouper.kt
+index 8e8b91e..9f65797 100644
+--- a/app/src/main/java/com/femi/gallery/domain/model/TimelineGrouper.kt
++++ b/app/src/main/java/com/femi/gallery/domain/model/TimelineGrouper.kt
+@@ -1,6 +1,7 @@
+ package com.femi.gallery.domain.model
+ 
+ import java.time.Instant
++import java.time.LocalDate
+ import java.time.ZoneId
+ 
+ object TimelineGrouper {
+@@ -36,4 +37,30 @@ object TimelineGrouper {
+         sections.add(TimelineSection(currentDay, sectionStart, dateAddedSeconds.size - sectionStart))
+         return sections
+     }
++
++    /**
++     * Merges day sections into months or years. Sections stay contiguous because the input is
++     * ordered, so neighbours with the same period just have their counts added.
++     */
++    fun regroup(daySections: List<TimelineSection>, granularity: TimelineGranularity): List<TimelineSection> {
++        if (granularity == TimelineGranularity.Day || daySections.isEmpty()) return daySections
++
++        val result = ArrayList<TimelineSection>()
++        for (section in daySections) {
++            val date = LocalDate.ofEpochDay(section.epochDay)
++            val periodStart = when (granularity) {
++                TimelineGranularity.Month -> date.withDayOfMonth(1)
++                TimelineGranularity.Year -> date.withDayOfYear(1)
++                TimelineGranularity.Day -> date
++            }.toEpochDay()
++
++            val last = result.lastOrNull()
++            if (last != null && last.epochDay == periodStart) {
++                result[result.lastIndex] = last.copy(count = last.count + section.count)
++            } else {
++                result.add(TimelineSection(periodStart, section.startIndex, section.count))
++            }
++        }
++        return result
++    }
+ }
+diff --git a/app/src/main/java/com/femi/gallery/domain/model/TimelineSection.kt b/app/src/main/java/com/femi/gallery/domain/model/TimelineSection.kt
+index e8d007d..6cdef59 100644
+--- a/app/src/main/java/com/femi/gallery/domain/model/TimelineSection.kt
++++ b/app/src/main/java/com/femi/gallery/domain/model/TimelineSection.kt
+@@ -1,9 +1,15 @@
+ package com.femi.gallery.domain.model
+ 
+-/** A run of consecutive media items captured on the same local calendar day. */
++/**
++ * A run of consecutive media items that share a day, month or year, depending on the
++ * [TimelineGranularity] it was built for. [epochDay] is the first day of that period.
++ */
+ data class TimelineSection(
+     val epochDay: Long,
+     /** Index of the section's first item in the full, newest-first media list. */
+     val startIndex: Int,
+     val count: Int,
+ )
++
++/** How coarsely the timeline is grouped. */
++enum class TimelineGranularity { Day, Month, Year }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
+index f46e6cb..2561ca8 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
+@@ -46,8 +46,8 @@ fun AlbumScreen(
+     viewModel: AlbumViewModel = hiltViewModel(),
+ ) {
+     val items = viewModel.media.collectAsLazyPagingItems()
+-    val sections by viewModel.sections.collectAsStateWithLifecycle()
+-    val columns by viewModel.columns.collectAsStateWithLifecycle()
++    val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
++    val zoom by viewModel.timeline.zoom.collectAsStateWithLifecycle()
+     val title by viewModel.title.collectAsStateWithLifecycle()
+     val selectionState by viewModel.selection.state.collectAsStateWithLifecycle()
+     val context = LocalContext.current
+@@ -93,7 +93,7 @@ fun AlbumScreen(
+             TimelineGrid(
+                 items = items,
+                 sections = sections,
+-                columns = columns,
++                zoom = zoom,
+                 onMediaClick = { mediaIndex, item ->
+                     if (selectionState.active) {
+                         viewModel.selection.toggle(item.toRef())
+@@ -102,8 +102,8 @@ fun AlbumScreen(
+                     }
+                 },
+                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
+-                onZoomIn = viewModel::zoomIn,
+-                onZoomOut = viewModel::zoomOut,
++                onZoomIn = viewModel.timeline::zoomIn,
++                onZoomOut = viewModel.timeline::zoomOut,
+                 modifier = Modifier.weight(1f),
+                 selectionActive = selectionState.active,
+                 selectedIds = selectionState.ids,
+diff --git a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumViewModel.kt
+index 2565fec..fc95ad6 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumViewModel.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumViewModel.kt
+@@ -7,7 +7,6 @@ import androidx.paging.PagingData
+ import androidx.paging.cachedIn
+ import com.femi.gallery.domain.model.MediaItem
+ import com.femi.gallery.domain.model.SpecialAlbums
+-import com.femi.gallery.domain.model.TimelineSection
+ import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
+ import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
+ import com.femi.gallery.domain.usecase.ObserveAlbumsUseCase
+@@ -16,19 +15,17 @@ import com.femi.gallery.domain.usecase.RefreshMediaUseCase
+ import com.femi.gallery.domain.usecase.RequestDeleteUseCase
+ import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
+ import com.femi.gallery.domain.usecase.RequestTrashUseCase
++import com.femi.gallery.presentation.pictures.TimelineZoomState
+ import com.femi.gallery.presentation.selection.MediaSelectionController
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import kotlinx.coroutines.flow.Flow
+-import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.SharingStarted
+ import kotlinx.coroutines.flow.StateFlow
+-import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.flow.map
+ import kotlinx.coroutines.flow.stateIn
+-import kotlinx.coroutines.flow.update
+ import javax.inject.Inject
+ 
+-/** One album's photos, grouped by day just like the Pictures tab. */
++/** One album's photos, grouped and zoomable just like the Pictures tab. */
+ @HiltViewModel
+ class AlbumViewModel @Inject constructor(
+     savedStateHandle: SavedStateHandle,
+@@ -49,8 +46,7 @@ class AlbumViewModel @Inject constructor(
+     val media: Flow<PagingData<MediaItem>> =
+         getPagedMedia(bucketId = bucketId).cachedIn(viewModelScope)
+ 
+-    val sections: StateFlow<List<TimelineSection>> = observeTimeline(bucketId)
+-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
++    val timeline = TimelineZoomState(viewModelScope, observeTimeline(bucketId))
+ 
+     /** Folder name, looked up from the album list so it never needs to travel through navigation. */
+     val title: StateFlow<String> = observeAlbums()
+@@ -66,19 +62,9 @@ class AlbumViewModel @Inject constructor(
+         requestDelete = requestDelete,
+     )
+ 
+-    private val _columns = MutableStateFlow(DEFAULT_COLUMNS)
+-    val columns: StateFlow<Int> = _columns.asStateFlow()
+-
+-    fun zoomIn() = _columns.update { (it - 1).coerceAtLeast(MIN_COLUMNS) }
+-
+-    fun zoomOut() = _columns.update { (it + 1).coerceAtMost(MAX_COLUMNS) }
+-
+     fun onResumed() = refreshMedia()
+ 
+     companion object {
+         const val BUCKET_ARG = "bucketId"
+-        private const val MIN_COLUMNS = 2
+-        private const val DEFAULT_COLUMNS = 3
+-        private const val MAX_COLUMNS = 6
+     }
+ }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/DayLabeler.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/DayLabeler.kt
+index 2622939..4ca4ba3 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/DayLabeler.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/DayLabeler.kt
+@@ -1,5 +1,6 @@
+ package com.femi.gallery.presentation.pictures
+ 
++import com.femi.gallery.domain.model.TimelineGranularity
+ import java.time.LocalDate
+ import java.time.format.DateTimeFormatter
+ import java.util.Locale
+@@ -13,6 +14,7 @@ class DayLabeler(
+     private val sameYear = DateTimeFormatter.ofPattern("EEE, MMM d", locale)
+     private val otherYear = DateTimeFormatter.ofPattern("MMM d, yyyy", locale)
+     private val month = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
++    private val year = DateTimeFormatter.ofPattern("yyyy", locale)
+ 
+     fun dayLabel(epochDay: Long): String {
+         val date = LocalDate.ofEpochDay(epochDay)
+@@ -25,4 +27,17 @@ class DayLabeler(
+     }
+ 
+     fun monthLabel(epochDay: Long): String = LocalDate.ofEpochDay(epochDay).format(month)
++
++    fun yearLabel(epochDay: Long): String = LocalDate.ofEpochDay(epochDay).format(year)
++
++    /** Section header: "Today", "October 2026" or "2025", depending on the zoom level. */
++    fun headerLabel(epochDay: Long, granularity: TimelineGranularity): String = when (granularity) {
++        TimelineGranularity.Day -> dayLabel(epochDay)
++        TimelineGranularity.Month -> monthLabel(epochDay)
++        TimelineGranularity.Year -> yearLabel(epochDay)
++    }
++
++    /** What the fast-scroll bubble shows: a month, or a year when zoomed all the way out. */
++    fun scrollLabel(epochDay: Long, granularity: TimelineGranularity): String =
++        if (granularity == TimelineGranularity.Year) yearLabel(epochDay) else monthLabel(epochDay)
+ }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+index 11029b3..8558526 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+@@ -27,8 +27,8 @@ fun PicturesScreen(
+     viewModel: PicturesViewModel = hiltViewModel(),
+ ) {
+     val items = viewModel.media.collectAsLazyPagingItems()
+-    val sections by viewModel.sections.collectAsStateWithLifecycle()
+-    val columns by viewModel.columns.collectAsStateWithLifecycle()
++    val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
++    val zoom by viewModel.timeline.zoom.collectAsStateWithLifecycle()
+     val selectionState by viewModel.selection.state.collectAsStateWithLifecycle()
+     val context = LocalContext.current
+ 
+@@ -45,13 +45,13 @@ fun PicturesScreen(
+         TimelineGrid(
+             items = items,
+             sections = sections,
+-            columns = columns,
++            zoom = zoom,
+             onMediaClick = { mediaIndex, item ->
+                 if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex)
+             },
+             onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
+-            onZoomIn = viewModel::zoomIn,
+-            onZoomOut = viewModel::zoomOut,
++            onZoomIn = viewModel.timeline::zoomIn,
++            onZoomOut = viewModel.timeline::zoomOut,
+             topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+             selectionActive = selectionState.active,
+             selectedIds = selectionState.ids,
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
+index 1432e7e..505c781 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
+@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
+ import androidx.paging.PagingData
+ import androidx.paging.cachedIn
+ import com.femi.gallery.domain.model.MediaItem
+-import com.femi.gallery.domain.model.TimelineSection
+ import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
+ import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
+ import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
+@@ -16,12 +15,6 @@ import com.femi.gallery.domain.usecase.RequestTrashUseCase
+ import com.femi.gallery.presentation.selection.MediaSelectionController
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import kotlinx.coroutines.flow.Flow
+-import kotlinx.coroutines.flow.MutableStateFlow
+-import kotlinx.coroutines.flow.SharingStarted
+-import kotlinx.coroutines.flow.StateFlow
+-import kotlinx.coroutines.flow.asStateFlow
+-import kotlinx.coroutines.flow.stateIn
+-import kotlinx.coroutines.flow.update
+ import javax.inject.Inject
+ 
+ @HiltViewModel
+@@ -37,8 +30,8 @@ class PicturesViewModel @Inject constructor(
+ 
+     val media: Flow<PagingData<MediaItem>> = getPagedMedia().cachedIn(viewModelScope)
+ 
+-    val sections: StateFlow<List<TimelineSection>> = observeTimeline()
+-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
++    /** Pinch-to-zoom level and the day/month/year sections that go with it. */
++    val timeline = TimelineZoomState(viewModelScope, observeTimeline())
+ 
+     val selection = MediaSelectionController(
+         scope = viewModelScope,
+@@ -49,20 +42,5 @@ class PicturesViewModel @Inject constructor(
+         requestDelete = requestDelete,
+     )
+ 
+-    private val _columns = MutableStateFlow(DEFAULT_COLUMNS)
+-    val columns: StateFlow<Int> = _columns.asStateFlow()
+-
+-    /** Pinch out: bigger thumbnails, fewer columns. */
+-    fun zoomIn() = _columns.update { (it - 1).coerceAtLeast(MIN_COLUMNS) }
+-
+-    /** Pinch in: smaller thumbnails, more columns. */
+-    fun zoomOut() = _columns.update { (it + 1).coerceAtMost(MAX_COLUMNS) }
+-
+     fun onResumed() = refreshMedia()
+-
+-    private companion object {
+-        const val MIN_COLUMNS = 2
+-        const val DEFAULT_COLUMNS = 3
+-        const val MAX_COLUMNS = 6
+-    }
+ }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineGrid.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineGrid.kt
+index d374fb6..0949dfb 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineGrid.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineGrid.kt
+@@ -56,7 +56,7 @@ private const val ContentTypeMedia = 1
+ private const val ZoomStep = 1.25f
+ 
+ /**
+- * The day-grouped photo grid with pinch-to-zoom columns and a fast scroller. Shared by the
++ * The grouped photo grid with pinch-to-zoom levels (days, months, years) and a fast scroller. Shared by the
+  * Pictures tab and album screens; callers own the paging items and column count.
+  *
+  * [topInset] reserves space at the top of the grid (e.g. for the status bar).
+@@ -65,7 +65,7 @@ private const val ZoomStep = 1.25f
+ fun TimelineGrid(
+     items: LazyPagingItems<MediaItem>,
+     sections: List<TimelineSection>,
+-    columns: Int,
++    zoom: TimelineZoom,
+     onMediaClick: (mediaIndex: Int, item: MediaItem) -> Unit,
+     onMediaLongClick: (item: MediaItem) -> Unit,
+     onZoomIn: () -> Unit,
+@@ -91,7 +91,7 @@ fun TimelineGrid(
+             .pinchToChangeColumns(onZoomIn = onZoomIn, onZoomOut = onZoomOut),
+     ) {
+         LazyVerticalGrid(
+-            columns = GridCells.Fixed(columns),
++            columns = GridCells.Fixed(zoom.columns),
+             state = gridState,
+             modifier = Modifier.fillMaxSize(),
+             contentPadding = PaddingValues(top = topInset),
+@@ -102,7 +102,7 @@ fun TimelineGrid(
+                 count = layout.totalCount,
+                 key = { gridIndex ->
+                     if (layout.isHeader(gridIndex)) {
+-                        "day-${layout.sections[layout.sectionIndexAt(gridIndex)].epochDay}"
++                        "${zoom.granularity}-${layout.sections[layout.sectionIndexAt(gridIndex)].epochDay}"
+                     } else {
+                         val mediaIndex = layout.mediaIndexAt(gridIndex)
+                         items.peekOrNull(mediaIndex)?.id ?: (-mediaIndex - 1L)
+@@ -117,7 +117,7 @@ fun TimelineGrid(
+             ) { gridIndex ->
+                 if (layout.isHeader(gridIndex)) {
+                     val section = layout.sections[layout.sectionIndexAt(gridIndex)]
+-                    DayHeader(text = labeler.dayLabel(section.epochDay))
++                    DayHeader(text = labeler.headerLabel(section.epochDay, zoom.granularity))
+                 } else {
+                     val mediaIndex = layout.mediaIndexAt(gridIndex)
+                     val item = items.getOrNull(mediaIndex)
+@@ -140,7 +140,7 @@ fun TimelineGrid(
+                 if (layout.sections.isEmpty()) {
+                     ""
+                 } else {
+-                    labeler.monthLabel(layout.sections[layout.sectionIndexAt(gridIndex)].epochDay)
++                    labeler.scrollLabel(layout.sections[layout.sectionIndexAt(gridIndex)].epochDay, zoom.granularity)
+                 }
+             },
+         )
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineZoom.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineZoom.kt
+new file mode 100644
+index 0000000..73a2fb0
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineZoom.kt
+@@ -0,0 +1,54 @@
++package com.femi.gallery.presentation.pictures
++
++import com.femi.gallery.domain.model.TimelineGranularity
++import com.femi.gallery.domain.model.TimelineGrouper
++import com.femi.gallery.domain.model.TimelineSection
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.SharingStarted
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.combine
++import kotlinx.coroutines.flow.stateIn
++import kotlinx.coroutines.flow.update
++
++/**
++ * The pinch-to-zoom steps, from most to least detailed: larger day thumbnails, smaller day
++ * thumbnails, then whole months, then whole years.
++ */
++enum class TimelineZoom(val granularity: TimelineGranularity, val columns: Int) {
++    Day2(TimelineGranularity.Day, 2),
++    Day3(TimelineGranularity.Day, 3),
++    Day4(TimelineGranularity.Day, 4),
++    Day5(TimelineGranularity.Day, 5),
++    Month6(TimelineGranularity.Month, 6),
++    Year7(TimelineGranularity.Year, 7);
++
++    /** Pinch out: bigger thumbnails. */
++    fun zoomedIn(): TimelineZoom = entries.getOrElse(ordinal - 1) { this }
++
++    /** Pinch in: smaller thumbnails, coarser grouping. */
++    fun zoomedOut(): TimelineZoom = entries.getOrElse(ordinal + 1) { this }
++
++    companion object {
++        val Default = Day3
++    }
++}
++
++/** Current zoom level plus the sections regrouped to match it. Shared by Pictures and albums. */
++class TimelineZoomState(
++    scope: CoroutineScope,
++    daySections: Flow<List<TimelineSection>>,
++) {
++    private val _zoom = MutableStateFlow(TimelineZoom.Default)
++    val zoom: StateFlow<TimelineZoom> = _zoom.asStateFlow()
++
++    val sections: StateFlow<List<TimelineSection>> =
++        combine(daySections, _zoom) { days, zoom -> TimelineGrouper.regroup(days, zoom.granularity) }
++            .stateIn(scope, SharingStarted.Eagerly, emptyList())
++
++    fun zoomIn() = _zoom.update { it.zoomedIn() }
++
++    fun zoomOut() = _zoom.update { it.zoomedOut() }
++}
+diff --git a/app/src/test/java/com/femi/gallery/domain/model/TimelineGrouperTest.kt b/app/src/test/java/com/femi/gallery/domain/model/TimelineGrouperTest.kt
+index 33a067f..6ee28fd 100644
+--- a/app/src/test/java/com/femi/gallery/domain/model/TimelineGrouperTest.kt
++++ b/app/src/test/java/com/femi/gallery/domain/model/TimelineGrouperTest.kt
+@@ -35,4 +35,47 @@ class TimelineGrouperTest {
+         val sections = TimelineGrouper.group(longArrayOf(5 * day), ZoneOffset.UTC)
+         assertEquals(listOf(TimelineSection(5, 0, 1)), sections)
+     }
++
++    @Test
++    fun regroupByMonthMergesNeighbouringDays() {
++        // 2026-10-15, 2026-10-03, 2026-09-30, 2026-09-01, 2025-12-31
++        val days = listOf(
++            TimelineSection(java.time.LocalDate.of(2026, 10, 15).toEpochDay(), 0, 3),
++            TimelineSection(java.time.LocalDate.of(2026, 10, 3).toEpochDay(), 3, 2),
++            TimelineSection(java.time.LocalDate.of(2026, 9, 30).toEpochDay(), 5, 4),
++            TimelineSection(java.time.LocalDate.of(2026, 9, 1).toEpochDay(), 9, 1),
++            TimelineSection(java.time.LocalDate.of(2025, 12, 31).toEpochDay(), 10, 6),
++        )
++
++        val months = TimelineGrouper.regroup(days, TimelineGranularity.Month)
++
++        assertEquals(
++            listOf(
++                TimelineSection(java.time.LocalDate.of(2026, 10, 1).toEpochDay(), 0, 5),
++                TimelineSection(java.time.LocalDate.of(2026, 9, 1).toEpochDay(), 5, 5),
++                TimelineSection(java.time.LocalDate.of(2025, 12, 1).toEpochDay(), 10, 6),
++            ),
++            months,
++        )
++    }
++
++    @Test
++    fun regroupByYearAndDayUnchanged() {
++        val days = listOf(
++            TimelineSection(java.time.LocalDate.of(2026, 10, 15).toEpochDay(), 0, 3),
++            TimelineSection(java.time.LocalDate.of(2026, 1, 2).toEpochDay(), 3, 2),
++            TimelineSection(java.time.LocalDate.of(2025, 6, 1).toEpochDay(), 5, 1),
++        )
++
++        val years = TimelineGrouper.regroup(days, TimelineGranularity.Year)
++
++        assertEquals(
++            listOf(
++                TimelineSection(java.time.LocalDate.of(2026, 1, 1).toEpochDay(), 0, 5),
++                TimelineSection(java.time.LocalDate.of(2025, 1, 1).toEpochDay(), 5, 1),
++            ),
++            years,
++        )
++        assertEquals(days, TimelineGrouper.regroup(days, TimelineGranularity.Day))
++    }
+ }
+diff --git a/app/src/test/java/com/femi/gallery/presentation/pictures/TimelineZoomTest.kt b/app/src/test/java/com/femi/gallery/presentation/pictures/TimelineZoomTest.kt
+new file mode 100644
+index 0000000..8883f02
+--- /dev/null
++++ b/app/src/test/java/com/femi/gallery/presentation/pictures/TimelineZoomTest.kt
+@@ -0,0 +1,25 @@
++package com.femi.gallery.presentation.pictures
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++
++class TimelineZoomTest {
++
++    @Test
++    fun zoomingInStopsAtTheMostDetailedLevel() {
++        assertEquals(TimelineZoom.Day2, TimelineZoom.Day2.zoomedIn())
++        assertEquals(TimelineZoom.Day2, TimelineZoom.Day3.zoomedIn())
++    }
++
++    @Test
++    fun zoomingOutStopsAtTheCoarsestLevel() {
++        assertEquals(TimelineZoom.Year7, TimelineZoom.Year7.zoomedOut())
++        assertEquals(TimelineZoom.Year7, TimelineZoom.Month6.zoomedOut())
++    }
++
++    @Test
++    fun levelsGetDenserAsYouZoomOut() {
++        val columns = TimelineZoom.entries.map { it.columns }
++        assertEquals(columns.sorted(), columns)
++    }
++}
+-- 
+2.43.0
+
