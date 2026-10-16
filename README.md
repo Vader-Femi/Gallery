@@ -18,7 +18,7 @@ This project closes that gap. It is a **Samsung Gallery–style app for Pixel (a
 - stays **fast on very large libraries** by paging, using system thumbnails and never loading the whole library into memory;
 - **reflects changes immediately** — a photo taken with the camera shows up as soon as it is saved.
 
-It is a personal project, developed and tested on a Pixel running Android 17.
+It is a personal project, developed and tested on a **Pixel 7 running Android 17**, and released to the public domain so anyone can use it for anything.
 
 ---
 
@@ -213,7 +213,7 @@ When you favorite, trash or permanently delete files, Android asks you to confir
 - **Trashed photos may not open full-size in the viewer**; thumbnails always show. This depends on how a given Android version exposes trashed files.
 - **System confirmation dialogs** appear for every favorite / trash / delete action, and very large selections show several in a row.
 - **Zoom level is not remembered** between launches.
-- Tested on one device (Pixel, Android 17). Other devices and manufacturers' MediaStore quirks are untested.
+- Tested on one device (Pixel 7, Android 17). Other devices and manufacturers' MediaStore quirks are untested.
 
 ---
 
@@ -234,11 +234,16 @@ The app was built incrementally as a series of reviewable patches:
 | 14 | Recycle bin and Favorites | Restore, delete forever, favorites album |
 | 15 | Zoom levels | Month and year views |
 | 16 | README | This document |
+| 17 | License | Released into the public domain (Unlicense) |
 
 ---
 
-## Disclaimer and license
+## License
+
+This project is released into the **public domain** under [The Unlicense](LICENSE). You can copy, modify, publish, use, compile, sell or distribute it, in source or binary form, for any purpose, commercial or not, with no conditions — no attribution required.
+
+The libraries it depends on (Jetpack Compose, Hilt, Coil, Media3 and others) are separate projects under their own licenses, mostly Apache 2.0. If you distribute a built app, those libraries' own notices still apply to the parts you ship.
+
+## Disclaimer
 
 This is an independent personal project. "Samsung" and "Samsung Gallery" are trademarks of Samsung Electronics; "Google", "Pixel" and "Google Photos" are trademarks of Google LLC. They are mentioned only to describe what this app is inspired by and what it replaces for its author.
-
-No license has been chosen yet.
