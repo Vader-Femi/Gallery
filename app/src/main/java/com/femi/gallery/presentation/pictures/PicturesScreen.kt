@@ -1,15 +1,25 @@
 package com.femi.gallery.presentation.pictures
 
+import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.femi.gallery.domain.model.toRef
+import com.femi.gallery.presentation.common.HideBottomBarWhile
+import com.femi.gallery.presentation.common.shareUris
+import com.femi.gallery.presentation.selection.SelectionBars
+import com.femi.gallery.presentation.selection.WriteRequestHandler
 
 @Composable
 fun PicturesScreen(
@@ -20,20 +30,44 @@ fun PicturesScreen(
     val items = viewModel.media.collectAsLazyPagingItems()
     val sections by viewModel.sections.collectAsStateWithLifecycle()
     val columns by viewModel.columns.collectAsStateWithLifecycle()
+    val selectionState by viewModel.selection.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LifecycleResumeEffect(viewModel) {
         viewModel.onResumed()
         onPauseOrDispose { }
     }
 
-    TimelineGrid(
-        items = items,
-        sections = sections,
-        columns = columns,
-        onMediaClick = onMediaClick,
-        onZoomIn = viewModel::zoomIn,
-        onZoomOut = viewModel::zoomOut,
-        modifier = modifier,
-        topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
-    )
+    HideBottomBarWhile(selectionState.active)
+    BackHandler(enabled = selectionState.active) { viewModel.selection.clear() }
+    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel.selection::clear)
+
+    Box(modifier = modifier.fillMaxSize()) {
+        TimelineGrid(
+            items = items,
+            sections = sections,
+            columns = columns,
+            onMediaClick = { mediaIndex, item ->
+                if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex)
+            },
+            onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
+            onZoomIn = viewModel::zoomIn,
+            onZoomOut = viewModel::zoomOut,
+            topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+            selectionActive = selectionState.active,
+            selectedIds = selectionState.ids,
+        )
+
+        if (selectionState.active) {
+            SelectionBars(
+                count = selectionState.count,
+                allFavorite = selectionState.selected.values.let { refs -> refs.isNotEmpty() && refs.all { it.isFavorite } },
+                onClose = viewModel.selection::clear,
+                onSelectAll = viewModel.selection::selectAll,
+                onShare = { shareUris(context, selectionState.selected.values.map { Uri.parse(it.uri) }) },
+                onFavorite = viewModel.selection::toggleFavoriteSelected,
+                onDelete = viewModel.selection::trashSelected,
+            )
+        }
+    }
 }

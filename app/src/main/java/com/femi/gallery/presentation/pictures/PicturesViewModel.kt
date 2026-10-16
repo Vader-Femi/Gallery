@@ -6,9 +6,13 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.TimelineSection
+import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
 import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
 import com.femi.gallery.domain.usecase.RefreshMediaUseCase
+import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
+import com.femi.gallery.domain.usecase.RequestTrashUseCase
+import com.femi.gallery.presentation.selection.MediaSelectionController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +27,9 @@ import javax.inject.Inject
 class PicturesViewModel @Inject constructor(
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
+    getAllRefs: GetAllMediaRefsUseCase,
+    requestTrash: RequestTrashUseCase,
+    requestFavorite: RequestFavoriteUseCase,
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
@@ -30,6 +37,14 @@ class PicturesViewModel @Inject constructor(
 
     val sections: StateFlow<List<TimelineSection>> = observeTimeline()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val selection = MediaSelectionController(
+        scope = viewModelScope,
+        bucketId = null,
+        getAllRefs = getAllRefs,
+        requestTrash = requestTrash,
+        requestFavorite = requestFavorite,
+    )
 
     private val _columns = MutableStateFlow(DEFAULT_COLUMNS)
     val columns: StateFlow<Int> = _columns.asStateFlow()

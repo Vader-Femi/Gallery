@@ -1,7 +1,9 @@
 package com.femi.gallery.presentation.pictures
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
@@ -18,8 +20,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -60,11 +66,14 @@ fun TimelineGrid(
     items: LazyPagingItems<MediaItem>,
     sections: List<TimelineSection>,
     columns: Int,
-    onMediaClick: (mediaIndex: Int) -> Unit,
+    onMediaClick: (mediaIndex: Int, item: MediaItem) -> Unit,
+    onMediaLongClick: (item: MediaItem) -> Unit,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     modifier: Modifier = Modifier,
     topInset: Dp = 0.dp,
+    selectionActive: Boolean = false,
+    selectedIds: Set<Long> = emptySet(),
 ) {
     val layout = remember(sections) { TimelineLayout(sections) }
     val labeler = rememberDayLabeler()
@@ -111,9 +120,13 @@ fun TimelineGrid(
                     DayHeader(text = labeler.dayLabel(section.epochDay))
                 } else {
                     val mediaIndex = layout.mediaIndexAt(gridIndex)
+                    val item = items.getOrNull(mediaIndex)
                     MediaCell(
-                        item = items.getOrNull(mediaIndex),
-                        onClick = { onMediaClick(mediaIndex) },
+                        item = item,
+                        selectionActive = selectionActive,
+                        selected = item != null && item.id in selectedIds,
+                        onClick = { if (item != null) onMediaClick(mediaIndex, item) },
+                        onLongClick = { if (item != null) onMediaLongClick(item) },
                     )
                 }
             }
@@ -145,20 +158,30 @@ private fun DayHeader(text: String) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MediaCell(item: MediaItem?, onClick: () -> Unit) {
+private fun MediaCell(
+    item: MediaItem?,
+    selectionActive: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(enabled = item != null, onClick = onClick),
+            .combinedClickable(enabled = item != null, onClick = onClick, onLongClick = onLongClick),
     ) {
         if (item != null) {
             AsyncImage(
                 model = item.uri,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+                // Selected photos shrink slightly, like Samsung Gallery.
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(if (selected) 6.dp else 0.dp),
             )
             if (item.isVideo) {
                 VideoBadge(
@@ -168,7 +191,48 @@ private fun MediaCell(item: MediaItem?, onClick: () -> Unit) {
                         .padding(4.dp),
                 )
             }
+            if (item.isFavorite && !selectionActive) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(6.dp)
+                        .size(14.dp),
+                )
+            }
+            if (selectionActive) {
+                SelectionIndicator(
+                    selected = selected,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun SelectionIndicator(selected: Boolean, modifier: Modifier = Modifier) {
+    val base = modifier
+        .size(22.dp)
+        .clip(CircleShape)
+    if (selected) {
+        Box(
+            modifier = base.background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    } else {
+        Box(modifier = base.background(Color.Black.copy(alpha = 0.25f)).border(2.dp, Color.White, CircleShape))
     }
 }
 

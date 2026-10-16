@@ -7,10 +7,14 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.TimelineSection
+import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
 import com.femi.gallery.domain.usecase.ObserveAlbumsUseCase
 import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
 import com.femi.gallery.domain.usecase.RefreshMediaUseCase
+import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
+import com.femi.gallery.domain.usecase.RequestTrashUseCase
+import com.femi.gallery.presentation.selection.MediaSelectionController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +33,9 @@ class AlbumViewModel @Inject constructor(
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
     observeAlbums: ObserveAlbumsUseCase,
+    getAllRefs: GetAllMediaRefsUseCase,
+    requestTrash: RequestTrashUseCase,
+    requestFavorite: RequestFavoriteUseCase,
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
@@ -44,6 +51,14 @@ class AlbumViewModel @Inject constructor(
     val title: StateFlow<String> = observeAlbums()
         .map { albums -> albums.firstOrNull { it.bucketId == bucketId }?.name.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    val selection = MediaSelectionController(
+        scope = viewModelScope,
+        bucketId = bucketId,
+        getAllRefs = getAllRefs,
+        requestTrash = requestTrash,
+        requestFavorite = requestFavorite,
+    )
 
     private val _columns = MutableStateFlow(DEFAULT_COLUMNS)
     val columns: StateFlow<Int> = _columns.asStateFlow()

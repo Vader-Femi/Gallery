@@ -8,6 +8,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -17,6 +19,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.femi.gallery.presentation.common.ChromeState
+import com.femi.gallery.presentation.common.LocalChromeState
 import com.femi.gallery.presentation.navigation.GalleryDestination
 import com.femi.gallery.presentation.navigation.GalleryNavHost
 import com.femi.gallery.presentation.navigation.GalleryRoutes
@@ -35,7 +39,9 @@ fun GalleryApp(
     }
 
     if (state.hasAccess) {
-        GalleryScaffold()
+        CompositionLocalProvider(LocalChromeState provides remember { ChromeState() }) {
+            GalleryScaffold()
+        }
     } else {
         PermissionScreen(
             permanentlyDenied = state.permanentlyDenied,
@@ -49,6 +55,7 @@ private fun GalleryScaffold() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val chrome = LocalChromeState.current
     val isAlbumDetail = currentDestination?.route == GalleryRoutes.ALBUM
     val isTopLevel = isAlbumDetail || GalleryDestination.entries.any { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
@@ -58,7 +65,7 @@ private fun GalleryScaffold() {
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             // The full-screen viewer takes over the whole window.
-            if (isTopLevel) NavigationBar {
+            if (isTopLevel && !chrome.bottomBarHidden) NavigationBar {
                 GalleryDestination.entries.forEach { destination ->
                     NavigationBarItem(
                         selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||

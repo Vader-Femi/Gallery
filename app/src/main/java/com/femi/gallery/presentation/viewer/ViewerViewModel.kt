@@ -7,8 +7,12 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetMediaDetailsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
+import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
+import com.femi.gallery.domain.usecase.RequestTrashUseCase
+import com.femi.gallery.presentation.selection.MediaSelectionController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +27,9 @@ class ViewerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     private val getMediaDetails: GetMediaDetailsUseCase,
+    getAllRefs: GetAllMediaRefsUseCase,
+    requestTrash: RequestTrashUseCase,
+    requestFavorite: RequestFavoriteUseCase,
 ) : ViewModel() {
 
     /** Position of the tapped item in the full, newest-first media list. */
@@ -38,6 +45,15 @@ class ViewerViewModel @Inject constructor(
             initialKey = (startIndex - PRELOAD_BEFORE).coerceAtLeast(0),
             bucketId = bucketId,
         ).cachedIn(viewModelScope)
+
+    /** Favorite / trash for the photo on screen (the viewer has no multi-selection). */
+    val actions = MediaSelectionController(
+        scope = viewModelScope,
+        bucketId = bucketId,
+        getAllRefs = getAllRefs,
+        requestTrash = requestTrash,
+        requestFavorite = requestFavorite,
+    )
 
     private val _details = MutableStateFlow<MediaDetails?>(null)
     val details: StateFlow<MediaDetails?> = _details.asStateFlow()

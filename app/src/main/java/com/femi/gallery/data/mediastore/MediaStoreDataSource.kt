@@ -3,6 +3,7 @@ package com.femi.gallery.data.mediastore
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
+import android.content.IntentSender
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.provider.MediaStore
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.MediaType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -121,6 +123,43 @@ class MediaStoreDataSource @Inject constructor(
         } ?: emptyList()
     }
 
+    suspend fun loadRefs(bucketId: Long? = null): List<MediaRef> = withContext(io) {
+        val projection = arrayOf(
+            MediaStore.MediaColumns._ID,
+            MediaStore.Files.FileColumns.MEDIA_TYPE,
+            MediaStore.MediaColumns.IS_FAVORITE,
+        )
+        resolver.query(collectionUri, projection, queryArgs(sorted = true, bucketId = bucketId), null)
+            ?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+                val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+                val favoriteColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_FAVORITE)
+                buildList(cursor.count) {
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getLong(idColumn)
+                        val isVideo = cursor.getInt(typeColumn) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                        add(MediaRef(id, contentUri(id, isVideo).toString(), cursor.getInt(favoriteColumn) == 1))
+                    }
+                }
+            } ?: emptyList()
+    }
+
+    /**
+     * Each request is a system dialog ("Allow Gallery to move 12 items to trash?"). Very large
+     * selections are split because a single request has to fit in one binder transaction.
+     */
+    suspend fun createTrashRequests(uris: List<String>, trash: Boolean): List<IntentSender> = withContext(io) {
+        uris.chunked(WRITE_BATCH_SIZE).map { chunk ->
+            MediaStore.createTrashRequest(resolver, chunk.map(Uri::parse), trash).intentSender
+        }
+    }
+
+    suspend fun createFavoriteRequests(uris: List<String>, favorite: Boolean): List<IntentSender> = withContext(io) {
+        uris.chunked(WRITE_BATCH_SIZE).map { chunk ->
+            MediaStore.createFavoriteRequest(resolver, chunk.map(Uri::parse), favorite).intentSender
+        }
+    }
+
     private fun contentUri(id: Long, isVideo: Boolean): Uri {
         val base = if (isVideo) {
             MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -198,6 +237,7 @@ class MediaStoreDataSource @Inject constructor(
 
     private companion object {
         const val CAMERA_PATH = "DCIM/Camera/"
+        const val WRITE_BATCH_SIZE = 500
 
         val PROJECTION = arrayOf(
             MediaStore.MediaColumns._ID,

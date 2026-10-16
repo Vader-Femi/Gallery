@@ -8,6 +8,21 @@
     <string name="timeline_today">Today</string>
     <string name="timeline_yesterday">Yesterday</string>
 
+    <string name="selection_count">%d selected</string>
+    <string name="selection_none">Select items</string>
+    <string name="selection_select_all">Select all</string>
+    <string name="selection_cancel">Cancel selection</string>
+    <string name="action_share">Share</string>
+    <string name="action_favorite">Favorite</string>
+    <string name="action_unfavorite">Unfavorite</string>
+    <string name="action_delete">Delete</string>
+    <plurals name="toast_trashed">
+        <item quantity="one">Moved %d item to the trash</item>
+        <item quantity="other">Moved %d items to the trash</item>
+    </plurals>
+    <string name="toast_favorited">Added to favorites</string>
+    <string name="toast_unfavorited">Removed from favorites</string>
+
     <string name="album_unnamed">Other</string>
     <plurals name="album_item_count">
         <item quantity="one">%d item</item>

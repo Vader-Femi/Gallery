@@ -14,8 +14,10 @@ import com.femi.gallery.data.mediastore.MediaStoreDataSource
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
+import com.femi.gallery.domain.model.WriteRequest
 import com.femi.gallery.domain.repository.MediaRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.FlowPreview
@@ -74,6 +76,14 @@ class MediaRepositoryImpl @Inject constructor(
     ).flow
 
     override suspend fun getDetails(item: MediaItem): MediaDetails = exifReader.read(item)
+
+    override suspend fun getAllRefs(bucketId: Long?): List<MediaRef> = dataSource.loadRefs(bucketId)
+
+    override suspend fun createTrashRequests(uris: List<String>, trash: Boolean): List<WriteRequest> =
+        dataSource.createTrashRequests(uris, trash).map(::WriteRequest)
+
+    override suspend fun createFavoriteRequests(uris: List<String>, favorite: Boolean): List<WriteRequest> =
+        dataSource.createFavoriteRequests(uris, favorite).map(::WriteRequest)
 
     override fun observeTimeline(bucketId: Long?): Flow<List<TimelineSection>> =
         changeTriggers()

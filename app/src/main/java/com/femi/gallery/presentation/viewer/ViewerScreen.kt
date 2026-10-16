@@ -24,6 +24,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
@@ -32,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +62,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
@@ -65,7 +70,9 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.findActivity
+import com.femi.gallery.presentation.selection.WriteRequestHandler
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -86,6 +93,12 @@ fun ViewerScreen(
     val context = LocalContext.current
 
     ImmersiveMode(enabled = !chromeVisible)
+    WriteRequestHandler(batches = viewModel.actions.batches, onSuccess = {})
+
+    // Leave the viewer once the last photo has been moved to the trash.
+    LaunchedEffect(items.loadState.refresh, items.itemCount) {
+        if (items.loadState.refresh is LoadState.NotLoading && items.itemCount == 0) onBack()
+    }
 
     Box(
         modifier = Modifier
@@ -130,7 +143,10 @@ fun ViewerScreen(
             ) {
                 if (current != null) {
                     BottomBar(
+                        isFavorite = current.isFavorite,
                         onShare = { shareMedia(context, current) },
+                        onFavorite = { viewModel.actions.toggleFavorite(listOf(current.toRef())) },
+                        onDelete = { viewModel.actions.trash(listOf(current.toRef())) },
                         onInfo = { viewModel.showDetails(current) },
                     )
                 }
@@ -273,7 +289,13 @@ private fun TopBar(item: MediaItem, onBack: () -> Unit) {
 }
 
 @Composable
-private fun BottomBar(onShare: () -> Unit, onInfo: () -> Unit) {
+private fun BottomBar(
+    isFavorite: Boolean,
+    onShare: () -> Unit,
+    onFavorite: () -> Unit,
+    onDelete: () -> Unit,
+    onInfo: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -284,6 +306,16 @@ private fun BottomBar(onShare: () -> Unit, onInfo: () -> Unit) {
     ) {
         IconButton(onClick = onShare) {
             Icon(Icons.Outlined.Share, stringResource(R.string.viewer_share), tint = Color.White)
+        }
+        IconButton(onClick = onFavorite) {
+            Icon(
+                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = stringResource(if (isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                tint = Color.White,
+            )
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Outlined.Delete, stringResource(R.string.action_delete), tint = Color.White)
         }
         IconButton(onClick = onInfo) {
             Icon(Icons.Outlined.Info, stringResource(R.string.viewer_info), tint = Color.White)
