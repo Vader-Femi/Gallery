@@ -15,7 +15,6 @@ import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.search.SearchCriteria
-import com.femi.gallery.domain.model.MediaType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
