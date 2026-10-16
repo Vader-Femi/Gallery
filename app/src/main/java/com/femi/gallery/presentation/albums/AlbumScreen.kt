@@ -1,6 +1,5 @@
 package com.femi.gallery.presentation.albums
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +16,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,9 +32,10 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
-import com.femi.gallery.presentation.common.shareUris
 import com.femi.gallery.presentation.pictures.TimelineGrid
 import com.femi.gallery.presentation.selection.SelectionBars
+import com.femi.gallery.presentation.selection.libraryActions
+import com.femi.gallery.presentation.selection.recycleBinActions
 import com.femi.gallery.presentation.selection.WriteRequestHandler
 
 @Composable
@@ -73,11 +74,21 @@ fun AlbumScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.viewer_back))
                 }
                 Text(
-                    text = title.ifEmpty { stringResource(R.string.album_unnamed) },
+                    text = when {
+                        viewModel.isRecycleBin -> stringResource(R.string.album_trash)
+                        viewModel.isFavorites -> stringResource(R.string.album_favorites)
+                        else -> title.ifEmpty { stringResource(R.string.album_unnamed) }
+                    },
                     style = MaterialTheme.typography.titleLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
+                if (viewModel.isRecycleBin && items.itemCount > 0) {
+                    TextButton(onClick = viewModel.selection::emptyBin) {
+                        Text(stringResource(R.string.action_empty_bin))
+                    }
+                }
             }
             TimelineGrid(
                 items = items,
@@ -102,12 +113,13 @@ fun AlbumScreen(
         if (selectionState.active) {
             SelectionBars(
                 count = selectionState.count,
-                allFavorite = selectionState.selected.values.let { refs -> refs.isNotEmpty() && refs.all { it.isFavorite } },
+                actions = if (viewModel.isRecycleBin) {
+                    recycleBinActions(viewModel.selection)
+                } else {
+                    libraryActions(context, selectionState, viewModel.selection)
+                },
                 onClose = viewModel.selection::clear,
                 onSelectAll = viewModel.selection::selectAll,
-                onShare = { shareUris(context, selectionState.selected.values.map { Uri.parse(it.uri) }) },
-                onFavorite = viewModel.selection::toggleFavoriteSelected,
-                onDelete = viewModel.selection::trashSelected,
             )
         }
     }

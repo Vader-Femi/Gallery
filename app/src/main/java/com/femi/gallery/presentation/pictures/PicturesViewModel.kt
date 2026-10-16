@@ -10,6 +10,7 @@ import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
 import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
 import com.femi.gallery.domain.usecase.RefreshMediaUseCase
+import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.presentation.selection.MediaSelectionController
@@ -30,6 +31,7 @@ class PicturesViewModel @Inject constructor(
     getAllRefs: GetAllMediaRefsUseCase,
     requestTrash: RequestTrashUseCase,
     requestFavorite: RequestFavoriteUseCase,
+    requestDelete: RequestDeleteUseCase,
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
@@ -44,6 +46,7 @@ class PicturesViewModel @Inject constructor(
         getAllRefs = getAllRefs,
         requestTrash = requestTrash,
         requestFavorite = requestFavorite,
+        requestDelete = requestDelete,
     )
 
     private val _columns = MutableStateFlow(DEFAULT_COLUMNS)

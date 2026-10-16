@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.Album
+import com.femi.gallery.domain.model.SpecialAlbums
 
 @Composable
 fun AlbumsScreen(
@@ -83,7 +84,11 @@ private fun AlbumCard(album: Album, onClick: () -> Unit) {
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         )
         Text(
-            text = album.name.ifEmpty { stringResource(R.string.album_unnamed) },
+            text = when (album.bucketId) {
+                SpecialAlbums.FAVORITES -> stringResource(R.string.album_favorites)
+                SpecialAlbums.TRASH -> stringResource(R.string.album_trash)
+                else -> album.name.ifEmpty { stringResource(R.string.album_unnamed) }
+            },
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

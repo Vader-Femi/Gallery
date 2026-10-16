@@ -7,9 +7,11 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetMediaDetailsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
+import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.presentation.selection.MediaSelectionController
@@ -30,10 +32,13 @@ class ViewerViewModel @Inject constructor(
     getAllRefs: GetAllMediaRefsUseCase,
     requestTrash: RequestTrashUseCase,
     requestFavorite: RequestFavoriteUseCase,
+    requestDelete: RequestDeleteUseCase,
 ) : ViewModel() {
 
     /** Position of the tapped item in the full, newest-first media list. */
     val startIndex: Int = savedStateHandle.get<Int>(INDEX_ARG) ?: 0
+
+    val isRecycleBin: Boolean get() = bucketId == SpecialAlbums.TRASH
 
     /** Set when opened from an album, so swiping stays inside that album. */
     private val bucketId: Long? =
@@ -53,6 +58,7 @@ class ViewerViewModel @Inject constructor(
         getAllRefs = getAllRefs,
         requestTrash = requestTrash,
         requestFavorite = requestFavorite,
+        requestDelete = requestDelete,
     )
 
     private val _details = MutableStateFlow<MediaDetails?>(null)

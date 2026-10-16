@@ -58,4 +58,6 @@ private fun successMessage(context: android.content.Context, batch: WriteBatch):
     WriteKind.Trash -> context.resources.getQuantityString(R.plurals.toast_trashed, batch.itemCount, batch.itemCount)
     WriteKind.Favorite -> context.getString(R.string.toast_favorited)
     WriteKind.Unfavorite -> context.getString(R.string.toast_unfavorited)
+    WriteKind.Restore -> context.resources.getQuantityString(R.plurals.toast_restored, batch.itemCount, batch.itemCount)
+    WriteKind.DeleteForever -> context.resources.getQuantityString(R.plurals.toast_deleted_forever, batch.itemCount, batch.itemCount)
 }

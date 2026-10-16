@@ -12,10 +12,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,16 +26,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.femi.gallery.R
 
+/** One button in the bottom action bar. */
+class SelectionAction(
+    val icon: ImageVector,
+    val label: String,
+    val onClick: () -> Unit,
+)
+
 /** Top "N selected" bar and bottom action bar shown while selecting photos. */
 @Composable
 fun BoxScope.SelectionBars(
     count: Int,
-    allFavorite: Boolean,
+    actions: List<SelectionAction>,
     onClose: () -> Unit,
     onSelectAll: () -> Unit,
-    onShare: () -> Unit,
-    onFavorite: () -> Unit,
-    onDelete: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.align(Alignment.TopCenter),
@@ -75,14 +75,9 @@ fun BoxScope.SelectionBars(
                 .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            BarAction(Icons.Outlined.Share, stringResource(R.string.action_share), count > 0, onShare)
-            BarAction(
-                icon = if (allFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                label = stringResource(if (allFavorite) R.string.action_unfavorite else R.string.action_favorite),
-                enabled = count > 0,
-                onClick = onFavorite,
-            )
-            BarAction(Icons.Outlined.Delete, stringResource(R.string.action_delete), count > 0, onDelete)
+            actions.forEach { action ->
+                BarAction(action.icon, action.label, enabled = count > 0, onClick = action.onClick)
+            }
         }
     }
 }

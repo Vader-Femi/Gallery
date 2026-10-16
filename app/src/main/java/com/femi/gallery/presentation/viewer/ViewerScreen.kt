@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
@@ -142,13 +144,21 @@ fun ViewerScreen(
                 modifier = Modifier.align(Alignment.BottomCenter),
             ) {
                 if (current != null) {
-                    BottomBar(
-                        isFavorite = current.isFavorite,
-                        onShare = { shareMedia(context, current) },
-                        onFavorite = { viewModel.actions.toggleFavorite(listOf(current.toRef())) },
-                        onDelete = { viewModel.actions.trash(listOf(current.toRef())) },
-                        onInfo = { viewModel.showDetails(current) },
-                    )
+                    if (viewModel.isRecycleBin) {
+                        RecycleBinBottomBar(
+                            onRestore = { viewModel.actions.restore(listOf(current.toRef())) },
+                            onDeleteForever = { viewModel.actions.deleteForever(listOf(current.toRef())) },
+                            onInfo = { viewModel.showDetails(current) },
+                        )
+                    } else {
+                        BottomBar(
+                            isFavorite = current.isFavorite,
+                            onShare = { shareMedia(context, current) },
+                            onFavorite = { viewModel.actions.toggleFavorite(listOf(current.toRef())) },
+                            onDelete = { viewModel.actions.trash(listOf(current.toRef())) },
+                            onInfo = { viewModel.showDetails(current) },
+                        )
+                    }
                 }
             }
         }
@@ -316,6 +326,28 @@ private fun BottomBar(
         }
         IconButton(onClick = onDelete) {
             Icon(Icons.Outlined.Delete, stringResource(R.string.action_delete), tint = Color.White)
+        }
+        IconButton(onClick = onInfo) {
+            Icon(Icons.Outlined.Info, stringResource(R.string.viewer_info), tint = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun RecycleBinBottomBar(onRestore: () -> Unit, onDeleteForever: () -> Unit, onInfo: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))))
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        IconButton(onClick = onRestore) {
+            Icon(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore), tint = Color.White)
+        }
+        IconButton(onClick = onDeleteForever) {
+            Icon(Icons.Outlined.DeleteForever, stringResource(R.string.action_delete_forever), tint = Color.White)
         }
         IconButton(onClick = onInfo) {
             Icon(Icons.Outlined.Info, stringResource(R.string.viewer_info), tint = Color.White)

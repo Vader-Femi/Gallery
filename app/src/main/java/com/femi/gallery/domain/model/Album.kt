@@ -11,3 +11,13 @@ data class Album(
     val coverUri: String,
     val itemCount: Int,
 )
+
+/**
+ * Virtual albums that are not device folders. They reuse the album "bucket id" slot so every
+ * screen that can show one folder can also show these. Real bucket ids are 32-bit hashes, so
+ * they can never collide with these values.
+ */
+object SpecialAlbums {
+    const val FAVORITES = Long.MIN_VALUE + 1
+    const val TRASH = Long.MIN_VALUE + 2
+}

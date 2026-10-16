@@ -6,12 +6,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
 import com.femi.gallery.domain.usecase.ObserveAlbumsUseCase
 import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
 import com.femi.gallery.domain.usecase.RefreshMediaUseCase
+import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.presentation.selection.MediaSelectionController
@@ -36,10 +38,13 @@ class AlbumViewModel @Inject constructor(
     getAllRefs: GetAllMediaRefsUseCase,
     requestTrash: RequestTrashUseCase,
     requestFavorite: RequestFavoriteUseCase,
+    requestDelete: RequestDeleteUseCase,
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
     val bucketId: Long = checkNotNull(savedStateHandle.get<Long>(BUCKET_ARG))
+    val isRecycleBin: Boolean = bucketId == SpecialAlbums.TRASH
+    val isFavorites: Boolean = bucketId == SpecialAlbums.FAVORITES
 
     val media: Flow<PagingData<MediaItem>> =
         getPagedMedia(bucketId = bucketId).cachedIn(viewModelScope)
@@ -58,6 +63,7 @@ class AlbumViewModel @Inject constructor(
         getAllRefs = getAllRefs,
         requestTrash = requestTrash,
         requestFavorite = requestFavorite,
+        requestDelete = requestDelete,
     )
 
     private val _columns = MutableStateFlow(DEFAULT_COLUMNS)

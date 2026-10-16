@@ -12,6 +12,7 @@ import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
+import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.model.MediaType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -93,7 +94,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
             MediaStore.MediaColumns.RELATIVE_PATH,
         )
-        resolver.query(collectionUri, projection, queryArgs(sorted = true), null)?.use { cursor ->
+        val folders = resolver.query(collectionUri, projection, queryArgs(sorted = true), null)?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
             val bucketColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_ID)
@@ -121,6 +122,28 @@ class MediaStoreDataSource @Inject constructor(
                 .map { it.copy(itemCount = counts[it.bucketId] ?: 0) }
                 .sortedByDescending { it.relativePath == CAMERA_PATH } // stable: keeps recency order otherwise
         } ?: emptyList()
+
+        // Favorites first and the recycle bin last; both only appear when they have something in them.
+        listOfNotNull(loadCollection(SpecialAlbums.FAVORITES)) + folders + listOfNotNull(loadCollection(SpecialAlbums.TRASH))
+    }
+
+    /** A virtual album ([SpecialAlbums]) with its newest item as cover, or null when empty. */
+    private fun loadCollection(id: Long): Album? {
+        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.Files.FileColumns.MEDIA_TYPE)
+        return resolver.query(collectionUri, projection, queryArgs(sorted = true, bucketId = id), null)?.use { cursor ->
+            if (!cursor.moveToFirst()) {
+                null
+            } else {
+                val isVideo = cursor.getInt(1) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                Album(
+                    bucketId = id,
+                    name = "",
+                    relativePath = "",
+                    coverUri = contentUri(cursor.getLong(0), isVideo).toString(),
+                    itemCount = cursor.count,
+                )
+            }
+        }
     }
 
     suspend fun loadRefs(bucketId: Long? = null): List<MediaRef> = withContext(io) {
@@ -160,6 +183,12 @@ class MediaStoreDataSource @Inject constructor(
         }
     }
 
+    suspend fun createDeleteRequests(uris: List<String>): List<IntentSender> = withContext(io) {
+        uris.chunked(WRITE_BATCH_SIZE).map { chunk ->
+            MediaStore.createDeleteRequest(resolver, chunk.map(Uri::parse)).intentSender
+        }
+    }
+
     private fun contentUri(id: Long, isVideo: Boolean): Uri {
         val base = if (isVideo) {
             MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -175,9 +204,15 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
         )
-        if (bucketId != null) {
-            selection.append(" AND ${MediaStore.MediaColumns.BUCKET_ID} = ?")
-            selectionArgs.add(bucketId.toString())
+        when (bucketId) {
+            null -> Unit
+            SpecialAlbums.FAVORITES -> selection.append(" AND ${MediaStore.MediaColumns.IS_FAVORITE} = 1")
+            // Trashed items are hidden from normal queries; this asks for only those.
+            SpecialAlbums.TRASH -> putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_ONLY)
+            else -> {
+                selection.append(" AND ${MediaStore.MediaColumns.BUCKET_ID} = ?")
+                selectionArgs.add(bucketId.toString())
+            }
         }
         putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection.toString())
         putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs.toTypedArray())

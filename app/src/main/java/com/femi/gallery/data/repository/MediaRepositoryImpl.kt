@@ -82,6 +82,9 @@ class MediaRepositoryImpl @Inject constructor(
     override suspend fun createTrashRequests(uris: List<String>, trash: Boolean): List<WriteRequest> =
         dataSource.createTrashRequests(uris, trash).map(::WriteRequest)
 
+    override suspend fun createDeleteRequests(uris: List<String>): List<WriteRequest> =
+        dataSource.createDeleteRequests(uris).map(::WriteRequest)
+
     override suspend fun createFavoriteRequests(uris: List<String>, favorite: Boolean): List<WriteRequest> =
         dataSource.createFavoriteRequests(uris, favorite).map(::WriteRequest)
 

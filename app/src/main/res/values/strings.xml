@@ -20,6 +20,19 @@
         <item quantity="one">Moved %d item to the trash</item>
         <item quantity="other">Moved %d items to the trash</item>
     </plurals>
+    <string name="action_restore">Restore</string>
+    <string name="action_delete_forever">Delete forever</string>
+    <string name="action_empty_bin">Empty</string>
+    <plurals name="toast_restored">
+        <item quantity="one">Restored %d item</item>
+        <item quantity="other">Restored %d items</item>
+    </plurals>
+    <plurals name="toast_deleted_forever">
+        <item quantity="one">Permanently deleted %d item</item>
+        <item quantity="other">Permanently deleted %d items</item>
+    </plurals>
+    <string name="album_favorites">Favorites</string>
+    <string name="album_trash">Recycle bin</string>
     <string name="toast_favorited">Added to favorites</string>
     <string name="toast_unfavorited">Removed from favorites</string>
 

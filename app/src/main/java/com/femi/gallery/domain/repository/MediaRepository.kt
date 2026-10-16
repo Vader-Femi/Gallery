@@ -30,6 +30,9 @@ interface MediaRepository {
 
     suspend fun createFavoriteRequests(uris: List<String>, favorite: Boolean): List<WriteRequest>
 
+    /** Confirmation dialogs to delete [uris] permanently (used from the recycle bin). */
+    suspend fun createDeleteRequests(uris: List<String>): List<WriteRequest>
+
     /** Cheap check (MediaStore generation counter); invalidates the list only if something changed. */
     fun refreshIfChanged()
 }

@@ -1,6 +1,5 @@
 package com.femi.gallery.presentation.pictures
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,8 +16,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
-import com.femi.gallery.presentation.common.shareUris
 import com.femi.gallery.presentation.selection.SelectionBars
+import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.WriteRequestHandler
 
 @Composable
@@ -61,12 +60,9 @@ fun PicturesScreen(
         if (selectionState.active) {
             SelectionBars(
                 count = selectionState.count,
-                allFavorite = selectionState.selected.values.let { refs -> refs.isNotEmpty() && refs.all { it.isFavorite } },
+                actions = libraryActions(context, selectionState, viewModel.selection),
                 onClose = viewModel.selection::clear,
                 onSelectAll = viewModel.selection::selectAll,
-                onShare = { shareUris(context, selectionState.selected.values.map { Uri.parse(it.uri) }) },
-                onFavorite = viewModel.selection::toggleFavoriteSelected,
-                onDelete = viewModel.selection::trashSelected,
             )
         }
     }
