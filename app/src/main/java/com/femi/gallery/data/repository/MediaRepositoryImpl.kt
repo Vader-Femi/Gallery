@@ -8,8 +8,10 @@ import android.provider.MediaStore
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import com.femi.gallery.data.exif.ExifReader
 import com.femi.gallery.data.mediastore.MediaPagingSource
 import com.femi.gallery.data.mediastore.MediaStoreDataSource
+import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
@@ -27,6 +29,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
+import java.util.Collections
+import java.util.WeakHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,10 +38,12 @@ import javax.inject.Singleton
 class MediaRepositoryImpl @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val dataSource: MediaStoreDataSource,
+    private val exifReader: ExifReader,
 ) : MediaRepository {
 
-    @Volatile
-    private var currentSource: MediaPagingSource? = null
+    /** Live paging sources (grid and viewer each have one); weakly held so they can be collected. */
+    private val sources: MutableSet<MediaPagingSource> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<MediaPagingSource, Boolean>()))
 
     @Volatile
     private var indexedGeneration = -1L
@@ -48,11 +54,11 @@ class MediaRepositoryImpl @Inject constructor(
     )
 
     override fun refreshIfChanged() {
-        currentSource?.invalidateIfStale()
+        synchronized(sources) { sources.toList() }.forEach { it.invalidateIfStale() }
         if (dataSource.generation() != indexedGeneration) refreshSignal.tryEmit(Unit)
     }
 
-    override fun getPagedMedia(): Flow<PagingData<MediaItem>> = Pager(
+    override fun getPagedMedia(initialKey: Int?): Flow<PagingData<MediaItem>> = Pager(
         config = PagingConfig(
             pageSize = 120,
             initialLoadSize = 240,
@@ -60,10 +66,13 @@ class MediaRepositoryImpl @Inject constructor(
             enablePlaceholders = true,
             jumpThreshold = 240,
         ),
+        initialKey = initialKey,
         pagingSourceFactory = {
-            MediaPagingSource(dataSource, context).also { currentSource = it }
+            MediaPagingSource(dataSource, context).also { sources.add(it) }
         },
     ).flow
+
+    override suspend fun getDetails(item: MediaItem): MediaDetails = exifReader.read(item)
 
     @OptIn(FlowPreview::class)
     override fun observeTimeline(): Flow<List<TimelineSection>> =

@@ -1,6 +1,7 @@
 package com.femi.gallery.presentation.pictures
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
@@ -46,6 +47,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.presentation.viewer.formatDuration
 
 private const val ContentTypeHeader = 0
 private const val ContentTypeMedia = 1
@@ -55,6 +57,7 @@ private const val ZoomStep = 1.25f
 
 @Composable
 fun PicturesScreen(
+    onMediaClick: (mediaIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PicturesViewModel = hiltViewModel(),
 ) {
@@ -111,7 +114,11 @@ fun PicturesScreen(
                     val section = layout.sections[layout.sectionIndexAt(gridIndex)]
                     DayHeader(text = labeler.dayLabel(section.epochDay))
                 } else {
-                    MediaCell(item = items.getOrNull(layout.mediaIndexAt(gridIndex)))
+                    val mediaIndex = layout.mediaIndexAt(gridIndex)
+                    MediaCell(
+                        item = items.getOrNull(mediaIndex),
+                        onClick = { onMediaClick(mediaIndex) },
+                    )
                 }
             }
         }
@@ -143,11 +150,12 @@ private fun DayHeader(text: String) {
 }
 
 @Composable
-private fun MediaCell(item: MediaItem?) {
+private fun MediaCell(item: MediaItem?, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(enabled = item != null, onClick = onClick),
     ) {
         if (item != null) {
             AsyncImage(
@@ -188,18 +196,6 @@ private fun VideoBadge(durationMillis: Long, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(end = 2.dp),
         )
-    }
-}
-
-private fun formatDuration(millis: Long): String {
-    val totalSeconds = millis / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%d:%02d".format(minutes, seconds)
     }
 }
 

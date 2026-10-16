@@ -12,6 +12,7 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.request.Options
+import coil3.size.Dimension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -48,11 +49,15 @@ class MediaThumbnailFetcher(
         override fun create(data: CoilUri, options: Options, imageLoader: ImageLoader): Fetcher? {
             // Only MediaStore images and videos; everything else uses Coil's defaults.
             if (data.scheme != "content" || data.authority != "media") return null
+            // Large requests (the full-screen viewer) need real pixels, not a 512px thumbnail.
+            val requestedWidth = (options.size.width as? Dimension.Pixels)?.px ?: Int.MAX_VALUE
+            if (requestedWidth > MAX_THUMBNAIL_REQUEST) return null
             return MediaThumbnailFetcher(data, options)
         }
     }
 
     private companion object {
         const val THUMBNAIL_SIZE = 512
+        const val MAX_THUMBNAIL_REQUEST = 700
     }
 }

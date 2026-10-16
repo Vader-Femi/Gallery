@@ -9,5 +9,7 @@ import javax.inject.Inject
 class GetPagedMediaUseCase @Inject constructor(
     private val repository: MediaRepository,
 ) {
-    operator fun invoke(): Flow<PagingData<MediaItem>> = repository.getPagedMedia()
+    /** [initialKey] is the media index to start loading around (used by the viewer). */
+    operator fun invoke(initialKey: Int? = null): Flow<PagingData<MediaItem>> =
+        repository.getPagedMedia(initialKey)
 }

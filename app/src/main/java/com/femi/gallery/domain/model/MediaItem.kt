@@ -17,6 +17,8 @@ data class MediaItem(
     val durationMillis: Long,
     val bucketId: Long,
     val bucketName: String,
+    /** Folder relative to storage root, e.g. "DCIM/Camera/". */
+    val relativePath: String,
     val isFavorite: Boolean,
 ) {
     val isVideo: Boolean get() = type == MediaType.Video

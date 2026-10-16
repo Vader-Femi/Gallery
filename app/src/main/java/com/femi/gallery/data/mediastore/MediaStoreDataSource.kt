@@ -114,6 +114,7 @@ class MediaStoreDataSource @Inject constructor(
         val duration = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DURATION)
         val bucketId = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_ID)
         val bucketName = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
+        val relativePath = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
         val favorite = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_FAVORITE)
     }
 
@@ -140,6 +141,7 @@ class MediaStoreDataSource @Inject constructor(
             durationMillis = if (isVideo) getLong(c.duration) else 0L,
             bucketId = getLong(c.bucketId),
             bucketName = getString(c.bucketName).orEmpty(),
+            relativePath = getString(c.relativePath).orEmpty(),
             isFavorite = getInt(c.favorite) == 1,
         )
     }
@@ -158,6 +160,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.MediaColumns.DURATION,
             MediaStore.MediaColumns.BUCKET_ID,
             MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
+            MediaStore.MediaColumns.RELATIVE_PATH,
             MediaStore.MediaColumns.IS_FAVORITE,
         )
     }

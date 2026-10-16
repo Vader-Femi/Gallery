@@ -1,0 +1,1023 @@
+From f82978e330c5d7e5e38c9aa838379dc616f1023b Mon Sep 17 00:00:00 2001
+From: Claude <claude@example.com>
+Date: Thu, 15 Oct 2026 17:21:13 +0000
+Subject: [PATCH] Patch 10: timeline with day headers, pinch-to-zoom columns
+ and fast scroller
+
+- Domain: TimelineSection + TimelineGrouper (per-day sections from DATE_ADDED), observe use case
+- Data: loadDatesAdded query, repository flow that refreshes on MediaStore changes
+- Presentation: day headers (Today/Yesterday/date), pinch to change 2-6 columns,
+  Samsung-style fast scroller with month bubble, video duration badge
+- Remove debug labels
+- Unit tests for grouping and grid index mapping
+---
+ .../data/mediastore/MediaStoreDataSource.kt   |  50 +++-
+ .../data/repository/MediaRepositoryImpl.kt    |  51 ++++
+ .../gallery/domain/model/TimelineGrouper.kt   |  39 +++
+ .../gallery/domain/model/TimelineSection.kt   |   9 +
+ .../domain/repository/MediaRepository.kt      |   4 +
+ .../domain/usecase/ObserveTimelineUseCase.kt  |  12 +
+ .../presentation/pictures/DayLabeler.kt       |  28 ++
+ .../presentation/pictures/FastScroller.kt     | 158 +++++++++++
+ .../presentation/pictures/PicturesScreen.kt   | 253 ++++++++++++++----
+ .../pictures/PicturesViewModel.kt             |  27 ++
+ .../presentation/pictures/TimelineLayout.kt   |  40 +++
+ app/src/main/res/values/strings.xml           |   3 +
+ .../domain/model/TimelineGrouperTest.kt       |  38 +++
+ .../pictures/TimelineLayoutTest.kt            |  51 ++++
+ 14 files changed, 691 insertions(+), 72 deletions(-)
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/model/TimelineGrouper.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/model/TimelineSection.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/usecase/ObserveTimelineUseCase.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/presentation/pictures/DayLabeler.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/presentation/pictures/FastScroller.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/presentation/pictures/TimelineLayout.kt
+ create mode 100644 app/src/test/java/com/femi/gallery/domain/model/TimelineGrouperTest.kt
+ create mode 100644 app/src/test/java/com/femi/gallery/presentation/pictures/TimelineLayoutTest.kt
+
+diff --git a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+index 86d59d4..4d82cb6 100644
+--- a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
++++ b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+@@ -38,12 +38,32 @@ class MediaStoreDataSource @Inject constructor(
+ 
+     /** Total number of photos + videos (trashed and pending items are excluded by default). */
+     suspend fun count(): Int = withContext(io) {
+-        resolver.query(collectionUri, arrayOf(MediaStore.Files.FileColumns._ID), queryArgs(), null)
+-            ?.use { it.count } ?: 0
++        resolver.query(
++            collectionUri,
++            arrayOf(MediaStore.Files.FileColumns._ID),
++            queryArgs(sorted = false),
++            null,
++        )?.use { it.count } ?: 0
++    }
++
++    /** DATE_ADDED (epoch seconds) of every photo and video, newest first. Used to build day sections. */
++    suspend fun loadDatesAdded(): LongArray = withContext(io) {
++        resolver.query(
++            collectionUri,
++            arrayOf(MediaStore.MediaColumns.DATE_ADDED),
++            queryArgs(sorted = true),
++            null,
++        )?.use { cursor ->
++            val result = LongArray(cursor.count)
++            val column = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
++            var i = 0
++            while (cursor.moveToNext() && i < result.size) result[i++] = cursor.getLong(column)
++            result
++        } ?: LongArray(0)
+     }
+ 
+     suspend fun load(offset: Int, limit: Int): List<MediaItem> = withContext(io) {
+-        val args = queryArgs().apply {
++        val args = queryArgs(sorted = true).apply {
+             putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
+             putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
+         }
+@@ -55,7 +75,7 @@ class MediaStoreDataSource @Inject constructor(
+         } ?: emptyList()
+     }
+ 
+-    private fun queryArgs(): Bundle = Bundle().apply {
++    private fun queryArgs(sorted: Boolean): Bundle = Bundle().apply {
+         putString(
+             ContentResolver.QUERY_ARG_SQL_SELECTION,
+             "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)",
+@@ -67,16 +87,18 @@ class MediaStoreDataSource @Inject constructor(
+                 MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+             ),
+         )
+-        // DATE_TAKEN is NULL for many files (WhatsApp images, screenshots, downloads), which breaks
+-        // ordering. DATE_ADDED is always set and matches the capture time for camera photos.
+-        // MediaProvider rejects expressions like COALESCE in sort order, so a perfect
+-        // "date taken, else modified" ordering will come later from our own index.
+-        // Note: QUERY_ARG_SORT_COLUMNS/DIRECTION are ignored here (results came back oldest
+-        // first), so we pass a plain SQL sort clause instead.
+-        putString(
+-            ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
+-            "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC",
+-        )
++        if (sorted) {
++            // DATE_TAKEN is NULL for many files (WhatsApp images, screenshots, downloads), which breaks
++            // ordering. DATE_ADDED is always set and matches the capture time for camera photos.
++            // MediaProvider rejects expressions like COALESCE in sort order, so a perfect
++            // "date taken, else modified" ordering will come later from our own index.
++            // Note: QUERY_ARG_SORT_COLUMNS/DIRECTION are ignored here (results came back oldest
++            // first), so we pass a plain SQL sort clause instead.
++            putString(
++                ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
++                "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC",
++            )
++        }
+     }
+ 
+     private class Columns(cursor: Cursor) {
+diff --git a/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt b/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
+index badc1dc..20a71cd 100644
+--- a/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
++++ b/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
+@@ -1,15 +1,32 @@
+ package com.femi.gallery.data.repository
+ 
+ import android.content.Context
++import android.database.ContentObserver
++import android.os.Handler
++import android.os.Looper
++import android.provider.MediaStore
+ import androidx.paging.Pager
+ import androidx.paging.PagingConfig
+ import androidx.paging.PagingData
+ import com.femi.gallery.data.mediastore.MediaPagingSource
+ import com.femi.gallery.data.mediastore.MediaStoreDataSource
+ import com.femi.gallery.domain.model.MediaItem
++import com.femi.gallery.domain.model.TimelineGrouper
++import com.femi.gallery.domain.model.TimelineSection
+ import com.femi.gallery.domain.repository.MediaRepository
+ import dagger.hilt.android.qualifiers.ApplicationContext
++import kotlinx.coroutines.FlowPreview
++import kotlinx.coroutines.channels.BufferOverflow
++import kotlinx.coroutines.channels.awaitClose
+ import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.MutableSharedFlow
++import kotlinx.coroutines.flow.callbackFlow
++import kotlinx.coroutines.flow.conflate
++import kotlinx.coroutines.flow.debounce
++import kotlinx.coroutines.flow.distinctUntilChanged
++import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.flow.merge
++import kotlinx.coroutines.flow.onStart
+ import javax.inject.Inject
+ import javax.inject.Singleton
+ 
+@@ -22,8 +39,17 @@ class MediaRepositoryImpl @Inject constructor(
+     @Volatile
+     private var currentSource: MediaPagingSource? = null
+ 
++    @Volatile
++    private var indexedGeneration = -1L
++
++    private val refreshSignal = MutableSharedFlow<Unit>(
++        extraBufferCapacity = 1,
++        onBufferOverflow = BufferOverflow.DROP_OLDEST,
++    )
++
+     override fun refreshIfChanged() {
+         currentSource?.invalidateIfStale()
++        if (dataSource.generation() != indexedGeneration) refreshSignal.tryEmit(Unit)
+     }
+ 
+     override fun getPagedMedia(): Flow<PagingData<MediaItem>> = Pager(
+@@ -38,4 +64,29 @@ class MediaRepositoryImpl @Inject constructor(
+             MediaPagingSource(dataSource, context).also { currentSource = it }
+         },
+     ).flow
++
++    @OptIn(FlowPreview::class)
++    override fun observeTimeline(): Flow<List<TimelineSection>> =
++        merge(mediaChanges().debounce(CHANGE_DEBOUNCE_MS), refreshSignal)
++            .onStart { emit(Unit) }
++            .conflate()
++            .map {
++                indexedGeneration = dataSource.generation()
++                TimelineGrouper.group(dataSource.loadDatesAdded())
++            }
++            .distinctUntilChanged()
++
++    private fun mediaChanges(): Flow<Unit> = callbackFlow {
++        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
++            override fun onChange(selfChange: Boolean) {
++                trySend(Unit)
++            }
++        }
++        context.contentResolver.registerContentObserver(MediaStore.AUTHORITY_URI, true, observer)
++        awaitClose { context.contentResolver.unregisterContentObserver(observer) }
++    }
++
++    private companion object {
++        const val CHANGE_DEBOUNCE_MS = 300L
++    }
+ }
+diff --git a/app/src/main/java/com/femi/gallery/domain/model/TimelineGrouper.kt b/app/src/main/java/com/femi/gallery/domain/model/TimelineGrouper.kt
+new file mode 100644
+index 0000000..8e8b91e
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/model/TimelineGrouper.kt
+@@ -0,0 +1,39 @@
++package com.femi.gallery.domain.model
++
++import java.time.Instant
++import java.time.ZoneId
++
++object TimelineGrouper {
++
++    /**
++     * Groups a newest-first list of timestamps (epoch seconds) into per-day sections.
++     * Day boundaries are cached so the 50k-photo case does one date conversion per day,
++     * not per photo.
++     */
++    fun group(
++        dateAddedSeconds: LongArray,
++        zone: ZoneId = ZoneId.systemDefault(),
++    ): List<TimelineSection> {
++        if (dateAddedSeconds.isEmpty()) return emptyList()
++
++        val sections = ArrayList<TimelineSection>()
++        var currentDay = 0L
++        var dayStart = 0L
++        var dayEnd = 0L // exclusive
++        var sectionStart = 0
++
++        for (i in dateAddedSeconds.indices) {
++            val seconds = dateAddedSeconds[i]
++            if (i == 0 || seconds < dayStart || seconds >= dayEnd) {
++                if (i > 0) sections.add(TimelineSection(currentDay, sectionStart, i - sectionStart))
++                val date = Instant.ofEpochSecond(seconds).atZone(zone).toLocalDate()
++                currentDay = date.toEpochDay()
++                dayStart = date.atStartOfDay(zone).toEpochSecond()
++                dayEnd = date.plusDays(1).atStartOfDay(zone).toEpochSecond()
++                sectionStart = i
++            }
++        }
++        sections.add(TimelineSection(currentDay, sectionStart, dateAddedSeconds.size - sectionStart))
++        return sections
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/domain/model/TimelineSection.kt b/app/src/main/java/com/femi/gallery/domain/model/TimelineSection.kt
+new file mode 100644
+index 0000000..e8d007d
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/model/TimelineSection.kt
+@@ -0,0 +1,9 @@
++package com.femi.gallery.domain.model
++
++/** A run of consecutive media items captured on the same local calendar day. */
++data class TimelineSection(
++    val epochDay: Long,
++    /** Index of the section's first item in the full, newest-first media list. */
++    val startIndex: Int,
++    val count: Int,
++)
+diff --git a/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt b/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
+index 364b86b..c065c03 100644
+--- a/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
++++ b/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
+@@ -2,12 +2,16 @@ package com.femi.gallery.domain.repository
+ 
+ import androidx.paging.PagingData
+ import com.femi.gallery.domain.model.MediaItem
++import com.femi.gallery.domain.model.TimelineSection
+ import kotlinx.coroutines.flow.Flow
+ 
+ interface MediaRepository {
+     /** All photos and videos on the device, newest first. Refreshes itself when MediaStore changes. */
+     fun getPagedMedia(): Flow<PagingData<MediaItem>>
+ 
++    /** Per-day sections of the media list, recomputed when MediaStore changes. */
++    fun observeTimeline(): Flow<List<TimelineSection>>
++
+     /** Cheap check (MediaStore generation counter); invalidates the list only if something changed. */
+     fun refreshIfChanged()
+ }
+diff --git a/app/src/main/java/com/femi/gallery/domain/usecase/ObserveTimelineUseCase.kt b/app/src/main/java/com/femi/gallery/domain/usecase/ObserveTimelineUseCase.kt
+new file mode 100644
+index 0000000..d31fc3a
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/usecase/ObserveTimelineUseCase.kt
+@@ -0,0 +1,12 @@
++package com.femi.gallery.domain.usecase
++
++import com.femi.gallery.domain.model.TimelineSection
++import com.femi.gallery.domain.repository.MediaRepository
++import kotlinx.coroutines.flow.Flow
++import javax.inject.Inject
++
++class ObserveTimelineUseCase @Inject constructor(
++    private val repository: MediaRepository,
++) {
++    operator fun invoke(): Flow<List<TimelineSection>> = repository.observeTimeline()
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/DayLabeler.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/DayLabeler.kt
+new file mode 100644
+index 0000000..2622939
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/DayLabeler.kt
+@@ -0,0 +1,28 @@
++package com.femi.gallery.presentation.pictures
++
++import java.time.LocalDate
++import java.time.format.DateTimeFormatter
++import java.util.Locale
++
++class DayLabeler(
++    private val todayLabel: String,
++    private val yesterdayLabel: String,
++    locale: Locale = Locale.getDefault(),
++    private val today: LocalDate = LocalDate.now(),
++) {
++    private val sameYear = DateTimeFormatter.ofPattern("EEE, MMM d", locale)
++    private val otherYear = DateTimeFormatter.ofPattern("MMM d, yyyy", locale)
++    private val month = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
++
++    fun dayLabel(epochDay: Long): String {
++        val date = LocalDate.ofEpochDay(epochDay)
++        return when {
++            date == today -> todayLabel
++            date == today.minusDays(1) -> yesterdayLabel
++            date.year == today.year -> date.format(sameYear)
++            else -> date.format(otherYear)
++        }
++    }
++
++    fun monthLabel(epochDay: Long): String = LocalDate.ofEpochDay(epochDay).format(month)
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/FastScroller.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/FastScroller.kt
+new file mode 100644
+index 0000000..1ad8b53
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/FastScroller.kt
+@@ -0,0 +1,158 @@
++package com.femi.gallery.presentation.pictures
++
++import androidx.compose.animation.AnimatedVisibility
++import androidx.compose.animation.fadeIn
++import androidx.compose.animation.fadeOut
++import androidx.compose.foundation.background
++import androidx.compose.foundation.gestures.detectVerticalDragGestures
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.BoxScope
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxHeight
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.offset
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.width
++import androidx.compose.foundation.lazy.grid.LazyGridState
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.derivedStateOf
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableFloatStateOf
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.rememberUpdatedState
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.input.pointer.pointerInput
++import androidx.compose.ui.layout.onSizeChanged
++import androidx.compose.ui.platform.LocalDensity
++import androidx.compose.ui.unit.Dp
++import androidx.compose.ui.unit.IntOffset
++import androidx.compose.ui.unit.dp
++import kotlinx.coroutines.delay
++import kotlin.math.roundToInt
++
++private val ThumbHeight = 56.dp
++private val ThumbTouchWidth = 36.dp
++private const val HideDelayMs = 1_500L
++
++/**
++ * Samsung-style scrubber: appears while scrolling, can be dragged to jump anywhere in the
++ * timeline and shows the month under the thumb. Jumps are instant because the paged list
++ * has placeholders for every item.
++ */
++@Composable
++fun BoxScope.FastScroller(
++    gridState: LazyGridState,
++    totalItems: Int,
++    topInset: Dp,
++    labelFor: (gridIndex: Int) -> String,
++) {
++    val thumbHeightPx = with(LocalDensity.current) { ThumbHeight.toPx() }
++    val currentTotal by rememberUpdatedState(totalItems)
++    val currentLabelFor by rememberUpdatedState(labelFor)
++
++    var trackHeightPx by remember { mutableIntStateOf(0) }
++    var dragging by remember { mutableStateOf(false) }
++    var dragFraction by remember { mutableFloatStateOf(0f) }
++    var recentlyScrolled by remember { mutableStateOf(false) }
++
++    val scrolling = gridState.isScrollInProgress
++    LaunchedEffect(scrolling, dragging) {
++        if (scrolling || dragging) {
++            recentlyScrolled = true
++        } else {
++            delay(HideDelayMs)
++            recentlyScrolled = false
++        }
++    }
++
++    val scrollFraction by remember {
++        derivedStateOf {
++            val visibleCount = gridState.layoutInfo.visibleItemsInfo.size
++            val denominator = (currentTotal - visibleCount).coerceAtLeast(1)
++            (gridState.firstVisibleItemIndex.toFloat() / denominator).coerceIn(0f, 1f)
++        }
++    }
++
++    val fraction = if (dragging) dragFraction else scrollFraction
++    val maxIndex = (currentTotal - 1).coerceAtLeast(0)
++    val targetIndex = (fraction * maxIndex).roundToInt().coerceIn(0, maxIndex)
++
++    Box(
++        modifier = Modifier
++            .align(Alignment.TopEnd)
++            .fillMaxHeight()
++            .padding(top = topInset)
++            .onSizeChanged { trackHeightPx = it.height },
++    ) {
++        AnimatedVisibility(
++            visible = (recentlyScrolled || dragging) && currentTotal > 0,
++            enter = fadeIn(),
++            exit = fadeOut(),
++            modifier = Modifier.offset {
++                val travel = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
++                IntOffset(0, (travel * fraction).roundToInt())
++            },
++        ) {
++            Row(verticalAlignment = Alignment.CenterVertically) {
++                if (dragging) {
++                    Surface(
++                        shape = RoundedCornerShape(16.dp),
++                        color = MaterialTheme.colorScheme.inverseSurface,
++                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
++                        shadowElevation = 4.dp,
++                        modifier = Modifier.padding(end = 8.dp),
++                    ) {
++                        Text(
++                            text = currentLabelFor(targetIndex),
++                            style = MaterialTheme.typography.labelLarge,
++                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
++                        )
++                    }
++                }
++                Box(
++                    modifier = Modifier
++                        .width(ThumbTouchWidth)
++                        .height(ThumbHeight)
++                        .pointerInput(Unit) {
++                            detectVerticalDragGestures(
++                                onDragStart = {
++                                    dragFraction = scrollFraction
++                                    dragging = true
++                                },
++                                onDragEnd = { dragging = false },
++                                onDragCancel = { dragging = false },
++                                onVerticalDrag = { change, dragAmount ->
++                                    change.consume()
++                                    val travel = (trackHeightPx - thumbHeightPx).coerceAtLeast(1f)
++                                    dragFraction = (dragFraction + dragAmount / travel).coerceIn(0f, 1f)
++                                    val last = (currentTotal - 1).coerceAtLeast(0)
++                                    gridState.requestScrollToItem((dragFraction * last).roundToInt())
++                                },
++                            )
++                        },
++                    contentAlignment = Alignment.CenterEnd,
++                ) {
++                    Box(
++                        modifier = Modifier
++                            .padding(end = 4.dp)
++                            .width(8.dp)
++                            .height(ThumbHeight - 8.dp)
++                            .background(
++                                color = MaterialTheme.colorScheme.primary,
++                                shape = RoundedCornerShape(4.dp),
++                            ),
++                    )
++                }
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+index 1a1b13e..a5d098c 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+@@ -1,40 +1,57 @@
+ package com.femi.gallery.presentation.pictures
+ 
+ import androidx.compose.foundation.background
++import androidx.compose.foundation.gestures.awaitEachGesture
++import androidx.compose.foundation.gestures.awaitFirstDown
++import androidx.compose.foundation.gestures.calculateZoom
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.WindowInsets
+ import androidx.compose.foundation.layout.aspectRatio
++import androidx.compose.foundation.layout.asPaddingValues
+ import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.statusBars
+ import androidx.compose.foundation.lazy.grid.GridCells
++import androidx.compose.foundation.lazy.grid.GridItemSpan
+ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
++import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.material.icons.Icons
+-import androidx.compose.material.icons.filled.PlayCircle
++import androidx.compose.material.icons.filled.PlayArrow
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.remember
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+-import androidx.compose.ui.draw.clip
+-import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.input.pointer.PointerEventPass
++import androidx.compose.ui.input.pointer.pointerInput
++import androidx.compose.ui.layout.ContentScale
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.unit.dp
+-import androidx.compose.ui.unit.sp
+ import androidx.hilt.navigation.compose.hiltViewModel
+ import androidx.lifecycle.compose.LifecycleResumeEffect
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import androidx.paging.compose.LazyPagingItems
+ import androidx.paging.compose.collectAsLazyPagingItems
+ import coil3.compose.AsyncImage
++import com.femi.gallery.R
++import com.femi.gallery.domain.model.MediaItem
+ 
+-/**
+- * Minimal grid used to verify the data layer. The real timeline (date headers, pinch-to-zoom
+- * columns, fast scroller) replaces this in the next patch.
+- */
+-/** Temporary: prints each item's id and file name on its cell to compare with `adb` output. */
+-private const val SHOW_DEBUG_LABELS = true
++private const val ContentTypeHeader = 0
++private const val ContentTypeMedia = 1
++
++/** Pinch distance (as a ratio) needed to move one zoom level. */
++private const val ZoomStep = 1.25f
+ 
+ @Composable
+ fun PicturesScreen(
+@@ -42,70 +59,190 @@ fun PicturesScreen(
+     viewModel: PicturesViewModel = hiltViewModel(),
+ ) {
+     val items = viewModel.media.collectAsLazyPagingItems()
++    val sections by viewModel.sections.collectAsStateWithLifecycle()
++    val columns by viewModel.columns.collectAsStateWithLifecycle()
++    val layout = remember(sections) { TimelineLayout(sections) }
++    val labeler = rememberDayLabeler()
++    val gridState = rememberLazyGridState()
++    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+ 
+     LifecycleResumeEffect(viewModel) {
+         viewModel.onResumed()
+         onPauseOrDispose { }
+     }
+ 
+-    val gridState = rememberLazyGridState()
+-
+     // When a newer photo arrives, jump to it if the user is already near the top.
+     val newestId = if (items.itemCount > 0) items.peek(0)?.id else null
+     LaunchedEffect(newestId) {
+         if (newestId != null && gridState.firstVisibleItemIndex < 24) gridState.scrollToItem(0)
+     }
+ 
+-    LazyVerticalGrid(
+-        columns = GridCells.Fixed(4),
+-        state = gridState,
+-        modifier = modifier.fillMaxSize(),
+-        contentPadding = PaddingValues(1.dp),
+-        horizontalArrangement = Arrangement.spacedBy(1.dp),
+-        verticalArrangement = Arrangement.spacedBy(1.dp),
++    Box(
++        modifier = modifier
++            .fillMaxSize()
++            .pinchToChangeColumns(onZoomIn = viewModel::zoomIn, onZoomOut = viewModel::zoomOut),
+     ) {
+-        items(
+-            count = items.itemCount,
+-            key = { index -> items.peek(index)?.id ?: -index.toLong() - 1 },
+-        ) { index ->
+-            val item = items[index]
+-            Box(
+-                modifier = Modifier
+-                    .aspectRatio(1f)
+-                    .clip(MaterialTheme.shapes.extraSmall)
+-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+-            ) {
+-                if (item != null) {
+-                    AsyncImage(
+-                        model = item.uri,
+-                        contentDescription = null,
+-                        contentScale = ContentScale.Crop,
+-                        modifier = Modifier.fillMaxSize(),
+-                    )
+-                    if (SHOW_DEBUG_LABELS) {
+-                        Text(
+-                            text = "${item.id}\n${item.displayName.takeLast(14)}",
+-                            color = Color.White,
+-                            fontSize = 8.sp,
+-                            lineHeight = 9.sp,
+-                            modifier = Modifier
+-                                .align(Alignment.TopStart)
+-                                .background(Color.Black.copy(alpha = 0.55f))
+-                                .padding(2.dp),
+-                        )
+-                    }
+-                    if (item.isVideo) {
+-                        Icon(
+-                            imageVector = Icons.Filled.PlayCircle,
+-                            contentDescription = null,
+-                            tint = MaterialTheme.colorScheme.surface,
+-                            modifier = Modifier
+-                                .align(Alignment.BottomStart)
+-                                .padding(4.dp),
+-                        )
++        LazyVerticalGrid(
++            columns = GridCells.Fixed(columns),
++            state = gridState,
++            modifier = Modifier.fillMaxSize(),
++            contentPadding = PaddingValues(top = statusBarTop),
++            horizontalArrangement = Arrangement.spacedBy(1.dp),
++            verticalArrangement = Arrangement.spacedBy(1.dp),
++        ) {
++            items(
++                count = layout.totalCount,
++                key = { gridIndex ->
++                    if (layout.isHeader(gridIndex)) {
++                        "day-${layout.sections[layout.sectionIndexAt(gridIndex)].epochDay}"
++                    } else {
++                        val mediaIndex = layout.mediaIndexAt(gridIndex)
++                        items.peekOrNull(mediaIndex)?.id ?: (-mediaIndex - 1L)
+                     }
++                },
++                span = { gridIndex ->
++                    if (layout.isHeader(gridIndex)) GridItemSpan(maxLineSpan) else GridItemSpan(1)
++                },
++                contentType = { gridIndex ->
++                    if (layout.isHeader(gridIndex)) ContentTypeHeader else ContentTypeMedia
++                },
++            ) { gridIndex ->
++                if (layout.isHeader(gridIndex)) {
++                    val section = layout.sections[layout.sectionIndexAt(gridIndex)]
++                    DayHeader(text = labeler.dayLabel(section.epochDay))
++                } else {
++                    MediaCell(item = items.getOrNull(layout.mediaIndexAt(gridIndex)))
++                }
++            }
++        }
++
++        FastScroller(
++            gridState = gridState,
++            totalItems = layout.totalCount,
++            topInset = statusBarTop,
++            labelFor = { gridIndex ->
++                if (layout.sections.isEmpty()) {
++                    ""
++                } else {
++                    labeler.monthLabel(layout.sections[layout.sectionIndexAt(gridIndex)].epochDay)
+                 }
++            },
++        )
++    }
++}
++
++@Composable
++private fun DayHeader(text: String) {
++    Text(
++        text = text,
++        style = MaterialTheme.typography.titleSmall,
++        modifier = Modifier
++            .fillMaxWidth()
++            .padding(horizontal = 16.dp, vertical = 12.dp),
++    )
++}
++
++@Composable
++private fun MediaCell(item: MediaItem?) {
++    Box(
++        modifier = Modifier
++            .aspectRatio(1f)
++            .background(MaterialTheme.colorScheme.surfaceVariant),
++    ) {
++        if (item != null) {
++            AsyncImage(
++                model = item.uri,
++                contentDescription = null,
++                contentScale = ContentScale.Crop,
++                modifier = Modifier.fillMaxSize(),
++            )
++            if (item.isVideo) {
++                VideoBadge(
++                    durationMillis = item.durationMillis,
++                    modifier = Modifier
++                        .align(Alignment.BottomStart)
++                        .padding(4.dp),
++                )
+             }
+         }
+     }
+ }
++
++@Composable
++private fun VideoBadge(durationMillis: Long, modifier: Modifier = Modifier) {
++    Row(
++        modifier = modifier
++            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(percent = 50))
++            .padding(horizontal = 4.dp, vertical = 2.dp),
++        verticalAlignment = Alignment.CenterVertically,
++    ) {
++        Icon(
++            imageVector = Icons.Filled.PlayArrow,
++            contentDescription = null,
++            tint = Color.White,
++            modifier = Modifier.size(14.dp),
++        )
++        Text(
++            text = formatDuration(durationMillis),
++            color = Color.White,
++            style = MaterialTheme.typography.labelSmall,
++            modifier = Modifier.padding(end = 2.dp),
++        )
++    }
++}
++
++private fun formatDuration(millis: Long): String {
++    val totalSeconds = millis / 1000
++    val hours = totalSeconds / 3600
++    val minutes = (totalSeconds % 3600) / 60
++    val seconds = totalSeconds % 60
++    return if (hours > 0) {
++        "%d:%02d:%02d".format(hours, minutes, seconds)
++    } else {
++        "%d:%02d".format(minutes, seconds)
++    }
++}
++
++@Composable
++private fun rememberDayLabeler(): DayLabeler {
++    val today = stringResource(R.string.timeline_today)
++    val yesterday = stringResource(R.string.timeline_yesterday)
++    return remember(today, yesterday) { DayLabeler(today, yesterday) }
++}
++
++private fun LazyPagingItems<MediaItem>.peekOrNull(index: Int): MediaItem? =
++    if (index in 0 until itemCount) peek(index) else null
++
++private fun LazyPagingItems<MediaItem>.getOrNull(index: Int): MediaItem? =
++    if (index in 0 until itemCount) get(index) else null
++
++/**
++ * Two-finger pinch changes the number of columns. Runs in the Initial pass and consumes
++ * multi-touch events so the grid doesn't scroll while pinching.
++ */
++private fun Modifier.pinchToChangeColumns(
++    onZoomIn: () -> Unit,
++    onZoomOut: () -> Unit,
++): Modifier = pointerInput(Unit) {
++    awaitEachGesture {
++        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
++        var accumulated = 1f
++        do {
++            val event = awaitPointerEvent(PointerEventPass.Initial)
++            if (event.changes.count { it.pressed } >= 2) {
++                accumulated *= event.calculateZoom()
++                event.changes.forEach { it.consume() }
++                when {
++                    accumulated > ZoomStep -> {
++                        onZoomIn()
++                        accumulated = 1f
++                    }
++                    accumulated < 1f / ZoomStep -> {
++                        onZoomOut()
++                        accumulated = 1f
++                    }
++                }
++            }
++        } while (event.changes.any { it.pressed })
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
+index e32375e..9f963ba 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesViewModel.kt
+@@ -5,19 +5,46 @@ import androidx.lifecycle.viewModelScope
+ import androidx.paging.PagingData
+ import androidx.paging.cachedIn
+ import com.femi.gallery.domain.model.MediaItem
++import com.femi.gallery.domain.model.TimelineSection
+ import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
++import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
+ import com.femi.gallery.domain.usecase.RefreshMediaUseCase
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.SharingStarted
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.stateIn
++import kotlinx.coroutines.flow.update
+ import javax.inject.Inject
+ 
+ @HiltViewModel
+ class PicturesViewModel @Inject constructor(
+     getPagedMedia: GetPagedMediaUseCase,
++    observeTimeline: ObserveTimelineUseCase,
+     private val refreshMedia: RefreshMediaUseCase,
+ ) : ViewModel() {
+ 
+     val media: Flow<PagingData<MediaItem>> = getPagedMedia().cachedIn(viewModelScope)
+ 
++    val sections: StateFlow<List<TimelineSection>> = observeTimeline()
++        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
++
++    private val _columns = MutableStateFlow(DEFAULT_COLUMNS)
++    val columns: StateFlow<Int> = _columns.asStateFlow()
++
++    /** Pinch out: bigger thumbnails, fewer columns. */
++    fun zoomIn() = _columns.update { (it - 1).coerceAtLeast(MIN_COLUMNS) }
++
++    /** Pinch in: smaller thumbnails, more columns. */
++    fun zoomOut() = _columns.update { (it + 1).coerceAtMost(MAX_COLUMNS) }
++
+     fun onResumed() = refreshMedia()
++
++    private companion object {
++        const val MIN_COLUMNS = 2
++        const val DEFAULT_COLUMNS = 3
++        const val MAX_COLUMNS = 6
++    }
+ }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineLayout.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineLayout.kt
+new file mode 100644
+index 0000000..5c7a641
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineLayout.kt
+@@ -0,0 +1,40 @@
++package com.femi.gallery.presentation.pictures
++
++import com.femi.gallery.domain.model.TimelineSection
++
++/**
++ * Maps positions in the grid (day headers + photos interleaved) to sections and media indices.
++ *
++ * Grid order is: header(0), photos of section 0, header(1), photos of section 1, ...
++ * so the header of section k sits at `section.startIndex + k`.
++ */
++class TimelineLayout(val sections: List<TimelineSection>) {
++
++    private val headerIndices = IntArray(sections.size) { sections[it].startIndex + it }
++
++    val totalCount: Int =
++        (sections.lastOrNull()?.let { it.startIndex + it.count } ?: 0) + sections.size
++
++    /** Index of the section that owns [gridIndex] (as header or photo). Requires non-empty sections. */
++    fun sectionIndexAt(gridIndex: Int): Int {
++        var low = 0
++        var high = headerIndices.size - 1
++        var answer = 0
++        while (low <= high) {
++            val mid = (low + high) ushr 1
++            if (headerIndices[mid] <= gridIndex) {
++                answer = mid
++                low = mid + 1
++            } else {
++                high = mid - 1
++            }
++        }
++        return answer
++    }
++
++    fun isHeader(gridIndex: Int): Boolean =
++        headerIndices.isNotEmpty() && headerIndices[sectionIndexAt(gridIndex)] == gridIndex
++
++    /** Position in the paged media list for a non-header [gridIndex]. */
++    fun mediaIndexAt(gridIndex: Int): Int = gridIndex - sectionIndexAt(gridIndex) - 1
++}
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index f15ecab..27c86d2 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -5,6 +5,9 @@
+     <string name="nav_albums">Albums</string>
+     <string name="nav_stories">Stories</string>
+ 
++    <string name="timeline_today">Today</string>
++    <string name="timeline_yesterday">Yesterday</string>
++
+     <string name="permission_title">Allow access to your photos and videos</string>
+     <string name="permission_body">Gallery needs permission to read the photos and videos on your device so it can show them. Nothing leaves your phone.</string>
+     <string name="permission_body_denied">Access was denied. Open settings and allow photos and videos to continue.</string>
+diff --git a/app/src/test/java/com/femi/gallery/domain/model/TimelineGrouperTest.kt b/app/src/test/java/com/femi/gallery/domain/model/TimelineGrouperTest.kt
+new file mode 100644
+index 0000000..33a067f
+--- /dev/null
++++ b/app/src/test/java/com/femi/gallery/domain/model/TimelineGrouperTest.kt
+@@ -0,0 +1,38 @@
++package com.femi.gallery.domain.model
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++import java.time.ZoneOffset
++
++class TimelineGrouperTest {
++
++    private val day = 86_400L
++
++    @Test
++    fun emptyInputGivesNoSections() {
++        assertTrue(TimelineGrouper.group(LongArray(0), ZoneOffset.UTC).isEmpty())
++    }
++
++    @Test
++    fun groupsConsecutiveItemsByDay() {
++        val dates = longArrayOf(100 * day + 500, 100 * day + 10, 99 * day + 700, 99 * day + 1, 97 * day + 5)
++
++        val sections = TimelineGrouper.group(dates, ZoneOffset.UTC)
++
++        assertEquals(
++            listOf(
++                TimelineSection(epochDay = 100, startIndex = 0, count = 2),
++                TimelineSection(epochDay = 99, startIndex = 2, count = 2),
++                TimelineSection(epochDay = 97, startIndex = 4, count = 1),
++            ),
++            sections,
++        )
++    }
++
++    @Test
++    fun singleItemIsOneSection() {
++        val sections = TimelineGrouper.group(longArrayOf(5 * day), ZoneOffset.UTC)
++        assertEquals(listOf(TimelineSection(5, 0, 1)), sections)
++    }
++}
+diff --git a/app/src/test/java/com/femi/gallery/presentation/pictures/TimelineLayoutTest.kt b/app/src/test/java/com/femi/gallery/presentation/pictures/TimelineLayoutTest.kt
+new file mode 100644
+index 0000000..faeb045
+--- /dev/null
++++ b/app/src/test/java/com/femi/gallery/presentation/pictures/TimelineLayoutTest.kt
+@@ -0,0 +1,51 @@
++package com.femi.gallery.presentation.pictures
++
++import com.femi.gallery.domain.model.TimelineSection
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class TimelineLayoutTest {
++
++    // Grid: H0 m0 m1 | H1 m2 m3 | H2 m4  ->  indices 0..7
++    private val layout = TimelineLayout(
++        listOf(
++            TimelineSection(epochDay = 100, startIndex = 0, count = 2),
++            TimelineSection(epochDay = 99, startIndex = 2, count = 2),
++            TimelineSection(epochDay = 97, startIndex = 4, count = 1),
++        ),
++    )
++
++    @Test
++    fun totalCountIncludesHeaders() {
++        assertEquals(8, layout.totalCount)
++    }
++
++    @Test
++    fun identifiesHeaders() {
++        listOf(0, 3, 6).forEach { assertTrue("index $it", layout.isHeader(it)) }
++        listOf(1, 2, 4, 5, 7).forEach { assertFalse("index $it", layout.isHeader(it)) }
++    }
++
++    @Test
++    fun mapsGridIndexToMediaIndex() {
++        assertEquals(0, layout.mediaIndexAt(1))
++        assertEquals(1, layout.mediaIndexAt(2))
++        assertEquals(2, layout.mediaIndexAt(4))
++        assertEquals(3, layout.mediaIndexAt(5))
++        assertEquals(4, layout.mediaIndexAt(7))
++    }
++
++    @Test
++    fun mapsGridIndexToSection() {
++        assertEquals(listOf(0, 0, 0, 1, 1, 1, 2, 2), (0 until 8).map(layout::sectionIndexAt))
++    }
++
++    @Test
++    fun emptyLayoutHasNoItems() {
++        val empty = TimelineLayout(emptyList())
++        assertEquals(0, empty.totalCount)
++        assertFalse(empty.isHeader(0))
++    }
++}
+-- 
+2.43.0
+
