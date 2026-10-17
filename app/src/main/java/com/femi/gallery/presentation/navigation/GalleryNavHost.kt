@@ -35,6 +35,10 @@ fun GalleryNavHost(
         NavHost(
             navController = navController,
             startDestination = GalleryDestination.Pictures.route,
+            enterTransition = { fadeIn(tween(220)) },
+            exitTransition = { fadeOut(tween(220)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { fadeOut(tween(220)) },
         ) {
             composable(GalleryDestination.Pictures.route) { backStackEntry ->
                 val lastViewedMediaIndex by backStackEntry.savedStateHandle
@@ -102,10 +106,10 @@ fun GalleryNavHost(
                         defaultValue = null
                     },
                 ),
-                enterTransition = { fadeIn(tween(250)) },
-                exitTransition = { fadeOut(tween(250)) },
-                popEnterTransition = { fadeIn(tween(250)) },
-                popExitTransition = { fadeOut(tween(250)) },
+                enterTransition = { fadeIn(tween(220)) },
+                exitTransition = { fadeOut(tween(220)) },
+                popEnterTransition = { fadeIn(tween(220)) },
+                popExitTransition = { fadeOut(tween(220)) },
             ) {
                 val handlePageChange: (Int) -> Unit = remember {
                     { page -> navController.previousBackStackEntry?.savedStateHandle?.set("last_viewed_media_index", page) }
