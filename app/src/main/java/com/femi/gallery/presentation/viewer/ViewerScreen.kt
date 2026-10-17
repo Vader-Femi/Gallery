@@ -5,13 +5,13 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.view.View
+import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
@@ -51,7 +52,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -120,6 +121,7 @@ private val BottomGradient = Brush.verticalGradient(listOf(Color.Transparent, Co
 @Composable
 fun ViewerScreen(
     onBack: () -> Unit,
+    onPageChange: (mediaIndex: Int) -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: ViewerViewModel = hiltViewModel(),
@@ -127,10 +129,10 @@ fun ViewerScreen(
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, viewModel, sharedTransitionScope, animatedVisibilityScope)
+            ViewerContent(onBack, onPageChange, viewModel, sharedTransitionScope, animatedVisibilityScope)
         }
     } else {
-        ViewerContent(onBack, viewModel, sharedTransitionScope, animatedVisibilityScope)
+        ViewerContent(onBack, onPageChange, viewModel, sharedTransitionScope, animatedVisibilityScope)
     }
 }
 
@@ -138,6 +140,7 @@ fun ViewerScreen(
 @Composable
 private fun ViewerContent(
     onBack: () -> Unit,
+    onPageChange: (mediaIndex: Int) -> Unit,
     viewModel: ViewerViewModel,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
@@ -162,6 +165,10 @@ private fun ViewerContent(
             val pagerState = rememberPagerState(
                 initialPage = viewModel.startIndex.coerceIn(0, items.itemCount - 1),
             ) { items.itemCount }
+
+            LaunchedEffect(pagerState.settledPage) {
+                onPageChange(pagerState.settledPage)
+            }
 
             HorizontalPager(
                 state = pagerState,
@@ -307,45 +314,76 @@ private fun PhotoPage(
     }
     val handleTap = remember(onTap) { { onTap() } }
 
+    val aspectRatio = remember(item.width, item.height) {
+        if (item.width > 0 && item.height > 0) item.width.toFloat() / item.height.toFloat() else null
+    }
+    var loadedSize by remember { mutableStateOf(Size.Zero) }
+    val effectiveAspectRatio = aspectRatio ?: if (loadedSize.width > 0f && loadedSize.height > 0f) {
+        loadedSize.width / loadedSize.height
+    } else {
+        null
+    }
+
     DragToDismissBox(
         enabled = isCurrent && !isZoomed,
         onDismiss = onBack,
         onDragStateChange = { isDragging ->
             if (isDragging) onChromeChange(false)
         },
-    ) { dragProgress ->
-        ZoomableBox(
-            isCurrent = isCurrent,
-            onTap = handleTap,
-            onZoomStateChange = { isZoomed = it },
-        ) { onImageSize ->
-            val baseModifier = Modifier.fillMaxSize()
-            val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                with(sharedTransitionScope) {
-                    baseModifier.sharedElement(
-                        sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
-                        animatedVisibilityScope = animatedVisibilityScope,
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            ZoomableBox(
+                isCurrent = isCurrent,
+                onTap = handleTap,
+                onZoomStateChange = { isZoomed = it },
+            ) { onImageSize ->
+                val baseModifier = if (effectiveAspectRatio != null) {
+                    Modifier.aspectRatio(effectiveAspectRatio)
+                } else {
+                    Modifier.fillMaxSize()
+                }
+
+                val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
+                    with(sharedTransitionScope) {
+                        baseModifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            boundsTransform = { _, _ ->
+                                spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                )
+                            },
+                        )
+                    }
+                } else {
+                    baseModifier
+                }
+
+                Box(modifier = sharedModifier) {
+                    AsyncImage(
+                        model = thumbnail,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                        onSuccess = { if (aspectRatio == null) onImageSize(it.painter.intrinsicSize) },
+                    )
+                    AsyncImage(
+                        model = full,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                        onSuccess = {
+                            if (aspectRatio == null) {
+                                onImageSize(it.painter.intrinsicSize)
+                                loadedSize = it.painter.intrinsicSize
+                            }
+                        },
                     )
                 }
-            } else {
-                baseModifier
-            }
-
-            Box(modifier = sharedModifier) {
-                AsyncImage(
-                    model = thumbnail,
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                    onSuccess = { onImageSize(it.painter.intrinsicSize) },
-                )
-                AsyncImage(
-                    model = full,
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                    onSuccess = { onImageSize(it.painter.intrinsicSize) },
-                )
             }
         }
     }
@@ -365,10 +403,21 @@ private fun VideoPage(
     val thumbnail = remember(item.uri) {
         ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()
     }
-    val videoModifier = remember {
-        Modifier
-            .fillMaxSize()
-            .padding(bottom = 72.dp)
+
+    val aspectRatio = remember(item.width, item.height) {
+        if (item.width > 0 && item.height > 0) item.width.toFloat() / item.height.toFloat() else null
+    }
+
+    val videoModifier = remember(aspectRatio) {
+        if (aspectRatio != null) {
+            Modifier
+                .aspectRatio(aspectRatio)
+                .fillMaxWidth()
+        } else {
+            Modifier
+                .fillMaxSize()
+                .padding(bottom = 72.dp)
+        }
     }
 
     DragToDismissBox(
@@ -378,30 +427,41 @@ private fun VideoPage(
             if (isDragging) onChromeChange(false)
         },
     ) {
-        val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
-            with(sharedTransitionScope) {
-                videoModifier.sharedElement(
-                    sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
+                with(sharedTransitionScope) {
+                    videoModifier.sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        boundsTransform = { _, _ ->
+                            spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                            )
+                        },
+                    )
+                }
+            } else {
+                videoModifier
             }
-        } else {
-            videoModifier
-        }
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            AsyncImage(
-                model = thumbnail,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = sharedModifier,
-            )
-            if (isCurrent) {
-                VideoPlayer(
-                    uri = item.uri,
-                    onControllerVisibilityChange = onChromeChange,
-                    modifier = sharedModifier,
+            Box(modifier = sharedModifier) {
+                AsyncImage(
+                    model = thumbnail,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
                 )
+                if (isCurrent) {
+                    VideoPlayer(
+                        uri = item.uri,
+                        onControllerVisibilityChange = onChromeChange,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }
@@ -413,13 +473,14 @@ private fun DragToDismissBox(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     onDragStateChange: (isDragging: Boolean) -> Unit = {},
-    content: @Composable (dragProgress: Float) -> Unit,
+    content: @Composable () -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val offsetYAnim = remember { Animatable(0f) }
-    val offsetXAnim = remember { Animatable(0f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+    var startTouchY by remember { mutableFloatStateOf(Float.NaN) }
 
     val density = LocalDensity.current
     val maxDragDistancePx = with(density) { 600.dp.toPx() }
@@ -431,28 +492,38 @@ private fun DragToDismissBox(
     val currentOnDragStateChange by rememberUpdatedState(onDragStateChange)
 
     PredictiveBackHandler(enabled = currentEnabled && !isDragging) { progressFlow ->
+        startTouchY = Float.NaN
         try {
             progressFlow.collect { backEvent ->
+                if (startTouchY.isNaN()) {
+                    startTouchY = backEvent.touchY
+                }
                 predictiveBackProgress = backEvent.progress
+                offsetY = (backEvent.touchY - startTouchY) * 0.4f
+                val edgeSign = if (backEvent.swipeEdge == BackEventCompat.EDGE_LEFT) 1f else -1f
+                offsetX = backEvent.progress * (maxDragDistancePx * 0.15f) * edgeSign
                 currentOnDragStateChange(backEvent.progress > 0f)
             }
             currentOnDismiss()
         } catch (_: CancellationException) {
             coroutineScope.launch {
+                val startX = offsetX
+                val startY = offsetY
+                val startProg = predictiveBackProgress
                 animate(
-                    initialValue = predictiveBackProgress,
+                    initialValue = 1f,
                     targetValue = 0f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                ) { value, _ -> predictiveBackProgress = value }
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                ) { fraction, _ ->
+                    offsetX = startX * fraction
+                    offsetY = startY * fraction
+                    predictiveBackProgress = startProg * fraction
+                }
                 currentOnDragStateChange(false)
             }
-        }
-    }
-
-    val dragProgress by remember {
-        derivedStateOf {
-            val verticalProgress = ViewerDragState.calculateDragProgress(offsetYAnim.value, maxDragDistancePx)
-            max(verticalProgress, predictiveBackProgress)
         }
     }
 
@@ -460,7 +531,8 @@ private fun DragToDismissBox(
         modifier = modifier
             .fillMaxSize()
             .drawWithContent {
-                val scrimAlpha = ViewerDragState.calculateScrimAlpha(dragProgress)
+                val progress = ViewerDragState.calculateDragProgress(offsetY, maxDragDistancePx, predictiveBackProgress)
+                val scrimAlpha = ViewerDragState.calculateScrimAlpha(progress)
                 drawRect(color = Color.Black.copy(alpha = scrimAlpha))
                 drawContent()
             }
@@ -500,16 +572,14 @@ private fun DragToDismissBox(
 
                                 if (isSwipingVertical) {
                                     change.consume()
-                                    coroutineScope.launch {
-                                        offsetYAnim.snapTo(offsetYAnim.value + dragAmount.y)
-                                        offsetXAnim.snapTo(offsetXAnim.value + dragAmount.x)
-                                    }
+                                    offsetX += dragAmount.x
+                                    offsetY += dragAmount.y
                                 }
                             } while (event.changes.any { it.pressed })
 
                             if (isSwipingVertical) {
                                 val velocity = velocityTracker.calculateVelocity()
-                                val totalY = offsetYAnim.value
+                                val totalY = offsetY
                                 val velocityY = velocity.y
 
                                 isDragging = false
@@ -517,17 +587,18 @@ private fun DragToDismissBox(
                                     currentOnDismiss()
                                 } else {
                                     coroutineScope.launch {
-                                        launch {
-                                            offsetYAnim.animateTo(
-                                                0f,
-                                                spring(stiffness = Spring.StiffnessMediumLow),
-                                            )
-                                        }
-                                        launch {
-                                            offsetXAnim.animateTo(
-                                                0f,
-                                                spring(stiffness = Spring.StiffnessMediumLow),
-                                            )
+                                        val startX = offsetX
+                                        val startY = offsetY
+                                        animate(
+                                            initialValue = 1f,
+                                            targetValue = 0f,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMediumLow,
+                                            ),
+                                        ) { fraction, _ ->
+                                            offsetX = startX * fraction
+                                            offsetY = startY * fraction
                                         }
                                         currentOnDragStateChange(false)
                                     }
@@ -538,44 +609,24 @@ private fun DragToDismissBox(
                 } else Modifier
             ),
     ) {
-        val cornerRadiusPx = with(density) { (ViewerDragState.calculateCornerRadiusDp(dragProgress).dp.toPx()) }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    translationX = offsetXAnim.value * 0.4f
-                    translationY = offsetYAnim.value
-                    val s = ViewerDragState.calculateScale(dragProgress)
+                    val progress = ViewerDragState.calculateDragProgress(offsetY, maxDragDistancePx, predictiveBackProgress)
+                    translationX = offsetX * 0.85f
+                    translationY = offsetY
+                    val s = ViewerDragState.calculateScale(progress)
                     scaleX = s
                     scaleY = s
-                    clip = dragProgress > 0.01f
+                    clip = progress > 0.01f
+                    val cornerRadiusPx = (ViewerDragState.calculateCornerRadiusDp(progress)).dp.toPx()
                     shape = RoundedCornerShape(cornerRadiusPx)
                 },
         ) {
-            content(dragProgress)
+            content()
         }
     }
-}
-
-object ViewerDragState {
-    fun calculateDragProgress(offsetYPx: Float, maxDragDistancePx: Float): Float =
-        (abs(offsetYPx) / maxDragDistancePx).coerceIn(0f, 1f)
-
-    fun calculateScale(dragProgress: Float): Float =
-        1f - (dragProgress * 0.35f)
-
-    fun calculateScrimAlpha(dragProgress: Float): Float =
-        (1f - dragProgress * 1.2f).coerceIn(0f, 1f)
-
-    fun calculateCornerRadiusDp(dragProgress: Float): Float =
-        dragProgress * 28f
-
-    fun shouldDismissOnRelease(
-        totalYPx: Float,
-        velocityYPxPerSec: Float,
-        dismissThresholdPx: Float,
-        flingVelocityThresholdPx: Float,
-    ): Boolean = totalYPx > dismissThresholdPx || (totalYPx > 50f && velocityYPxPerSec > flingVelocityThresholdPx)
 }
 
 @OptIn(UnstableApi::class)
@@ -691,6 +742,37 @@ private fun shareMedia(context: Context, item: MediaItem) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(send, null))
+}
+
+object ViewerDragState {
+    fun calculateDragProgress(
+        offsetYPx: Float,
+        maxDragDistancePx: Float,
+        predictiveBackProgress: Float = 0f,
+    ): Float {
+        val verticalProgress = (abs(offsetYPx) / maxDragDistancePx).coerceIn(0f, 1f)
+        return max(verticalProgress, predictiveBackProgress)
+    }
+
+    fun calculateScale(dragProgress: Float): Float =
+        1f - (dragProgress * 0.35f)
+
+    fun calculateScrimAlpha(dragProgress: Float): Float =
+        (1f - dragProgress * 1.2f).coerceIn(0f, 1f)
+
+    fun calculateCornerRadiusDp(dragProgress: Float): Float =
+        dragProgress * 28f
+
+    fun shouldDismissOnRelease(
+        totalYPx: Float,
+        velocityYPxPerSec: Float,
+        dismissThresholdPx: Float,
+        flingVelocityThresholdPx: Float,
+    ): Boolean {
+        val absY = abs(totalYPx)
+        val absVelY = abs(velocityYPxPerSec)
+        return absY > dismissThresholdPx || (absY > 50f && absVelY > flingVelocityThresholdPx)
+    }
 }
 
 private fun LazyPagingItems<MediaItem>.peekOrNull(index: Int): MediaItem? =
