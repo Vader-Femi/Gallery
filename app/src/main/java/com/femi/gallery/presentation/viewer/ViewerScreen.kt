@@ -5,8 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.view.View
-import androidx.activity.BackEventCompat
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -24,6 +22,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
@@ -100,14 +99,12 @@ import com.femi.gallery.presentation.common.findActivity
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.max
 import androidx.media3.common.MediaItem as PlayerMediaItem
 
 private const val ThumbnailRequestSize = 512
@@ -147,6 +144,7 @@ private fun ViewerContent(
     val items = viewModel.media.collectAsLazyPagingItems()
     val details by viewModel.details.collectAsStateWithLifecycle()
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
+    var isDragging by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     ImmersiveMode(enabled = !chromeVisible)
@@ -178,11 +176,13 @@ private fun ViewerContent(
                 key = { page -> items.peekOrNull(page)?.id ?: (-page - 1L) },
             ) { page ->
                 val handleChromeChange: (Boolean) -> Unit = remember { { chromeVisible = it } }
+                val handleDragChange: (Boolean) -> Unit = remember { { isDragging = it } }
                 ViewerPage(
                     item = items.getOrNull(page),
                     isCurrent = pagerState.settledPage == page,
                     chromeVisible = chromeVisible,
                     onChromeChange = handleChromeChange,
+                    onDragChange = handleDragChange,
                     onBack = onBack,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
@@ -190,9 +190,10 @@ private fun ViewerContent(
             }
 
             val current = items.peekOrNull(pagerState.currentPage)
+            val barsVisible = chromeVisible && !isDragging && current != null
 
             AnimatedVisibility(
-                visible = chromeVisible && current != null,
+                visible = barsVisible,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.TopStart),
@@ -201,7 +202,7 @@ private fun ViewerContent(
             }
 
             AnimatedVisibility(
-                visible = chromeVisible && current != null,
+                visible = barsVisible,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -267,6 +268,7 @@ private fun ViewerPage(
     isCurrent: Boolean,
     chromeVisible: Boolean,
     onChromeChange: (Boolean) -> Unit,
+    onDragChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
@@ -278,6 +280,7 @@ private fun ViewerPage(
             isCurrent = isCurrent,
             onBack = onBack,
             onChromeChange = onChromeChange,
+            onDragChange = onDragChange,
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope,
         )
@@ -286,7 +289,7 @@ private fun ViewerPage(
             isCurrent = isCurrent,
             onTap = { onChromeChange(!chromeVisible) },
             onBack = onBack,
-            onChromeChange = onChromeChange,
+            onDragChange = onDragChange,
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope,
         )
@@ -300,12 +303,13 @@ private fun PhotoPage(
     isCurrent: Boolean,
     onTap: () -> Unit,
     onBack: () -> Unit,
-    onChromeChange: (Boolean) -> Unit,
+    onDragChange: (Boolean) -> Unit,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
 ) {
     val context = LocalContext.current
     var isZoomed by remember { mutableStateOf(false) }
+    var intrinsicSize by remember(item.id) { mutableStateOf(Size.Zero) }
     val isTransitionActive = sharedTransitionScope?.isTransitionActive == true
 
     val thumbnail = remember(item.id, item.uri) {
@@ -326,6 +330,12 @@ private fun PhotoPage(
     }
     val handleTap = remember(onTap) { { onTap() } }
 
+    val photoAspectRatio = if (intrinsicSize.width > 0f && intrinsicSize.height > 0f) {
+        (intrinsicSize.width / intrinsicSize.height).coerceIn(0.2f, 5f)
+    } else {
+        null
+    }
+
     val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             Modifier.sharedElement(
@@ -334,7 +344,7 @@ private fun PhotoPage(
                 boundsTransform = { _, _ ->
                     spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMedium,
+                        stiffness = Spring.StiffnessMediumLow,
                     )
                 },
             )
@@ -344,34 +354,47 @@ private fun PhotoPage(
     }
 
     DragToDismissBox(
-        contentModifier = sharedModifier,
         enabled = isCurrent && !isZoomed,
         onDismiss = onBack,
-        onDragStateChange = { isDragging ->
-            if (isDragging) onChromeChange(false)
-        },
+        onDragStateChange = onDragChange,
     ) {
         ZoomableBox(
             isCurrent = isCurrent,
             onTap = handleTap,
             onZoomStateChange = { isZoomed = it },
         ) { onImageSize ->
-            AsyncImage(
-                model = thumbnail,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
+            Box(
                 modifier = Modifier.fillMaxSize(),
-                onSuccess = { onImageSize(it.painter.intrinsicSize) },
-            )
-            // Defer decoding the 2160px image until the shared transition settles so frames never drop.
-            if (isCurrent && !isTransitionActive) {
+                contentAlignment = Alignment.Center,
+            ) {
+                val sizeModifier = if (photoAspectRatio != null) {
+                    Modifier.aspectRatio(photoAspectRatio)
+                } else {
+                    Modifier.fillMaxSize()
+                }
                 AsyncImage(
-                    model = full,
+                    model = thumbnail,
                     contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                    onSuccess = { onImageSize(it.painter.intrinsicSize) },
+                    contentScale = ContentScale.Crop,
+                    modifier = sizeModifier.then(sharedModifier),
+                    onSuccess = {
+                        intrinsicSize = it.painter.intrinsicSize
+                        onImageSize(it.painter.intrinsicSize)
+                    },
                 )
+                // Defer decoding the 2160px image until the shared transition settles so frames never drop.
+                if (isCurrent && !isTransitionActive) {
+                    AsyncImage(
+                        model = full,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = sizeModifier,
+                        onSuccess = {
+                            intrinsicSize = it.painter.intrinsicSize
+                            onImageSize(it.painter.intrinsicSize)
+                        },
+                    )
+                }
             }
         }
     }
@@ -384,6 +407,7 @@ private fun VideoPage(
     isCurrent: Boolean,
     onBack: () -> Unit,
     onChromeChange: (Boolean) -> Unit,
+    onDragChange: (Boolean) -> Unit,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
 ) {
@@ -409,7 +433,7 @@ private fun VideoPage(
                 boundsTransform = { _, _ ->
                     spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMedium,
+                        stiffness = Spring.StiffnessMediumLow,
                     )
                 },
             )
@@ -422,9 +446,7 @@ private fun VideoPage(
         contentModifier = sharedModifier,
         enabled = isCurrent,
         onDismiss = onBack,
-        onDragStateChange = { isDragging ->
-            if (isDragging) onChromeChange(false)
-        },
+        onDragStateChange = onDragChange,
     ) {
         Box(modifier = videoModifier) {
             AsyncImage(
@@ -457,8 +479,6 @@ private fun DragToDismissBox(
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
-    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
-    var startTouchY by remember { mutableFloatStateOf(Float.NaN) }
 
     val density = LocalDensity.current
     val maxDragDistancePx = with(density) { 600.dp.toPx() }
@@ -469,47 +489,11 @@ private fun DragToDismissBox(
     val currentOnDismiss by rememberUpdatedState(onDismiss)
     val currentOnDragStateChange by rememberUpdatedState(onDragStateChange)
 
-    PredictiveBackHandler(enabled = currentEnabled && !isDragging) { progressFlow ->
-        startTouchY = Float.NaN
-        try {
-            progressFlow.collect { backEvent ->
-                if (startTouchY.isNaN()) {
-                    startTouchY = backEvent.touchY
-                }
-                predictiveBackProgress = backEvent.progress
-                offsetY = (backEvent.touchY - startTouchY) * 0.4f
-                val edgeSign = if (backEvent.swipeEdge == BackEventCompat.EDGE_LEFT) 1f else -1f
-                offsetX = backEvent.progress * (maxDragDistancePx * 0.15f) * edgeSign
-                currentOnDragStateChange(backEvent.progress > 0f)
-            }
-            currentOnDismiss()
-        } catch (_: CancellationException) {
-            coroutineScope.launch {
-                val startX = offsetX
-                val startY = offsetY
-                val startProg = predictiveBackProgress
-                animate(
-                    initialValue = 1f,
-                    targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMediumLow,
-                    ),
-                ) { fraction, _ ->
-                    offsetX = startX * fraction
-                    offsetY = startY * fraction
-                    predictiveBackProgress = startProg * fraction
-                }
-                currentOnDragStateChange(false)
-            }
-        }
-    }
-
     Box(
         modifier = modifier
             .fillMaxSize()
             .drawWithContent {
-                val progress = ViewerDragState.calculateDragProgress(offsetY, maxDragDistancePx, predictiveBackProgress)
+                val progress = ViewerDragState.calculateDragProgress(offsetY, maxDragDistancePx)
                 val scrimAlpha = ViewerDragState.calculateScrimAlpha(progress)
                 drawRect(color = Color.Black.copy(alpha = scrimAlpha))
                 drawContent()
@@ -591,7 +575,7 @@ private fun DragToDismissBox(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    val progress = ViewerDragState.calculateDragProgress(offsetY, maxDragDistancePx, predictiveBackProgress)
+                    val progress = ViewerDragState.calculateDragProgress(offsetY, maxDragDistancePx)
                     translationX = offsetX * 0.85f
                     translationY = offsetY
                     val s = ViewerDragState.calculateScale(progress)
@@ -727,11 +711,7 @@ object ViewerDragState {
     fun calculateDragProgress(
         offsetYPx: Float,
         maxDragDistancePx: Float,
-        predictiveBackProgress: Float = 0f,
-    ): Float {
-        val verticalProgress = (abs(offsetYPx) / maxDragDistancePx).coerceIn(0f, 1f)
-        return max(verticalProgress, predictiveBackProgress)
-    }
+    ): Float = (abs(offsetYPx) / maxDragDistancePx).coerceIn(0f, 1f)
 
     fun calculateScale(dragProgress: Float): Float =
         1f - (dragProgress * 0.35f)

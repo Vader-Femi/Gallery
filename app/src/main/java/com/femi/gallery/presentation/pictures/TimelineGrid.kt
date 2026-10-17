@@ -282,7 +282,7 @@ private fun MediaCell(
                         boundsTransform = { _, _ ->
                             androidx.compose.animation.core.spring(
                                 dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-                                stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
                             )
                         },
                     )
