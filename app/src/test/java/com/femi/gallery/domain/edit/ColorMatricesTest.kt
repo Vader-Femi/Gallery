@@ -64,7 +64,8 @@ class ColorMatricesTest {
     @Test
     fun timesAppliesTheSecondMatrixFirst() {
         val brightenThenDesaturate = ColorMatrices.times(ColorMatrices.saturation(-1f), ColorMatrices.brightness(0.5f))
-        val direct = pixel(ColorMatrices.saturation(-1f), *pixel(ColorMatrices.brightness(0.5f), 200f, 100f, 50f).toTypedArray())
+        val brighter = pixel(ColorMatrices.brightness(0.5f), 200f, 100f, 50f)
+        val direct = pixel(ColorMatrices.saturation(-1f), brighter[0], brighter[1], brighter[2])
         assertArrayEquals(direct, pixel(brightenThenDesaturate, 200f, 100f, 50f), 0.05f)
     }
 
