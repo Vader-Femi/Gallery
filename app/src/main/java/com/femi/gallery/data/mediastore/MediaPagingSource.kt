@@ -7,15 +7,19 @@ import android.os.Looper
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.MediaOrder
 import com.femi.gallery.domain.search.SearchCriteria
 
 /**
- * Offset-based paging straight from MediaStore. Placeholders are enabled by reporting
- * [LoadResult.Page.itemsBefore]/[LoadResult.Page.itemsAfter], which lets the UI jump to any
- * position (fast scroller, date scrubber) without loading everything in between.
+ * Pages through the library in "date taken, else date added" order. The order of every matching
+ * item is read once per source (two numbers per item); each page then loads just its own rows.
  *
- * A source is invalidated (and replaced by Paging) whenever MediaStore changes, so the total
- * count is computed once per instance instead of on every page load.
+ * Placeholders are enabled by reporting [LoadResult.Page.itemsBefore]/[LoadResult.Page.itemsAfter],
+ * which lets the UI jump to any position (fast scroller, date scrubber) without loading
+ * everything in between.
+ *
+ * A source is invalidated (and replaced by Paging) whenever MediaStore changes, so the order is
+ * not recomputed on every page load.
  */
 class MediaPagingSource(
     private val dataSource: MediaStoreDataSource,
@@ -25,7 +29,7 @@ class MediaPagingSource(
 ) : PagingSource<Int, MediaItem>() {
 
     private val generationAtCreation = dataSource.generation()
-    private var cachedTotal: Int? = null
+    private var cachedOrder: MediaOrder? = null
 
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) = invalidate()
@@ -48,13 +52,20 @@ class MediaPagingSource(
     }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> = try {
-        val total = cachedTotal ?: dataSource.count(bucketId, search).also { cachedTotal = it }
+        val order = cachedOrder ?: dataSource.loadOrder(bucketId, search).also { cachedOrder = it }
+        val total = order.size
         val offset = (params.key ?: 0).coerceIn(0, maxOf(0, total - 1))
-        val items = dataSource.load(offset = offset, limit = params.loadSize, bucketId = bucketId, search = search)
+        val end = minOf(total, offset + params.loadSize)
+        val pageIds = order.ids.copyOfRange(offset, end)
+        val items = dataSource.loadByIds(pageIds, bucketId, search)
+
+        // Something was deleted or changed since the order was read: show what is left and reload.
+        if (items.size != pageIds.size) invalidate()
+
         LoadResult.Page(
             data = items,
             prevKey = if (offset == 0) null else maxOf(0, offset - params.loadSize),
-            nextKey = if (offset + items.size >= total) null else offset + items.size,
+            nextKey = if (end >= total) null else end,
             itemsBefore = offset,
             itemsAfter = maxOf(0, total - offset - items.size),
         )

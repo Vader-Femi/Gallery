@@ -134,7 +134,7 @@ class MediaRepositoryImpl @Inject constructor(
             changeTriggers()
                 .map {
                     indexedGeneration = dataSource.generation()
-                    TimelineGrouper.group(dataSource.loadDatesAdded(bucketId, search))
+                    TimelineGrouper.group(dataSource.loadDatesSeconds(bucketId, search))
                 }
                 .distinctUntilChanged()
         }

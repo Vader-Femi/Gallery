@@ -69,7 +69,7 @@ class LockedStore @Inject constructor(
     /** Dates (epoch seconds) in the same order as [list], for building day headers. */
     suspend fun datesSeconds(): LongArray {
         val items = list()
-        return LongArray(items.size) { items[it].dateAddedMillis / 1000 }
+        return LongArray(items.size) { items[it].dateTakenMillis / 1000 }
     }
 
     /** Copies [uris] into the folder. Items that fail to copy are skipped. */
@@ -177,7 +177,7 @@ class LockedStore @Inject constructor(
     private fun readAll(): List<MediaItem> =
         dir.listFiles { file -> file.extension == "json" }.orEmpty()
             .mapNotNull { file -> runCatching { toItem(JSONObject(file.readText())) }.getOrNull() }
-            .sortedWith(compareByDescending<MediaItem> { it.dateAddedMillis }.thenByDescending { it.id })
+            .sortedWith(compareByDescending<MediaItem> { it.dateTakenMillis }.thenByDescending { it.id })
 
     private fun toItem(json: JSONObject): MediaItem? {
         val file = File(dir, json.getString("file"))

@@ -85,7 +85,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Video editor: trim, speed and basic effects
 - [ ] Duplicate finder (perceptual hashing)
 - [ ] Motion photo playback, set as wallpaper, slideshow
-- [ ] A local **Room index** — gives exact "date taken, else modified" ordering and powers search and ML (see limitations)
+- [ ] A local **Room index** — speeds up opening the app on huge libraries and will power search and ML
 - [ ] Shared-element transition from grid to viewer, and scrolling the grid to the photo you were just viewing
 - [ ] Tiled full-resolution zoom for very large photos
 - [ ] Remember zoom level and a small settings screen (DataStore)
@@ -220,7 +220,7 @@ When you favorite, trash or permanently delete files, Android asks you to confir
 
 ## Known limitations
 
-- **Ordering uses the date a file was added, not the date it was taken.** MediaStore's `date_taken` is empty for many files (WhatsApp images, screenshots, downloads) and MediaProvider doesn't allow the expression needed for "date taken, else modified". For camera photos the two dates are the same; for photos copied onto the phone later they can differ. A local Room index will fix this.
+- **Photos are ordered by "date taken", falling back to the date they were added** when a file has no date taken (WhatsApp images, screenshots, downloads). Android cannot sort by "one column, else another", so the app reads the dates of the matching items and sorts them itself (about 0.1 s for 50,000 photos). A photo with a wrong or missing date in the file itself will appear where that date says.
 - **Zoomed-in photos soften past roughly 2–3×**, because the viewer decodes up to 2160 px. Tiled decoding is on the to-do list.
 - **Trashed photos may not open full-size in the viewer**; thumbnails always show. This depends on how a given Android version exposes trashed files.
 - **System confirmation dialogs** appear for every favorite / trash / delete action, and very large selections show several in a row.
@@ -255,6 +255,7 @@ The app was built incrementally as a series of reviewable patches:
 | 19 | Locked folder | Private, biometric-protected folder; lock, unlock, delete |
 | 20 | Secure window fix | Screenshot protection now stays on when opening a locked photo |
 | 21 | Album management | Move and copy to albums, new albums, rename album |
+| 22 | Ordering fix | Sorted by date taken (else date added) so unlocked/restored photos return to their real place |
 
 ---
 

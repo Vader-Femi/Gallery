@@ -13,6 +13,8 @@ import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.MediaOrder
+import com.femi.gallery.domain.model.MediaOrdering
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.model.WriteLimits
@@ -47,50 +49,61 @@ class MediaStoreDataSource @Inject constructor(
     fun generation(): Long = MediaStore.getGeneration(context, MediaStore.VOLUME_EXTERNAL_PRIMARY)
 
     /**
-     * Total number of photos + videos (trashed and pending items are excluded by default),
-     * optionally limited to one album ([bucketId]).
+     * Ids and dates of everything matching the filters, newest first. A photo's date is when it
+     * was taken, or when it was added if the file has no "date taken" (WhatsApp images,
+     * screenshots, ...). MediaProvider cannot sort by "one column, else another", so the ordering
+     * is done here; only two numbers per item are read, which is cheap even for 50,000 photos.
      */
-    suspend fun count(bucketId: Long? = null, search: SearchCriteria? = null): Int = withContext(io) {
-        resolver.query(
-            collectionUri,
-            arrayOf(MediaStore.Files.FileColumns._ID),
-            queryArgs(sorted = false, bucketId = bucketId, search = search),
-            null,
-        )?.use { it.count } ?: 0
-    }
-
-    /** DATE_ADDED (epoch seconds) of every photo and video, newest first. Used to build day sections. */
-    suspend fun loadDatesAdded(bucketId: Long? = null, search: SearchCriteria? = null): LongArray = withContext(io) {
-        resolver.query(
-            collectionUri,
-            arrayOf(MediaStore.MediaColumns.DATE_ADDED),
-            queryArgs(sorted = true, bucketId = bucketId, search = search),
-            null,
-        )?.use { cursor ->
-            val result = LongArray(cursor.count)
-            val column = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+    suspend fun loadOrder(bucketId: Long? = null, search: SearchCriteria? = null): MediaOrder = withContext(io) {
+        val projection = arrayOf(
+            MediaStore.MediaColumns._ID,
+            MediaStore.MediaColumns.DATE_TAKEN,
+            MediaStore.MediaColumns.DATE_ADDED,
+        )
+        resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search), null)?.use { cursor ->
+            val ids = LongArray(cursor.count)
+            val dates = LongArray(cursor.count)
             var i = 0
-            while (cursor.moveToNext() && i < result.size) result[i++] = cursor.getLong(column)
-            result
-        } ?: LongArray(0)
+            while (cursor.moveToNext() && i < ids.size) {
+                ids[i] = cursor.getLong(0)
+                dates[i] = MediaOrdering.effectiveDateMillis(taken = cursor.getLong(1), addedSeconds = cursor.getLong(2))
+                i++
+            }
+            MediaOrdering.newestFirst(ids, dates, i)
+        } ?: MediaOrder.Empty
     }
 
-    suspend fun load(
-        offset: Int,
-        limit: Int,
+    /** Dates (epoch seconds) of the matching items, newest first. Used to build day sections. */
+    suspend fun loadDatesSeconds(bucketId: Long? = null, search: SearchCriteria? = null): LongArray {
+        val order = loadOrder(bucketId, search)
+        return LongArray(order.size) { order.datesMillis[it] / 1000 }
+    }
+
+    /**
+     * Loads the full rows for [ids] (one page of an ordered list) and returns them in that same
+     * order. Items that no longer exist or match are skipped.
+     */
+    suspend fun loadByIds(
+        ids: LongArray,
         bucketId: Long? = null,
         search: SearchCriteria? = null,
     ): List<MediaItem> = withContext(io) {
-        val args = queryArgs(sorted = true, bucketId = bucketId, search = search).apply {
-            putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
-            putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
-        }
-        resolver.query(collectionUri, PROJECTION, args, null)?.use { cursor ->
-            buildList(cursor.count) {
-                val columns = Columns(cursor)
-                while (cursor.moveToNext()) add(cursor.toMediaItem(columns))
+        if (ids.isEmpty()) return@withContext emptyList()
+        val byId = resolver.query(
+            collectionUri,
+            PROJECTION,
+            queryArgs(bucketId = bucketId, search = search, onlyIds = ids),
+            null,
+        )?.use { cursor ->
+            val columns = Columns(cursor)
+            buildMap(cursor.count) {
+                while (cursor.moveToNext()) {
+                    val item = cursor.toMediaItem(columns)
+                    put(item.id, item)
+                }
             }
-        } ?: emptyList()
+        }.orEmpty()
+        ids.mapNotNull { byId[it] }
     }
 
     /**
@@ -104,47 +117,56 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.MediaColumns.BUCKET_ID,
             MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
             MediaStore.MediaColumns.RELATIVE_PATH,
+            MediaStore.MediaColumns.DATE_TAKEN,
+            MediaStore.MediaColumns.DATE_ADDED,
         )
-        val folders = resolver.query(collectionUri, projection, queryArgs(sorted = true), null)?.use { cursor ->
+        val folders = resolver.query(collectionUri, projection, queryArgs(), null)?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
             val bucketColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_ID)
             val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
             val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
+            val takenColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN)
+            val addedColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
 
-            val albumsMap = androidx.collection.LongSparseArray<AlbumBuilder>()
-            val order = mutableListOf<Long>()
-
+            // Rows arrive in no particular order, so the cover is the item with the newest date.
+            val albumsMap = HashMap<Long, AlbumBuilder>()
             while (cursor.moveToNext()) {
                 val bucketId = cursor.getLong(bucketColumn)
-                val existing = albumsMap.get(bucketId)
-                if (existing != null) {
-                    existing.itemCount++
-                } else {
-                    val isVideo = cursor.getInt(typeColumn) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-                    albumsMap.put(
-                        bucketId,
-                        AlbumBuilder(
-                            name = cursor.getString(nameColumn).orEmpty(),
-                            relativePath = cursor.getString(pathColumn).orEmpty(),
-                            coverUri = contentUri(cursor.getLong(idColumn), isVideo).toString(),
-                            itemCount = 1
-                        )
+                val date = MediaOrdering.effectiveDateMillis(cursor.getLong(takenColumn), cursor.getLong(addedColumn))
+                val isVideo = cursor.getInt(typeColumn) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                val coverUri = contentUri(cursor.getLong(idColumn), isVideo).toString()
+                val existing = albumsMap[bucketId]
+                if (existing == null) {
+                    albumsMap[bucketId] = AlbumBuilder(
+                        bucketId = bucketId,
+                        name = cursor.getString(nameColumn).orEmpty(),
+                        relativePath = cursor.getString(pathColumn).orEmpty(),
+                        coverUri = coverUri,
+                        newestDate = date,
+                        itemCount = 1,
                     )
-                    order.add(bucketId)
+                } else {
+                    existing.itemCount++
+                    if (date > existing.newestDate) {
+                        existing.newestDate = date
+                        existing.coverUri = coverUri
+                    }
                 }
             }
 
-            order.mapNotNull { bucketId ->
-                val builder = albumsMap.get(bucketId) ?: return@mapNotNull null
-                Album(
-                    bucketId = bucketId,
-                    name = builder.name,
-                    relativePath = builder.relativePath,
-                    coverUri = builder.coverUri,
-                    itemCount = builder.itemCount
-                )
-            }.sortedByDescending { it.relativePath == CAMERA_PATH } // stable: keeps recency order otherwise
+            albumsMap.values
+                .sortedByDescending { it.newestDate }
+                .map { builder ->
+                    Album(
+                        bucketId = builder.bucketId,
+                        name = builder.name,
+                        relativePath = builder.relativePath,
+                        coverUri = builder.coverUri,
+                        itemCount = builder.itemCount,
+                    )
+                }
+                .sortedByDescending { it.relativePath == CAMERA_PATH } // stable: keeps recency order otherwise
         } ?: emptyList()
 
         // Favorites first and the recycle bin last; both only appear when they have something in them.
@@ -153,35 +175,32 @@ class MediaStoreDataSource @Inject constructor(
 
     suspend fun loadAlbumName(bucketId: Long): String = withContext(io) {
         val projection = arrayOf(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
-        resolver.query(collectionUri, projection, queryArgs(sorted = false, bucketId = bucketId), null)?.use { cursor ->
+        resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId), null)?.use { cursor ->
             if (cursor.moveToFirst()) cursor.getString(0) else ""
         }.orEmpty()
     }
 
     private class AlbumBuilder(
+        val bucketId: Long,
         val name: String,
         val relativePath: String,
-        val coverUri: String,
-        var itemCount: Int
+        var coverUri: String,
+        var newestDate: Long,
+        var itemCount: Int,
     )
 
     /** A virtual album ([SpecialAlbums]) with its newest item as cover, or null when empty. */
-    private fun loadCollection(id: Long): Album? {
-        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.Files.FileColumns.MEDIA_TYPE)
-        return resolver.query(collectionUri, projection, queryArgs(sorted = true, bucketId = id), null)?.use { cursor ->
-            if (!cursor.moveToFirst()) {
-                null
-            } else {
-                val isVideo = cursor.getInt(1) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-                Album(
-                    bucketId = id,
-                    name = "",
-                    relativePath = "",
-                    coverUri = contentUri(cursor.getLong(0), isVideo).toString(),
-                    itemCount = cursor.count,
-                )
-            }
-        }
+    private suspend fun loadCollection(id: Long): Album? {
+        val order = loadOrder(bucketId = id)
+        if (order.size == 0) return null
+        val cover = loadByIds(longArrayOf(order.ids.first()), bucketId = id).firstOrNull() ?: return null
+        return Album(
+            bucketId = id,
+            name = "",
+            relativePath = "",
+            coverUri = cover.uri,
+            itemCount = order.size,
+        )
     }
 
     suspend fun loadRefs(bucketId: Long? = null, search: SearchCriteria? = null): List<MediaRef> = withContext(io) {
@@ -190,7 +209,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             MediaStore.MediaColumns.IS_FAVORITE,
         )
-        resolver.query(collectionUri, projection, queryArgs(sorted = true, bucketId = bucketId, search = search), null)
+        resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search), null)
             ?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                 val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
@@ -231,13 +250,17 @@ class MediaStoreDataSource @Inject constructor(
             args.add("%$term%")
         }
         if (search.dateRanges.isNotEmpty()) {
-            val column = MediaStore.MediaColumns.DATE_ADDED
+            // Same date the grid shows: date taken, else date added (seconds, hence the *1000).
+            val taken = MediaStore.MediaColumns.DATE_TAKEN
+            val added = MediaStore.MediaColumns.DATE_ADDED
             selection.append(
                 search.dateRanges.joinToString(separator = " OR ", prefix = " AND (", postfix = ")") {
-                    "($column >= ? AND $column <= ?)"
+                    "(($taken >= ? AND $taken <= ?) OR (($taken IS NULL OR $taken = 0) AND $added >= ? AND $added <= ?))"
                 },
             )
             search.dateRanges.forEach { range ->
+                args.add((range.first * 1000L).toString())
+                args.add((range.last * 1000L + 999L).toString())
                 args.add(range.first.toString())
                 args.add(range.last.toString())
             }
@@ -348,9 +371,10 @@ class MediaStoreDataSource @Inject constructor(
     }
 
     private fun queryArgs(
-        sorted: Boolean,
         bucketId: Long? = null,
         search: SearchCriteria? = null,
+        /** Restricts the query to these ids (used to load one page of an ordered list). */
+        onlyIds: LongArray? = null,
     ): Bundle = Bundle().apply {
         val selection = StringBuilder("${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)")
         val selectionArgs = mutableListOf(
@@ -368,20 +392,12 @@ class MediaStoreDataSource @Inject constructor(
             }
         }
         if (search != null) appendSearch(search, selection, selectionArgs)
+        if (onlyIds != null && onlyIds.isNotEmpty()) {
+            selection.append(" AND ${MediaStore.MediaColumns._ID} IN (${onlyIds.joinToString(",") { "?" }})")
+            onlyIds.forEach { selectionArgs.add(it.toString()) }
+        }
         putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection.toString())
         putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs.toTypedArray())
-        if (sorted) {
-            // DATE_TAKEN is NULL for many files (WhatsApp images, screenshots, downloads), which breaks
-            // ordering. DATE_ADDED is always set and matches the capture time for camera photos.
-            // MediaProvider rejects expressions like COALESCE in sort order, so a perfect
-            // "date taken, else modified" ordering will come later from our own index.
-            // Note: QUERY_ARG_SORT_COLUMNS/DIRECTION are ignored here (results came back oldest
-            // first), so we pass a plain SQL sort clause instead.
-            putString(
-                ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
-                "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC",
-            )
-        }
     }
 
     private class Columns(cursor: Cursor) {
