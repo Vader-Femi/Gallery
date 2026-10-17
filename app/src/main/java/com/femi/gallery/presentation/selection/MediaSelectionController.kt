@@ -17,6 +17,7 @@ import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.domain.usecase.RequestWriteAccessUseCase
 import com.femi.gallery.domain.usecase.UnlockMediaUseCase
+import androidx.compose.runtime.Stable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -68,6 +69,7 @@ class WriteBatch(
  * Selection state plus the actions that can be applied to it (or to any list of items, which
  * is how the viewer uses it). Screens collect [batches] and launch the system dialogs.
  */
+@Stable
 class MediaSelectionController(
     private val scope: CoroutineScope,
     private val bucketId: Long?,

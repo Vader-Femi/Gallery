@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -73,24 +75,28 @@ class LockedStore @Inject constructor(
     /** Copies [uris] into the folder. Items that fail to copy are skipped. */
     suspend fun copyIn(uris: List<String>): List<LockedCopy> = withContext(io) {
         dir.mkdirs()
-        val copies = uris.mapNotNull { uri ->
-            runCatching { copyOne(Uri.parse(uri)) }.getOrNull()?.let { LockedCopy(it, uri) }
-        }
+        val copies = uris.map { uri ->
+            async { runCatching { copyOne(Uri.parse(uri)) }.getOrNull()?.let { LockedCopy(it, uri) } }
+        }.awaitAll().filterNotNull()
+        
         if (copies.isNotEmpty()) changed()
         copies
     }
 
     /** Puts items back into the gallery (Pictures / Movies / DCIM); returns how many succeeded. */
     suspend fun restore(ids: List<Long>): Int = withContext(io) {
-        val restored = ids.count { id -> runCatching { restoreOne(id) }.getOrDefault(false) }
+        val restored = ids.map { id ->
+            async { runCatching { restoreOne(id) }.getOrDefault(false) }
+        }.awaitAll().count { it }
+        
         if (restored > 0) changed()
         restored
     }
 
     suspend fun delete(ids: List<Long>) = withContext(io) {
-        ids.forEach { id ->
-            dir.listFiles { file -> file.name.startsWith("$id.") }?.forEach { it.delete() }
-        }
+        ids.map { id ->
+            async { dir.listFiles { file -> file.name.startsWith("$id.") }?.forEach { it.delete() } }
+        }.awaitAll()
         changed()
     }
 

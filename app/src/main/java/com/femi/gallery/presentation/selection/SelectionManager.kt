@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.selection
 
+import androidx.compose.runtime.Stable
 import com.femi.gallery.domain.model.MediaRef
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.update
 /** Which photos are selected, and whether the screen is in selection mode at all. */
 class SelectionManager {
 
+    @Stable
     data class State(
         val active: Boolean = false,
         val selected: Map<Long, MediaRef> = emptyMap(),
