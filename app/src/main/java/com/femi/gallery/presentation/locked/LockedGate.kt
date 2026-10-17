@@ -17,7 +17,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,13 +55,15 @@ fun LockedGate(
     if (unlocked) {
         content()
     } else {
+        val handleUnlock: () -> Unit = remember { { session.unlock() } }
         val prompt = {
             if (activity != null && available) {
-                BiometricAuth.authenticate(activity, title, subtitle, onSuccess = session::unlock)
+                BiometricAuth.authenticate(activity, title, subtitle, onSuccess = handleUnlock)
             }
         }
-        LaunchedEffect(available) { prompt() }
-        LockedPlaceholder(available = available, onUnlock = prompt, onClose = onClose)
+        val handlePrompt by rememberUpdatedState(prompt)
+        LaunchedEffect(available) { handlePrompt() }
+        LockedPlaceholder(available = available, onUnlock = handlePrompt, onClose = onClose)
     }
 }
 
@@ -107,8 +111,8 @@ private var secureWindowCount = 0
 @Composable
 fun SecureWindow() {
     val view = LocalView.current
-    DisposableEffect(view) {
-        val window = view.context.findActivity()?.window
+    val window = remember(view) { view.context.findActivity()?.window }
+    DisposableEffect(window) {
         secureWindowCount++
         window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         onDispose {
