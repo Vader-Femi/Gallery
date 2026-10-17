@@ -22,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -35,11 +38,14 @@ import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.libraryMoreActions
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PicturesScreen(
     onMediaClick: (mediaIndex: Int) -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: PicturesViewModel = hiltViewModel(),
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
@@ -88,6 +94,8 @@ fun PicturesScreen(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
             )
         }
 

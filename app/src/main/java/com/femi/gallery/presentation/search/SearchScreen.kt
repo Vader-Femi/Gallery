@@ -54,6 +54,10 @@ import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.libraryMoreActions
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+
 /** Suggestion chips: the label shown, and the (English) query it fills in. */
 private val Suggestions = listOf(
     R.string.search_suggestion_videos to "videos",
@@ -62,12 +66,14 @@ private val Suggestions = listOf(
     R.string.search_suggestion_yesterday to "yesterday",
 )
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
     onMediaClick: (mediaIndex: Int, query: String) -> Unit,
     modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -161,6 +167,8 @@ fun SearchScreen(
                             onZoomOut = viewModel.timeline::zoomOut,
                             selectionActive = selectionState.active,
                             selectedIds = selectionState.ids,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
                         )
                     }
                 }

@@ -42,6 +42,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -69,6 +72,7 @@ private const val ZoomStep = 1.25f
  *
  * [topInset] reserves space at the top of the grid (e.g. for the status bar).
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TimelineGrid(
     items: LazyPagingItems<MediaItem>,
@@ -82,6 +86,8 @@ fun TimelineGrid(
     topInset: Dp = 0.dp,
     selectionActive: Boolean = false,
     selectedIds: Set<Long> = emptySet(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val layout = remember(sections) { TimelineLayout(sections) }
     val labeler = rememberDayLabeler()
@@ -177,6 +183,8 @@ fun TimelineGrid(
                         selected = item != null && item.id in selectedIds,
                         onClick = onMediaClick,
                         onLongClick = onMediaLongClick,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
                     )
                 }
             }
@@ -208,7 +216,7 @@ private fun DayHeader(text: String) {
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 private fun MediaCell(
     item: MediaItem?,
@@ -217,6 +225,8 @@ private fun MediaCell(
     selected: Boolean,
     onClick: (Int, MediaItem) -> Unit,
     onLongClick: (MediaItem) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     Box(
         modifier = Modifier
@@ -234,14 +244,26 @@ private fun MediaCell(
             ),
     ) {
         if (item != null) {
+            val baseModifier = Modifier
+                .fillMaxSize()
+                .padding(if (selected) 6.dp else 0.dp)
+            val sharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                with(sharedTransitionScope) {
+                    baseModifier.sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
+                }
+            } else {
+                baseModifier
+            }
+
             AsyncImage(
                 model = item.uri,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 // Selected photos shrink slightly, like Samsung Gallery.
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(if (selected) 6.dp else 0.dp),
+                modifier = sharedModifier,
             )
             if (item.isVideo) {
                 VideoBadge(

@@ -27,6 +27,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
@@ -41,29 +44,35 @@ import com.femi.gallery.presentation.selection.lockedActions
 import com.femi.gallery.presentation.selection.recycleBinActions
 import com.femi.gallery.presentation.selection.SelectionHost
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AlbumScreen(
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: AlbumViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
         // Nothing from the Locked folder is shown until the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            AlbumContent(onBack, onMediaClick, viewModel, modifier)
+            AlbumContent(onBack, onMediaClick, viewModel, modifier, sharedTransitionScope, animatedVisibilityScope)
         }
     } else {
-        AlbumContent(onBack, onMediaClick, viewModel, modifier)
+        AlbumContent(onBack, onMediaClick, viewModel, modifier, sharedTransitionScope, animatedVisibilityScope)
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun AlbumContent(
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
     viewModel: AlbumViewModel,
     modifier: Modifier,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
     val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
@@ -128,6 +137,8 @@ private fun AlbumContent(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
             )
         }
 

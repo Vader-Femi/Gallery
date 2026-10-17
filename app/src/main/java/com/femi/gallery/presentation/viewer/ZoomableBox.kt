@@ -51,6 +51,7 @@ fun ZoomableBox(
     isCurrent: Boolean,
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
+    onZoomStateChange: (Boolean) -> Unit = {},
     content: @Composable (onImageSize: (Size) -> Unit) -> Unit,
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -60,6 +61,12 @@ fun ZoomableBox(
     val scope = rememberCoroutineScope()
     // The gesture handlers below are created once, so they must read the latest callback.
     val latestOnTap by rememberUpdatedState(onTap)
+    val latestOnZoomStateChange by rememberUpdatedState(onZoomStateChange)
+
+    val isZoomed = scale > 1.05f
+    LaunchedEffect(isZoomed) {
+        latestOnZoomStateChange(isZoomed)
+    }
 
     LaunchedEffect(isCurrent) {
         if (!isCurrent) {

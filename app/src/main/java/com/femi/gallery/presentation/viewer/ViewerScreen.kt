@@ -5,11 +5,21 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.view.View
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -22,16 +32,17 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
-import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,18 +51,27 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -80,10 +100,14 @@ import com.femi.gallery.presentation.common.findActivity
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.max
 import androidx.media3.common.MediaItem as PlayerMediaItem
 
 private const val ThumbnailRequestSize = 512
@@ -92,25 +116,31 @@ private const val FullRequestSize = 2160
 private val TopGradient = Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent))
 private val BottomGradient = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ViewerScreen(
     onBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: ViewerViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, viewModel)
+            ViewerContent(onBack, viewModel, sharedTransitionScope, animatedVisibilityScope)
         }
     } else {
-        ViewerContent(onBack, viewModel)
+        ViewerContent(onBack, viewModel, sharedTransitionScope, animatedVisibilityScope)
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun ViewerContent(
     onBack: () -> Unit,
     viewModel: ViewerViewModel,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
     val details by viewModel.details.collectAsStateWithLifecycle()
@@ -126,9 +156,7 @@ private fun ViewerContent(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black),
+        modifier = Modifier.fillMaxSize(),
     ) {
         if (items.itemCount > 0) {
             val pagerState = rememberPagerState(
@@ -147,6 +175,9 @@ private fun ViewerContent(
                     isCurrent = pagerState.settledPage == page,
                     chromeVisible = chromeVisible,
                     onChromeChange = handleChromeChange,
+                    onBack = onBack,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
                 )
             }
 
@@ -221,24 +252,53 @@ private fun ViewerContent(
     details?.let { DetailsSheet(details = it, onDismiss = viewModel::hideDetails) }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun ViewerPage(
     item: MediaItem?,
     isCurrent: Boolean,
     chromeVisible: Boolean,
     onChromeChange: (Boolean) -> Unit,
+    onBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
 ) {
     when {
         item == null -> Box(Modifier.fillMaxSize())
-        item.isVideo -> VideoPage(item, isCurrent, onChromeChange)
-        else -> PhotoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) })
+        item.isVideo -> VideoPage(
+            item = item,
+            isCurrent = isCurrent,
+            onBack = onBack,
+            onChromeChange = onChromeChange,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+        )
+        else -> PhotoPage(
+            item = item,
+            isCurrent = isCurrent,
+            onTap = { onChromeChange(!chromeVisible) },
+            onBack = onBack,
+            onChromeChange = onChromeChange,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+        )
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
+private fun PhotoPage(
+    item: MediaItem,
+    isCurrent: Boolean,
+    onTap: () -> Unit,
+    onBack: () -> Unit,
+    onChromeChange: (Boolean) -> Unit,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
+) {
     val context = LocalContext.current
-    // Layer 1: the system thumbnail appears instantly. Layer 2: the sharper image fades in on top.
+    var isZoomed by remember { mutableStateOf(false) }
+
     val thumbnail = remember(item.uri) {
         ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()
     }
@@ -246,54 +306,276 @@ private fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
         ImageRequest.Builder(context).data(item.uri).size(FullRequestSize).crossfade(true).build()
     }
     val handleTap = remember(onTap) { { onTap() } }
-    ZoomableBox(isCurrent = isCurrent, onTap = handleTap) { onImageSize ->
-        AsyncImage(
-            model = thumbnail,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(),
-            onSuccess = { onImageSize(it.painter.intrinsicSize) },
-        )
-        AsyncImage(
-            model = full,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(),
-            onSuccess = { onImageSize(it.painter.intrinsicSize) },
-        )
+
+    DragToDismissBox(
+        enabled = isCurrent && !isZoomed,
+        onDismiss = onBack,
+        onDragStateChange = { isDragging ->
+            if (isDragging) onChromeChange(false)
+        },
+    ) { dragProgress ->
+        ZoomableBox(
+            isCurrent = isCurrent,
+            onTap = handleTap,
+            onZoomStateChange = { isZoomed = it },
+        ) { onImageSize ->
+            val baseModifier = Modifier.fillMaxSize()
+            val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
+                with(sharedTransitionScope) {
+                    baseModifier.sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
+                }
+            } else {
+                baseModifier
+            }
+
+            Box(modifier = sharedModifier) {
+                AsyncImage(
+                    model = thumbnail,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                    onSuccess = { onImageSize(it.painter.intrinsicSize) },
+                )
+                AsyncImage(
+                    model = full,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                    onSuccess = { onImageSize(it.painter.intrinsicSize) },
+                )
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun VideoPage(item: MediaItem, isCurrent: Boolean, onChromeChange: (Boolean) -> Unit) {
+private fun VideoPage(
+    item: MediaItem,
+    isCurrent: Boolean,
+    onBack: () -> Unit,
+    onChromeChange: (Boolean) -> Unit,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
+) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) {
         ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()
     }
-    // Pad both so the thumbnail and player share the same exact center and bounds.
     val videoModifier = remember {
         Modifier
             .fillMaxSize()
             .padding(bottom = 72.dp)
     }
-    
-    Box(modifier = Modifier.fillMaxSize()) {
-        AsyncImage(
-            model = thumbnail,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = videoModifier,
-        )
-        // Only the settled page plays, so swiping past a video releases its player.
-        if (isCurrent) {
-            VideoPlayer(
-                uri = item.uri,
-                onControllerVisibilityChange = onChromeChange,
-                // Keep the player's own seek bar clear of our bottom action bar.
-                modifier = videoModifier,
+
+    DragToDismissBox(
+        enabled = isCurrent,
+        onDismiss = onBack,
+        onDragStateChange = { isDragging ->
+            if (isDragging) onChromeChange(false)
+        },
+    ) {
+        val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
+            with(sharedTransitionScope) {
+                videoModifier.sharedElement(
+                    sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+            }
+        } else {
+            videoModifier
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model = thumbnail,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = sharedModifier,
             )
+            if (isCurrent) {
+                VideoPlayer(
+                    uri = item.uri,
+                    onControllerVisibilityChange = onChromeChange,
+                    modifier = sharedModifier,
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun DragToDismissBox(
+    enabled: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    onDragStateChange: (isDragging: Boolean) -> Unit = {},
+    content: @Composable (dragProgress: Float) -> Unit,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val offsetYAnim = remember { Animatable(0f) }
+    val offsetXAnim = remember { Animatable(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+
+    val density = LocalDensity.current
+    val maxDragDistancePx = with(density) { 600.dp.toPx() }
+    val dismissThresholdPx = with(density) { 160.dp.toPx() }
+    val flingVelocityThresholdPx = with(density) { 1000.dp.toPx() }
+
+    val currentEnabled by rememberUpdatedState(enabled)
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+    val currentOnDragStateChange by rememberUpdatedState(onDragStateChange)
+
+    PredictiveBackHandler(enabled = currentEnabled && !isDragging) { progressFlow ->
+        try {
+            progressFlow.collect { backEvent ->
+                predictiveBackProgress = backEvent.progress
+                currentOnDragStateChange(backEvent.progress > 0f)
+            }
+            currentOnDismiss()
+        } catch (_: CancellationException) {
+            coroutineScope.launch {
+                animate(
+                    initialValue = predictiveBackProgress,
+                    targetValue = 0f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                ) { value, _ -> predictiveBackProgress = value }
+                currentOnDragStateChange(false)
+            }
+        }
+    }
+
+    val dragProgress by remember {
+        derivedStateOf {
+            val verticalProgress = ViewerDragState.calculateDragProgress(offsetYAnim.value, maxDragDistancePx)
+            max(verticalProgress, predictiveBackProgress)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .drawWithContent {
+                val scrimAlpha = ViewerDragState.calculateScrimAlpha(dragProgress)
+                drawRect(color = Color.Black.copy(alpha = scrimAlpha))
+                drawContent()
+            }
+            .then(
+                if (currentEnabled) {
+                    Modifier.pointerInput(Unit) {
+                        val velocityTracker = VelocityTracker()
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            val pointerId = down.id
+                            val startPosition = down.position
+                            var isSwipingVertical = false
+                            var isSwipingHorizontal = false
+                            velocityTracker.resetTracking()
+                            velocityTracker.addPosition(down.uptimeMillis, down.position)
+
+                            do {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                velocityTracker.addPosition(change.uptimeMillis, change.position)
+
+                                val dragAmount = change.position - change.previousPosition
+
+                                if (!isSwipingVertical && !isSwipingHorizontal) {
+                                    val totalDelta = change.position - startPosition
+                                    val dx = abs(totalDelta.x)
+                                    val dy = abs(totalDelta.y)
+                                    val touchSlop = viewConfiguration.touchSlop
+                                    if (dy > touchSlop && dy > dx * 1.2f) {
+                                        isSwipingVertical = true
+                                        isDragging = true
+                                        currentOnDragStateChange(true)
+                                    } else if (dx > touchSlop && dx > dy * 1.2f) {
+                                        isSwipingHorizontal = true
+                                    }
+                                }
+
+                                if (isSwipingVertical) {
+                                    change.consume()
+                                    coroutineScope.launch {
+                                        offsetYAnim.snapTo(offsetYAnim.value + dragAmount.y)
+                                        offsetXAnim.snapTo(offsetXAnim.value + dragAmount.x)
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
+
+                            if (isSwipingVertical) {
+                                val velocity = velocityTracker.calculateVelocity()
+                                val totalY = offsetYAnim.value
+                                val velocityY = velocity.y
+
+                                isDragging = false
+                                if (ViewerDragState.shouldDismissOnRelease(totalY, velocityY, dismissThresholdPx, flingVelocityThresholdPx)) {
+                                    currentOnDismiss()
+                                } else {
+                                    coroutineScope.launch {
+                                        launch {
+                                            offsetYAnim.animateTo(
+                                                0f,
+                                                spring(stiffness = Spring.StiffnessMediumLow),
+                                            )
+                                        }
+                                        launch {
+                                            offsetXAnim.animateTo(
+                                                0f,
+                                                spring(stiffness = Spring.StiffnessMediumLow),
+                                            )
+                                        }
+                                        currentOnDragStateChange(false)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else Modifier
+            ),
+    ) {
+        val cornerRadiusPx = with(density) { (ViewerDragState.calculateCornerRadiusDp(dragProgress).dp.toPx()) }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationX = offsetXAnim.value * 0.4f
+                    translationY = offsetYAnim.value
+                    val s = ViewerDragState.calculateScale(dragProgress)
+                    scaleX = s
+                    scaleY = s
+                    clip = dragProgress > 0.01f
+                    shape = RoundedCornerShape(cornerRadiusPx)
+                },
+        ) {
+            content(dragProgress)
+        }
+    }
+}
+
+object ViewerDragState {
+    fun calculateDragProgress(offsetYPx: Float, maxDragDistancePx: Float): Float =
+        (abs(offsetYPx) / maxDragDistancePx).coerceIn(0f, 1f)
+
+    fun calculateScale(dragProgress: Float): Float =
+        1f - (dragProgress * 0.35f)
+
+    fun calculateScrimAlpha(dragProgress: Float): Float =
+        (1f - dragProgress * 1.2f).coerceIn(0f, 1f)
+
+    fun calculateCornerRadiusDp(dragProgress: Float): Float =
+        dragProgress * 28f
+
+    fun shouldDismissOnRelease(
+        totalYPx: Float,
+        velocityYPxPerSec: Float,
+        dismissThresholdPx: Float,
+        flingVelocityThresholdPx: Float,
+    ): Boolean = totalYPx > dismissThresholdPx || (totalYPx > 50f && velocityYPxPerSec > flingVelocityThresholdPx)
 }
 
 @OptIn(UnstableApi::class)
