@@ -103,7 +103,7 @@ class MediaStoreDataSource @Inject constructor(
                 }
             }
         }.orEmpty()
-        ids.mapNotNull { byId[it] }
+        ids.map { byId[it] }.filterNotNull()
     }
 
     /**
