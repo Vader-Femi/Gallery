@@ -86,6 +86,7 @@ fun TimelineGrid(
     topInset: Dp = 0.dp,
     selectionActive: Boolean = false,
     selectedIds: Set<Long> = emptySet(),
+    lastViewedMediaIndex: Int? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -95,6 +96,17 @@ fun TimelineGrid(
     val haptic = LocalHapticFeedback.current
 
     var anchorMediaIndex by remember { mutableIntStateOf(-1) }
+
+    // Scroll to the item viewed in the full-screen viewer if it is scrolled offscreen.
+    LaunchedEffect(lastViewedMediaIndex) {
+        if (lastViewedMediaIndex != null && lastViewedMediaIndex >= 0 && layout.totalCount > 0) {
+            val gridIndex = layout.gridIndexForMedia(lastViewedMediaIndex)
+            val isVisible = gridState.layoutInfo.visibleItemsInfo.any { it.index == gridIndex }
+            if (!isVisible) {
+                gridState.scrollToItem(gridIndex)
+            }
+        }
+    }
     
     // Check strictly if at the very top of the grid
     val isAtTop by remember {
@@ -252,6 +264,12 @@ private fun MediaCell(
                     baseModifier.sharedElement(
                         sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
                         animatedVisibilityScope = animatedVisibilityScope,
+                        boundsTransform = { _, _ ->
+                            androidx.compose.animation.core.spring(
+                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                            )
+                        },
                     )
                 }
             } else {

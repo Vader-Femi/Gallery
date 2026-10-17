@@ -44,6 +44,7 @@ fun PicturesScreen(
     onMediaClick: (mediaIndex: Int) -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
+    lastViewedMediaIndex: Int? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: PicturesViewModel = hiltViewModel(),
@@ -94,6 +95,7 @@ fun PicturesScreen(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                lastViewedMediaIndex = lastViewedMediaIndex,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
             )
