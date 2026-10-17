@@ -31,7 +31,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,17 +86,58 @@ fun TimelineGrid(
     val layout = remember(sections) { TimelineLayout(sections) }
     val labeler = rememberDayLabeler()
     val gridState = rememberLazyGridState()
+    val haptic = LocalHapticFeedback.current
 
-    // When a newer photo arrives, jump to it if the user is already near the top.
+    var anchorMediaIndex by remember { mutableIntStateOf(-1) }
+    
+    // Check strictly if at the very top of the grid
+    val isAtTop by remember {
+        derivedStateOf { gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0 }
+    }
+
+    // When a newer photo arrives, jump to it if the user is already strictly at the top.
     val newestId = if (items.itemCount > 0) items.peek(0)?.id else null
     LaunchedEffect(newestId) {
-        if (newestId != null && gridState.firstVisibleItemIndex < 24) gridState.scrollToItem(0)
+        if (newestId != null && isAtTop) {
+            gridState.animateScrollToItem(0)
+        }
+    }
+
+    // Restore scroll position after a layout change (e.g. from zoom)
+    LaunchedEffect(layout) {
+        if (anchorMediaIndex >= 0 && layout.totalCount > 0 && !isAtTop) {
+            gridState.scrollToItem(layout.gridIndexForMedia(anchorMediaIndex))
+        }
+    }
+    
+    fun captureAnchorMediaIndex() {
+        if (layout.totalCount > 0) {
+            val gridIndex = gridState.firstVisibleItemIndex
+            if (gridIndex < layout.totalCount) {
+                anchorMediaIndex = if (layout.isHeader(gridIndex)) {
+                    layout.sections[layout.sectionIndexAt(gridIndex)].startIndex
+                } else {
+                    layout.mediaIndexAt(gridIndex)
+                }
+            }
+        }
     }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .pinchToChangeColumns(onZoomIn = onZoomIn, onZoomOut = onZoomOut),
+            .pinchToChangeColumns(
+                onZoomIn = {
+                    captureAnchorMediaIndex()
+                    onZoomIn()
+                    if (zoom == TimelineZoom.Day2) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                },
+                onZoomOut = {
+                    captureAnchorMediaIndex()
+                    onZoomOut()
+                    if (zoom == TimelineZoom.Year7) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+            ),
     ) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(zoom.columns),
@@ -123,10 +172,11 @@ fun TimelineGrid(
                     val item = items.getOrNull(mediaIndex)
                     MediaCell(
                         item = item,
+                        mediaIndex = mediaIndex,
                         selectionActive = selectionActive,
                         selected = item != null && item.id in selectedIds,
-                        onClick = { if (item != null) onMediaClick(mediaIndex, item) },
-                        onLongClick = { if (item != null) onMediaLongClick(item) },
+                        onClick = onMediaClick,
+                        onLongClick = onMediaLongClick,
                     )
                 }
             }
@@ -162,16 +212,26 @@ private fun DayHeader(text: String) {
 @Composable
 private fun MediaCell(
     item: MediaItem?,
+    mediaIndex: Int,
     selectionActive: Boolean,
     selected: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onClick: (Int, MediaItem) -> Unit,
+    onLongClick: (MediaItem) -> Unit,
 ) {
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .combinedClickable(enabled = item != null, onClick = onClick, onLongClick = onLongClick),
+            .semantics {
+                if (item != null) {
+                    contentDescription = if (item.isVideo) "Video, ${formatDuration(item.durationMillis)}" else "Photo"
+                }
+            }
+            .combinedClickable(
+                enabled = item != null,
+                onClick = { if (item != null) onClick(mediaIndex, item) },
+                onLongClick = { if (item != null) onLongClick(item) }
+            ),
     ) {
         if (item != null) {
             AsyncImage(
