@@ -50,7 +50,6 @@ fun AlbumScreen(
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
-    lastViewedMediaIndex: Int? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: AlbumViewModel = hiltViewModel(),
@@ -58,10 +57,10 @@ fun AlbumScreen(
     if (viewModel.isLocked) {
         // Nothing from the Locked folder is shown until the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            AlbumContent(onBack, onMediaClick, viewModel, modifier, lastViewedMediaIndex, sharedTransitionScope, animatedVisibilityScope)
+            AlbumContent(onBack, onMediaClick, viewModel, modifier, sharedTransitionScope, animatedVisibilityScope)
         }
     } else {
-        AlbumContent(onBack, onMediaClick, viewModel, modifier, lastViewedMediaIndex, sharedTransitionScope, animatedVisibilityScope)
+        AlbumContent(onBack, onMediaClick, viewModel, modifier, sharedTransitionScope, animatedVisibilityScope)
     }
 }
 
@@ -72,7 +71,6 @@ private fun AlbumContent(
     onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
     viewModel: AlbumViewModel,
     modifier: Modifier,
-    lastViewedMediaIndex: Int?,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
 ) {
@@ -139,7 +137,6 @@ private fun AlbumContent(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
-                lastViewedMediaIndex = lastViewedMediaIndex,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
             )

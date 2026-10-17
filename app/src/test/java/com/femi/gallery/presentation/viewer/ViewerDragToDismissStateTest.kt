@@ -8,15 +8,12 @@ import org.junit.Test
 class ViewerDragToDismissStateTest {
 
     @Test
-    fun calculateDragProgressClampsToUnitRangeAndConsidersPredictiveBack() {
+    fun calculateDragProgressClampsToUnitRange() {
         assertEquals(0f, ViewerDragState.calculateDragProgress(0f, 600f), 0.001f)
         assertEquals(0.5f, ViewerDragState.calculateDragProgress(300f, 600f), 0.001f)
         assertEquals(1.0f, ViewerDragState.calculateDragProgress(600f, 600f), 0.001f)
         assertEquals(1.0f, ViewerDragState.calculateDragProgress(1200f, 600f), 0.001f)
         assertEquals(0.5f, ViewerDragState.calculateDragProgress(-300f, 600f), 0.001f)
-
-        // Predictive back progress higher than drag
-        assertEquals(0.7f, ViewerDragState.calculateDragProgress(100f, 600f, 0.7f), 0.001f)
     }
 
     @Test
@@ -42,21 +39,11 @@ class ViewerDragToDismissStateTest {
 
     @Test
     fun shouldDismissOnReleaseTriggersWhenPastDistanceThresholdOrFlingVelocity() {
-        // Distance threshold crossed (downward)
+        // Distance threshold crossed
         assertTrue(
             ViewerDragState.shouldDismissOnRelease(
                 totalYPx = 200f,
                 velocityYPxPerSec = 100f,
-                dismissThresholdPx = 160f,
-                flingVelocityThresholdPx = 1000f,
-            ),
-        )
-
-        // Distance threshold crossed (upward)
-        assertTrue(
-            ViewerDragState.shouldDismissOnRelease(
-                totalYPx = -200f,
-                velocityYPxPerSec = -100f,
                 dismissThresholdPx = 160f,
                 flingVelocityThresholdPx = 1000f,
             ),

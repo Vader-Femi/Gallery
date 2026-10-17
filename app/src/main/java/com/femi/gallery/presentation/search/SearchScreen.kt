@@ -72,7 +72,6 @@ fun SearchScreen(
     onBack: () -> Unit,
     onMediaClick: (mediaIndex: Int, query: String) -> Unit,
     modifier: Modifier = Modifier,
-    lastViewedMediaIndex: Int? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: SearchViewModel = hiltViewModel(),
@@ -168,7 +167,6 @@ fun SearchScreen(
                             onZoomOut = viewModel.timeline::zoomOut,
                             selectionActive = selectionState.active,
                             selectedIds = selectionState.ids,
-                            lastViewedMediaIndex = lastViewedMediaIndex,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                         )
