@@ -89,6 +89,9 @@ import androidx.media3.common.MediaItem as PlayerMediaItem
 private const val ThumbnailRequestSize = 512
 private const val FullRequestSize = 2160
 
+private val TopGradient = Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent))
+private val BottomGradient = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))
+
 @Composable
 fun ViewerScreen(
     onBack: () -> Unit,
@@ -138,11 +141,12 @@ private fun ViewerContent(
                 beyondViewportPageCount = 1,
                 key = { page -> items.peekOrNull(page)?.id ?: (-page - 1L) },
             ) { page ->
+                val handleChromeChange: (Boolean) -> Unit = remember { { chromeVisible = it } }
                 ViewerPage(
                     item = items.getOrNull(page),
                     isCurrent = pagerState.settledPage == page,
                     chromeVisible = chromeVisible,
-                    onChromeChange = { chromeVisible = it },
+                    onChromeChange = handleChromeChange,
                 )
             }
 
@@ -165,50 +169,50 @@ private fun ViewerContent(
             ) {
                 if (current != null) {
                     val ref = current.toRef()
-                    ActionBar(
-                        actions = when {
-                            viewModel.isRecycleBin -> listOf(
-                                ViewerAction(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore)) {
-                                    viewModel.actions.restore(listOf(ref))
-                                },
-                                ViewerAction(Icons.Outlined.DeleteForever, stringResource(R.string.action_delete_forever)) {
-                                    viewModel.actions.deleteForever(listOf(ref))
-                                },
-                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
-                                    viewModel.showDetails(current)
-                                },
-                            )
-                            viewModel.isLocked -> listOf(
-                                ViewerAction(Icons.Outlined.LockOpen, stringResource(R.string.action_unlock)) {
-                                    viewModel.actions.unlock(listOf(ref))
-                                },
-                                ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
-                                    viewModel.actions.deleteLocked(listOf(ref))
-                                },
-                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
-                                    viewModel.showDetails(current)
-                                },
-                            )
-                            else -> listOf(
-                                ViewerAction(Icons.Outlined.Share, stringResource(R.string.viewer_share)) {
-                                    shareMedia(context, current)
-                                },
-                                ViewerAction(
-                                    icon = if (current.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                                    label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
-                                ) { viewModel.actions.toggleFavorite(listOf(ref)) },
-                                ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
-                                    viewModel.actions.trash(listOf(ref))
-                                },
-                                ViewerAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
-                                    lockWithScreenLockCheck(context) { viewModel.actions.lock(listOf(ref)) }
-                                },
-                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
-                                    viewModel.showDetails(current)
-                                },
-                            )
-                        },
-                    )
+                    val actions = when {
+                        viewModel.isRecycleBin -> listOf(
+                            ViewerAction(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore)) {
+                                viewModel.actions.restore(listOf(ref))
+                            },
+                            ViewerAction(Icons.Outlined.DeleteForever, stringResource(R.string.action_delete_forever)) {
+                                viewModel.actions.deleteForever(listOf(ref))
+                            },
+                            ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                viewModel.showDetails(current)
+                            },
+                        )
+                        viewModel.isLocked -> listOf(
+                            ViewerAction(Icons.Outlined.LockOpen, stringResource(R.string.action_unlock)) {
+                                viewModel.actions.unlock(listOf(ref))
+                            },
+                            ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
+                                viewModel.actions.deleteLocked(listOf(ref))
+                            },
+                            ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                viewModel.showDetails(current)
+                            },
+                        )
+                        else -> listOf(
+                            ViewerAction(Icons.Outlined.Share, stringResource(R.string.viewer_share)) {
+                                shareMedia(context, current)
+                            },
+                            ViewerAction(
+                                icon = if (current.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                            ) { viewModel.actions.toggleFavorite(listOf(ref)) },
+                            ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
+                                viewModel.actions.trash(listOf(ref))
+                            },
+                            ViewerAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
+                                lockWithScreenLockCheck(context) { viewModel.actions.lock(listOf(ref)) }
+                            },
+                            ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                viewModel.showDetails(current)
+                            },
+                        )
+                    }
+                    val cachedActions = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions }
+                    ActionBar(actions = cachedActions)
                 }
             }
         }
@@ -241,7 +245,8 @@ private fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
     val full = remember(item.uri) {
         ImageRequest.Builder(context).data(item.uri).size(FullRequestSize).crossfade(true).build()
     }
-    ZoomableBox(isCurrent = isCurrent, onTap = onTap) { onImageSize ->
+    val handleTap = remember(onTap) { { onTap() } }
+    ZoomableBox(isCurrent = isCurrent, onTap = handleTap) { onImageSize ->
         AsyncImage(
             model = thumbnail,
             contentDescription = null,
@@ -265,12 +270,19 @@ private fun VideoPage(item: MediaItem, isCurrent: Boolean, onChromeChange: (Bool
     val thumbnail = remember(item.uri) {
         ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()
     }
+    // Pad both so the thumbnail and player share the same exact center and bounds.
+    val videoModifier = remember {
+        Modifier
+            .fillMaxSize()
+            .padding(bottom = 72.dp)
+    }
+    
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
             model = thumbnail,
             contentDescription = null,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(),
+            modifier = videoModifier,
         )
         // Only the settled page plays, so swiping past a video releases its player.
         if (isCurrent) {
@@ -278,9 +290,7 @@ private fun VideoPage(item: MediaItem, isCurrent: Boolean, onChromeChange: (Bool
                 uri = item.uri,
                 onControllerVisibilityChange = onChromeChange,
                 // Keep the player's own seek bar clear of our bottom action bar.
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 72.dp),
+                modifier = videoModifier,
             )
         }
     }
@@ -332,7 +342,7 @@ private fun TopBar(item: MediaItem, onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
+            .background(TopGradient)
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -359,7 +369,7 @@ private fun ActionBar(actions: List<ViewerAction>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))))
+            .background(BottomGradient)
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -376,9 +386,10 @@ private fun ActionBar(actions: List<ViewerAction>) {
 @Composable
 private fun ImmersiveMode(enabled: Boolean) {
     val view = LocalView.current
-    DisposableEffect(enabled) {
-        val window = view.context.findActivity()?.window
-        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+    val window = remember(view) { view.context.findActivity()?.window }
+    val controller = remember(window, view) { window?.let { WindowCompat.getInsetsController(it, view) } }
+    
+    DisposableEffect(enabled, controller) {
         controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         if (enabled) {
             controller?.hide(WindowInsetsCompat.Type.systemBars())
