@@ -53,6 +53,7 @@ fun AlbumPickerSheet(
 ) {
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     var creating by rememberSaveable { mutableStateOf(false) }
+    val handleChoose by androidx.compose.runtime.rememberUpdatedState(onChoose)
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Text(
@@ -76,8 +77,9 @@ fun AlbumPickerSheet(
                 )
             }
             items(albums, key = { it.bucketId }) { album ->
+                val handleRowClick: () -> Unit = remember(album.bucketId) { { handleChoose(album.relativePath) } }
                 PickerRow(
-                    onClick = { onChoose(album.relativePath) },
+                    onClick = handleRowClick,
                     leading = {
                         AsyncImage(
                             model = album.coverUri,

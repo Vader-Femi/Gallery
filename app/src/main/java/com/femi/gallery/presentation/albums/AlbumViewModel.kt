@@ -9,6 +9,7 @@ import com.femi.gallery.core.security.LockSession
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
+import com.femi.gallery.domain.usecase.GetAlbumNameUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
 import com.femi.gallery.domain.usecase.ObserveAlbumsUseCase
 import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
@@ -20,10 +21,13 @@ import com.femi.gallery.presentation.pictures.TimelineZoomState
 import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /** One album's photos, grouped and zoomable just like the Pictures tab. */
@@ -32,7 +36,7 @@ class AlbumViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
-    observeAlbums: ObserveAlbumsUseCase,
+    getAlbumName: GetAlbumNameUseCase,
     selectionFactory: MediaSelectionControllerFactory,
     val lockSession: LockSession,
     private val refreshMedia: RefreshMediaUseCase,
@@ -48,10 +52,15 @@ class AlbumViewModel @Inject constructor(
 
     val timeline = TimelineZoomState(viewModelScope, observeTimeline(bucketId))
 
-    /** Folder name, looked up from the album list so it never needs to travel through navigation. */
-    val title: StateFlow<String> = observeAlbums()
-        .map { albums -> albums.firstOrNull { it.bucketId == bucketId }?.name.orEmpty() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    /** Folder name, looked up once when the album is opened. */
+    private val _title = MutableStateFlow("")
+    val title: StateFlow<String> = _title.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _title.value = getAlbumName(bucketId)
+        }
+    }
 
     val selection = selectionFactory.create(
         scope = viewModelScope,
