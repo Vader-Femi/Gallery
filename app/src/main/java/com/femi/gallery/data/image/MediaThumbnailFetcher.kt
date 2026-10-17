@@ -15,6 +15,8 @@ import coil3.request.Options
 import coil3.size.Dimension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.os.CancellationSignal
+import kotlinx.coroutines.job
 
 /**
  * Loads grid thumbnails through [ContentResolver.loadThumbnail] instead of decoding the full
@@ -27,11 +29,17 @@ class MediaThumbnailFetcher(
 ) : Fetcher {
 
     override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
+        val signal = CancellationSignal()
+        val completionHandler = coroutineContext.job.invokeOnCompletion { error -> 
+            if (error != null) signal.cancel() 
+        }
         try {
+            val requestedWidth = (options.size.width as? Dimension.Pixels)?.px ?: THUMBNAIL_SIZE
+            val size = minOf(THUMBNAIL_SIZE, requestedWidth)
             val bitmap = options.context.contentResolver.loadThumbnail(
                 Uri.parse(data.toString()),
-                Size(THUMBNAIL_SIZE, THUMBNAIL_SIZE),
-                null,
+                Size(size, size),
+                signal,
             )
             ImageFetchResult(
                 image = bitmap.asImage(),
@@ -42,6 +50,8 @@ class MediaThumbnailFetcher(
             // No system thumbnail (yet): log it and let Coil's default fetcher decode the file.
             Log.w("MediaThumbnailFetcher", "loadThumbnail failed for $data", e)
             null
+        } finally {
+            completionHandler.dispose()
         }
     }
 
