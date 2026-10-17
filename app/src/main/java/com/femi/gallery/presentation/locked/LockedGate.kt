@@ -96,13 +96,24 @@ private fun LockedPlaceholder(available: Boolean, onUnlock: () -> Unit, onClose:
     }
 }
 
+/**
+ * How many [SecureWindow]s are currently on screen. Screens overlap while navigating (the album
+ * is still composed while the viewer opens on top of it), so the flag may only be cleared when
+ * the last one leaves; otherwise the album disposing would switch off the viewer's protection.
+ */
+private var secureWindowCount = 0
+
 /** Blocks screenshots, screen recording and the recent-apps thumbnail while this is composed. */
 @Composable
 fun SecureWindow() {
     val view = LocalView.current
     DisposableEffect(view) {
         val window = view.context.findActivity()?.window
+        secureWindowCount++
         window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+        onDispose {
+            secureWindowCount = maxOf(0, secureWindowCount - 1)
+            if (secureWindowCount == 0) window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
     }
 }
