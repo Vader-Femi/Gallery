@@ -32,9 +32,11 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
+import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.pictures.TimelineGrid
 import com.femi.gallery.presentation.selection.SelectionBars
 import com.femi.gallery.presentation.selection.libraryActions
+import com.femi.gallery.presentation.selection.lockedActions
 import com.femi.gallery.presentation.selection.recycleBinActions
 import com.femi.gallery.presentation.selection.WriteRequestHandler
 
@@ -44,6 +46,23 @@ fun AlbumScreen(
     onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AlbumViewModel = hiltViewModel(),
+) {
+    if (viewModel.isLocked) {
+        // Nothing from the Locked folder is shown until the user authenticates.
+        LockedGate(session = viewModel.lockSession, onClose = onBack) {
+            AlbumContent(onBack, onMediaClick, viewModel, modifier)
+        }
+    } else {
+        AlbumContent(onBack, onMediaClick, viewModel, modifier)
+    }
+}
+
+@Composable
+private fun AlbumContent(
+    onBack: () -> Unit,
+    onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
+    viewModel: AlbumViewModel,
+    modifier: Modifier,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
     val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
@@ -77,6 +96,7 @@ fun AlbumScreen(
                     text = when {
                         viewModel.isRecycleBin -> stringResource(R.string.album_trash)
                         viewModel.isFavorites -> stringResource(R.string.album_favorites)
+                        viewModel.isLocked -> stringResource(R.string.album_locked)
                         else -> title.ifEmpty { stringResource(R.string.album_unnamed) }
                     },
                     style = MaterialTheme.typography.titleLarge,
@@ -113,10 +133,10 @@ fun AlbumScreen(
         if (selectionState.active) {
             SelectionBars(
                 count = selectionState.count,
-                actions = if (viewModel.isRecycleBin) {
-                    recycleBinActions(viewModel.selection)
-                } else {
-                    libraryActions(context, selectionState, viewModel.selection)
+                actions = when {
+                    viewModel.isRecycleBin -> recycleBinActions(viewModel.selection)
+                    viewModel.isLocked -> lockedActions(viewModel.selection)
+                    else -> libraryActions(context, selectionState, viewModel.selection)
                 },
                 onClose = viewModel.selection::clear,
                 onSelectAll = viewModel.selection::selectAll,

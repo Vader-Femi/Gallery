@@ -20,4 +20,7 @@ data class Album(
 object SpecialAlbums {
     const val FAVORITES = Long.MIN_VALUE + 1
     const val TRASH = Long.MIN_VALUE + 2
+
+    /** Photos moved into the app-private, biometric-protected Locked folder. */
+    const val LOCKED = Long.MIN_VALUE + 3
 }

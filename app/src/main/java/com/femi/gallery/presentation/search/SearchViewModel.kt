@@ -16,7 +16,7 @@ import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.presentation.pictures.TimelineZoomState
-import com.femi.gallery.presentation.selection.MediaSelectionController
+import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -38,10 +38,7 @@ import javax.inject.Inject
 class SearchViewModel @Inject constructor(
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
-    getAllRefs: GetAllMediaRefsUseCase,
-    requestTrash: RequestTrashUseCase,
-    requestFavorite: RequestFavoriteUseCase,
-    requestDelete: RequestDeleteUseCase,
+    selectionFactory: MediaSelectionControllerFactory,
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
@@ -68,13 +65,9 @@ class SearchViewModel @Inject constructor(
         },
     )
 
-    val selection = MediaSelectionController(
+    val selection = selectionFactory.create(
         scope = viewModelScope,
         bucketId = null,
-        getAllRefs = getAllRefs,
-        requestTrash = requestTrash,
-        requestFavorite = requestFavorite,
-        requestDelete = requestDelete,
         currentSearch = { criteria.value.takeUnless { it.isEmpty } },
     )
 

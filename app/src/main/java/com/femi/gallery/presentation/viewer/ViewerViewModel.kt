@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.femi.gallery.core.security.LockSession
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.SpecialAlbums
@@ -16,7 +17,7 @@ import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
 import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
-import com.femi.gallery.presentation.selection.MediaSelectionController
+import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -31,16 +32,15 @@ class ViewerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     private val getMediaDetails: GetMediaDetailsUseCase,
-    getAllRefs: GetAllMediaRefsUseCase,
-    requestTrash: RequestTrashUseCase,
-    requestFavorite: RequestFavoriteUseCase,
-    requestDelete: RequestDeleteUseCase,
+    selectionFactory: MediaSelectionControllerFactory,
+    val lockSession: LockSession,
 ) : ViewModel() {
 
     /** Position of the tapped item in the full, newest-first media list. */
     val startIndex: Int = savedStateHandle.get<Int>(INDEX_ARG) ?: 0
 
     val isRecycleBin: Boolean get() = bucketId == SpecialAlbums.TRASH
+    val isLocked: Boolean get() = bucketId == SpecialAlbums.LOCKED
 
     /** Set when opened from an album, so swiping stays inside that album. */
     private val bucketId: Long? =
@@ -60,13 +60,9 @@ class ViewerViewModel @Inject constructor(
         ).cachedIn(viewModelScope)
 
     /** Favorite / trash for the photo on screen (the viewer has no multi-selection). */
-    val actions = MediaSelectionController(
+    val actions = selectionFactory.create(
         scope = viewModelScope,
         bucketId = bucketId,
-        getAllRefs = getAllRefs,
-        requestTrash = requestTrash,
-        requestFavorite = requestFavorite,
-        requestDelete = requestDelete,
     )
 
     private val _details = MutableStateFlow<MediaDetails?>(null)

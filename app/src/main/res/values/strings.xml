@@ -46,6 +46,30 @@
     <string name="toast_favorited">Added to favorites</string>
     <string name="toast_unfavorited">Removed from favorites</string>
 
+    <string name="album_locked">Locked folder</string>
+    <string name="action_lock">Lock</string>
+    <string name="action_unlock">Unlock</string>
+    <string name="locked_prompt_title">Locked folder</string>
+    <string name="locked_prompt_subtitle">Confirm it\'s you to see your private photos</string>
+    <string name="locked_title">Locked folder</string>
+    <string name="locked_body">Your private photos and videos are hidden from other apps. Unlock with your fingerprint, face, or screen lock to see them.</string>
+    <string name="locked_unlock">Unlock</string>
+    <string name="locked_no_screen_lock_title">Set up a screen lock first</string>
+    <string name="locked_no_screen_lock_body">The Locked folder is protected by your phone\'s fingerprint, face or screen lock. Set one in your phone\'s settings to use it.</string>
+    <string name="locked_needs_screen_lock">Set up a screen lock in your phone\'s settings to use the Locked folder</string>
+    <plurals name="toast_locked">
+        <item quantity="one">Moved %d item to the Locked folder</item>
+        <item quantity="other">Moved %d items to the Locked folder</item>
+    </plurals>
+    <plurals name="toast_unlocked">
+        <item quantity="one">Restored %d item to your gallery</item>
+        <item quantity="other">Restored %d items to your gallery</item>
+    </plurals>
+    <plurals name="toast_deleted_locked">
+        <item quantity="one">Deleted %d item</item>
+        <item quantity="other">Deleted %d items</item>
+    </plurals>
+    <string name="toast_failed">Something went wrong</string>
     <string name="album_unnamed">Other</string>
     <plurals name="album_item_count">
         <item quantity="one">%d item</item>

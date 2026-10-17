@@ -30,6 +30,8 @@ import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -74,7 +77,9 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.findActivity
+import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.WriteRequestHandler
+import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -88,6 +93,21 @@ private const val FullRequestSize = 2160
 fun ViewerScreen(
     onBack: () -> Unit,
     viewModel: ViewerViewModel = hiltViewModel(),
+) {
+    if (viewModel.isLocked) {
+        // Photos from the Locked folder only show after the user authenticates.
+        LockedGate(session = viewModel.lockSession, onClose = onBack) {
+            ViewerContent(onBack, viewModel)
+        }
+    } else {
+        ViewerContent(onBack, viewModel)
+    }
+}
+
+@Composable
+private fun ViewerContent(
+    onBack: () -> Unit,
+    viewModel: ViewerViewModel,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
     val details by viewModel.details.collectAsStateWithLifecycle()
@@ -144,21 +164,51 @@ fun ViewerScreen(
                 modifier = Modifier.align(Alignment.BottomCenter),
             ) {
                 if (current != null) {
-                    if (viewModel.isRecycleBin) {
-                        RecycleBinBottomBar(
-                            onRestore = { viewModel.actions.restore(listOf(current.toRef())) },
-                            onDeleteForever = { viewModel.actions.deleteForever(listOf(current.toRef())) },
-                            onInfo = { viewModel.showDetails(current) },
-                        )
-                    } else {
-                        BottomBar(
-                            isFavorite = current.isFavorite,
-                            onShare = { shareMedia(context, current) },
-                            onFavorite = { viewModel.actions.toggleFavorite(listOf(current.toRef())) },
-                            onDelete = { viewModel.actions.trash(listOf(current.toRef())) },
-                            onInfo = { viewModel.showDetails(current) },
-                        )
-                    }
+                    val ref = current.toRef()
+                    ActionBar(
+                        actions = when {
+                            viewModel.isRecycleBin -> listOf(
+                                ViewerAction(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore)) {
+                                    viewModel.actions.restore(listOf(ref))
+                                },
+                                ViewerAction(Icons.Outlined.DeleteForever, stringResource(R.string.action_delete_forever)) {
+                                    viewModel.actions.deleteForever(listOf(ref))
+                                },
+                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                    viewModel.showDetails(current)
+                                },
+                            )
+                            viewModel.isLocked -> listOf(
+                                ViewerAction(Icons.Outlined.LockOpen, stringResource(R.string.action_unlock)) {
+                                    viewModel.actions.unlock(listOf(ref))
+                                },
+                                ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
+                                    viewModel.actions.deleteLocked(listOf(ref))
+                                },
+                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                    viewModel.showDetails(current)
+                                },
+                            )
+                            else -> listOf(
+                                ViewerAction(Icons.Outlined.Share, stringResource(R.string.viewer_share)) {
+                                    shareMedia(context, current)
+                                },
+                                ViewerAction(
+                                    icon = if (current.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                    label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                                ) { viewModel.actions.toggleFavorite(listOf(ref)) },
+                                ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
+                                    viewModel.actions.trash(listOf(ref))
+                                },
+                                ViewerAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
+                                    lockWithScreenLockCheck(context) { viewModel.actions.lock(listOf(ref)) }
+                                },
+                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                    viewModel.showDetails(current)
+                                },
+                            )
+                        },
+                    )
                 }
             }
         }
@@ -298,43 +348,14 @@ private fun TopBar(item: MediaItem, onBack: () -> Unit) {
     }
 }
 
-@Composable
-private fun BottomBar(
-    isFavorite: Boolean,
-    onShare: () -> Unit,
-    onFavorite: () -> Unit,
-    onDelete: () -> Unit,
-    onInfo: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))))
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-    ) {
-        IconButton(onClick = onShare) {
-            Icon(Icons.Outlined.Share, stringResource(R.string.viewer_share), tint = Color.White)
-        }
-        IconButton(onClick = onFavorite) {
-            Icon(
-                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = stringResource(if (isFavorite) R.string.action_unfavorite else R.string.action_favorite),
-                tint = Color.White,
-            )
-        }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Outlined.Delete, stringResource(R.string.action_delete), tint = Color.White)
-        }
-        IconButton(onClick = onInfo) {
-            Icon(Icons.Outlined.Info, stringResource(R.string.viewer_info), tint = Color.White)
-        }
-    }
-}
+private class ViewerAction(
+    val icon: ImageVector,
+    val label: String,
+    val onClick: () -> Unit,
+)
 
 @Composable
-private fun RecycleBinBottomBar(onRestore: () -> Unit, onDeleteForever: () -> Unit, onInfo: () -> Unit) {
+private fun ActionBar(actions: List<ViewerAction>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -343,14 +364,10 @@ private fun RecycleBinBottomBar(onRestore: () -> Unit, onDeleteForever: () -> Un
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        IconButton(onClick = onRestore) {
-            Icon(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore), tint = Color.White)
-        }
-        IconButton(onClick = onDeleteForever) {
-            Icon(Icons.Outlined.DeleteForever, stringResource(R.string.action_delete_forever), tint = Color.White)
-        }
-        IconButton(onClick = onInfo) {
-            Icon(Icons.Outlined.Info, stringResource(R.string.viewer_info), tint = Color.White)
+        actions.forEach { action ->
+            IconButton(onClick = action.onClick) {
+                Icon(action.icon, action.label, tint = Color.White)
+            }
         }
     }
 }

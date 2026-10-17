@@ -13,6 +13,7 @@ import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.domain.model.WriteLimits
 import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.search.SearchCriteria
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -178,13 +179,13 @@ class MediaStoreDataSource @Inject constructor(
      * selections are split because a single request has to fit in one binder transaction.
      */
     suspend fun createTrashRequests(uris: List<String>, trash: Boolean): List<IntentSender> = withContext(io) {
-        uris.chunked(WRITE_BATCH_SIZE).map { chunk ->
+        uris.chunked(WriteLimits.BATCH_SIZE).map { chunk ->
             MediaStore.createTrashRequest(resolver, chunk.map(Uri::parse), trash).intentSender
         }
     }
 
     suspend fun createFavoriteRequests(uris: List<String>, favorite: Boolean): List<IntentSender> = withContext(io) {
-        uris.chunked(WRITE_BATCH_SIZE).map { chunk ->
+        uris.chunked(WriteLimits.BATCH_SIZE).map { chunk ->
             MediaStore.createFavoriteRequest(resolver, chunk.map(Uri::parse), favorite).intentSender
         }
     }
@@ -223,7 +224,7 @@ class MediaStoreDataSource @Inject constructor(
     }
 
     suspend fun createDeleteRequests(uris: List<String>): List<IntentSender> = withContext(io) {
-        uris.chunked(WRITE_BATCH_SIZE).map { chunk ->
+        uris.chunked(WriteLimits.BATCH_SIZE).map { chunk ->
             MediaStore.createDeleteRequest(resolver, chunk.map(Uri::parse)).intentSender
         }
     }
@@ -316,7 +317,6 @@ class MediaStoreDataSource @Inject constructor(
 
     private companion object {
         const val CAMERA_PATH = "DCIM/Camera/"
-        const val WRITE_BATCH_SIZE = 500
 
         val PROJECTION = arrayOf(
             MediaStore.MediaColumns._ID,

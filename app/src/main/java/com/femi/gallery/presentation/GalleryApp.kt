@@ -9,16 +9,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.presentation.common.ChromeState
 import com.femi.gallery.presentation.common.LocalChromeState
 import com.femi.gallery.presentation.navigation.GalleryDestination
@@ -56,6 +60,18 @@ private fun GalleryScaffold() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val chrome = LocalChromeState.current
+    val lockSession = hiltViewModel<AppViewModel>().lockSession
+
+    // The Locked folder stays open only while the app is in the foreground and the user is
+    // looking at it (its album or a photo viewed from it).
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { lockSession.lock() }
+    val route = currentDestination?.route
+    val arguments = backStackEntry?.arguments
+    val inLockedFolder = (route == GalleryRoutes.ALBUM || route == GalleryRoutes.VIEWER) &&
+        arguments?.containsKey("bucketId") == true &&
+        arguments.getLong("bucketId") == SpecialAlbums.LOCKED
+    LaunchedEffect(inLockedFolder) { if (!inLockedFolder) lockSession.lock() }
+
     val isAlbumDetail = currentDestination?.route == GalleryRoutes.ALBUM
     val isTopLevel = isAlbumDetail || GalleryDestination.entries.any { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true

@@ -52,6 +52,13 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Details panel**: file name, date, folder, resolution, size, duration, camera, aperture, shutter speed, ISO, focal length and GPS (from EXIF)
 - [x] Share, favorite and move to trash
 
+**Locked folder**
+- [x] **Move photos and videos into a private Locked folder** that other apps — including other galleries and the system photo picker — cannot see
+- [x] Opens only after **fingerprint / face / screen lock**, and re-locks when you leave it or the app goes to the background
+- [x] Hidden from screenshots, screen recording and the recent-apps preview while it is open
+- [x] Same timeline, zoom, viewer and selection as everywhere else; **Unlock** puts items back into the gallery, **Delete** removes them for good
+- [x] Never included in backups
+
 **Selection and actions**
 - [x] Long-press to select, tap to toggle, **Select all**, Back to exit
 - [x] **Share** several items at once, **favorite / unfavorite**, **move to trash**
@@ -68,7 +75,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Next up**
 - [ ] **Search by place** (needs reverse geocoding) and by content (see ML below)
 - [ ] **Create, rename, move and copy** albums and photos (needs the same system write confirmations as trash)
-- [ ] **Hidden / locked folder** protected by biometrics
 - [ ] **Stories** tab — automatic collections by date and place, plus slideshow *(the tab exists as a placeholder)*
 - [ ] **Basic photo editor** — crop, rotate, filters, brightness / contrast and other adjustments
 - [ ] **Map view** of geotagged photos
@@ -218,6 +224,9 @@ When you favorite, trash or permanently delete files, Android asks you to confir
 - **Trashed photos may not open full-size in the viewer**; thumbnails always show. This depends on how a given Android version exposes trashed files.
 - **System confirmation dialogs** appear for every favorite / trash / delete action, and very large selections show several in a row.
 - **Zoom level is not remembered** between launches.
+- **The Locked folder lives inside the app.** Uninstalling the app or clearing its data deletes everything in it, and it is excluded from backups (so it is also not copied to a new phone by cloud restore). Files are protected by Android's per-app storage and your screen lock, but not separately encrypted. Moving items in permanently deletes the originals from your gallery (after Android asks you to confirm).
+- **Unlocking** restores a photo to its original folder when that is Pictures, DCIM or Movies; anything else (for example WhatsApp's private folder) goes to `Pictures/Restored` or `Movies/Restored`, and the date it appears under becomes the date it was restored.
+- **The Locked folder needs a phone screen lock** (PIN, pattern, password, fingerprint or face).
 - Tested on one device (Pixel 7, Android 17). Other devices and manufacturers' MediaStore quirks are untested.
 
 ---
@@ -241,6 +250,7 @@ The app was built incrementally as a series of reviewable patches:
 | 16 | README | This document |
 | 17 | License | Released into the public domain (Unlicense) |
 | 18 | Search | File/folder/date/type search with the shared timeline |
+| 19 | Locked folder | Private, biometric-protected folder; lock, unlock, delete |
 
 ---
 

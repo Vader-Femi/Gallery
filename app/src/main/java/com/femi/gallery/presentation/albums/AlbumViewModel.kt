@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.femi.gallery.core.security.LockSession
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
@@ -16,7 +17,7 @@ import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.presentation.pictures.TimelineZoomState
-import com.femi.gallery.presentation.selection.MediaSelectionController
+import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,16 +33,15 @@ class AlbumViewModel @Inject constructor(
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
     observeAlbums: ObserveAlbumsUseCase,
-    getAllRefs: GetAllMediaRefsUseCase,
-    requestTrash: RequestTrashUseCase,
-    requestFavorite: RequestFavoriteUseCase,
-    requestDelete: RequestDeleteUseCase,
+    selectionFactory: MediaSelectionControllerFactory,
+    val lockSession: LockSession,
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
     val bucketId: Long = checkNotNull(savedStateHandle.get<Long>(BUCKET_ARG))
     val isRecycleBin: Boolean = bucketId == SpecialAlbums.TRASH
     val isFavorites: Boolean = bucketId == SpecialAlbums.FAVORITES
+    val isLocked: Boolean = bucketId == SpecialAlbums.LOCKED
 
     val media: Flow<PagingData<MediaItem>> =
         getPagedMedia(bucketId = bucketId).cachedIn(viewModelScope)
@@ -53,13 +53,9 @@ class AlbumViewModel @Inject constructor(
         .map { albums -> albums.firstOrNull { it.bucketId == bucketId }?.name.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
 
-    val selection = MediaSelectionController(
+    val selection = selectionFactory.create(
         scope = viewModelScope,
         bucketId = bucketId,
-        getAllRefs = getAllRefs,
-        requestTrash = requestTrash,
-        requestFavorite = requestFavorite,
-        requestDelete = requestDelete,
     )
 
     fun onResumed() = refreshMedia()

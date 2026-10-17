@@ -2,6 +2,7 @@ package com.femi.gallery.domain.repository
 
 import androidx.paging.PagingData
 import com.femi.gallery.domain.model.Album
+import com.femi.gallery.domain.model.LockedCopy
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
@@ -37,6 +38,15 @@ interface MediaRepository {
 
     /** Confirmation dialogs to delete [uris] permanently (used from the recycle bin). */
     suspend fun createDeleteRequests(uris: List<String>): List<WriteRequest>
+
+    /** Copies photos/videos into the private Locked folder. The originals are left untouched. */
+    suspend fun copyToLocked(uris: List<String>): List<LockedCopy>
+
+    /** Moves items from the Locked folder back into the gallery; returns how many were restored. */
+    suspend fun unlockItems(ids: List<Long>): Int
+
+    /** Permanently deletes items from the Locked folder. */
+    suspend fun deleteLockedItems(ids: List<Long>)
 
     /** Cheap check (MediaStore generation counter); invalidates the list only if something changed. */
     fun refreshIfChanged()

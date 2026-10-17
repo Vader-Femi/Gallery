@@ -9,12 +9,16 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.femi.gallery.data.exif.ExifReader
+import com.femi.gallery.data.locked.LockedPagingSource
+import com.femi.gallery.data.locked.LockedStore
 import com.femi.gallery.data.mediastore.MediaPagingSource
 import com.femi.gallery.data.mediastore.MediaStoreDataSource
 import com.femi.gallery.domain.model.Album
+import com.femi.gallery.domain.model.LockedCopy
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
+import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
@@ -27,6 +31,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -43,6 +48,7 @@ class MediaRepositoryImpl @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val dataSource: MediaStoreDataSource,
     private val exifReader: ExifReader,
+    private val lockedStore: LockedStore,
 ) : MediaRepository {
 
     /** Live paging sources (grid and viewer each have one); weakly held so they can be collected. */
@@ -76,14 +82,28 @@ class MediaRepositoryImpl @Inject constructor(
         ),
         initialKey = initialKey,
         pagingSourceFactory = {
-            MediaPagingSource(dataSource, context, bucketId, search).also { sources.add(it) }
+            if (bucketId == SpecialAlbums.LOCKED) {
+                LockedPagingSource(lockedStore)
+            } else {
+                MediaPagingSource(dataSource, context, bucketId, search).also { sources.add(it) }
+            }
         },
     ).flow
 
     override suspend fun getDetails(item: MediaItem): MediaDetails = exifReader.read(item)
 
     override suspend fun getAllRefs(bucketId: Long?, search: SearchCriteria?): List<MediaRef> =
-        dataSource.loadRefs(bucketId, search)
+        if (bucketId == SpecialAlbums.LOCKED) {
+            lockedStore.list().map { MediaRef(it.id, it.uri, isFavorite = false) }
+        } else {
+            dataSource.loadRefs(bucketId, search)
+        }
+
+    override suspend fun copyToLocked(uris: List<String>): List<LockedCopy> = lockedStore.copyIn(uris)
+
+    override suspend fun unlockItems(ids: List<Long>): Int = lockedStore.restore(ids)
+
+    override suspend fun deleteLockedItems(ids: List<Long>) = lockedStore.delete(ids)
 
     override suspend fun createTrashRequests(uris: List<String>, trash: Boolean): List<WriteRequest> =
         dataSource.createTrashRequests(uris, trash).map(::WriteRequest)
@@ -95,16 +115,31 @@ class MediaRepositoryImpl @Inject constructor(
         dataSource.createFavoriteRequests(uris, favorite).map(::WriteRequest)
 
     override fun observeTimeline(bucketId: Long?, search: SearchCriteria?): Flow<List<TimelineSection>> =
-        changeTriggers()
-            .map {
-                indexedGeneration = dataSource.generation()
-                TimelineGrouper.group(dataSource.loadDatesAdded(bucketId, search))
-            }
-            .distinctUntilChanged()
+        if (bucketId == SpecialAlbums.LOCKED) {
+            lockedStore.version
+                .map { TimelineGrouper.group(lockedStore.datesSeconds()) }
+                .distinctUntilChanged()
+        } else {
+            changeTriggers()
+                .map {
+                    indexedGeneration = dataSource.generation()
+                    TimelineGrouper.group(dataSource.loadDatesAdded(bucketId, search))
+                }
+                .distinctUntilChanged()
+        }
 
     override fun observeAlbums(): Flow<List<Album>> =
-        changeTriggers()
-            .map { dataSource.loadAlbums() }
+        combine(changeTriggers().map { dataSource.loadAlbums() }, lockedStore.version) { albums, _ -> albums }
+            .map { albums ->
+                // The Locked folder is always listed last so it can be found even when empty.
+                albums + Album(
+                    bucketId = SpecialAlbums.LOCKED,
+                    name = "",
+                    relativePath = "",
+                    coverUri = "",
+                    itemCount = lockedStore.list().size,
+                )
+            }
             .distinctUntilChanged()
 
     /** Emits once on start, then (debounced) whenever MediaStore changes or the app resumes after a change. */

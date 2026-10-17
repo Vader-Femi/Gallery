@@ -12,7 +12,7 @@ import com.femi.gallery.domain.usecase.RefreshMediaUseCase
 import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
-import com.femi.gallery.presentation.selection.MediaSelectionController
+import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -21,10 +21,7 @@ import javax.inject.Inject
 class PicturesViewModel @Inject constructor(
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
-    getAllRefs: GetAllMediaRefsUseCase,
-    requestTrash: RequestTrashUseCase,
-    requestFavorite: RequestFavoriteUseCase,
-    requestDelete: RequestDeleteUseCase,
+    selectionFactory: MediaSelectionControllerFactory,
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
@@ -33,13 +30,9 @@ class PicturesViewModel @Inject constructor(
     /** Pinch-to-zoom level and the day/month/year sections that go with it. */
     val timeline = TimelineZoomState(viewModelScope, observeTimeline())
 
-    val selection = MediaSelectionController(
+    val selection = selectionFactory.create(
         scope = viewModelScope,
         bucketId = null,
-        getAllRefs = getAllRefs,
-        requestTrash = requestTrash,
-        requestFavorite = requestFavorite,
-        requestDelete = requestDelete,
     )
 
     fun onResumed() = refreshMedia()
