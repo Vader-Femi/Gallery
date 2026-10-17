@@ -36,6 +36,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Albums**
 - [x] Albums tab with device folders (cover + item count), **Camera pinned first**
 - [x] Album detail screen with the same timeline, zoom and fast scroller, scoped to one folder
+- [x] **Move or copy** photos and videos to an album, or to a **new album** you name (in the selection bar's More menu)
+- [x] **Rename an album** (long-press it in the Albums tab)
 - [x] **Favorites** album and **Recycle bin**, shown only when they contain something
 
 **Search**
@@ -74,7 +76,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [ ] **Search by place** (needs reverse geocoding) and by content (see ML below)
-- [ ] **Create, rename, move and copy** albums and photos (needs the same system write confirmations as trash)
 - [ ] **Stories** tab — automatic collections by date and place, plus slideshow *(the tab exists as a placeholder)*
 - [ ] **Basic photo editor** — crop, rotate, filters, brightness / contrast and other adjustments
 - [ ] **Map view** of geotagged photos
@@ -225,6 +226,7 @@ When you favorite, trash or permanently delete files, Android asks you to confir
 - **System confirmation dialogs** appear for every favorite / trash / delete action, and very large selections show several in a row.
 - **Zoom level is not remembered** between launches.
 - **The Locked folder lives inside the app.** Uninstalling the app or clearing its data deletes everything in it, and it is excluded from backups (so it is also not copied to a new phone by cloud restore). Files are protected by Android's per-app storage and your screen lock, but not separately encrypted. Moving items in permanently deletes the originals from your gallery (after Android asks you to confirm).
+- **Moving and renaming need Android's permission** to change files other apps created, so a system dialog appears first. New albums are created under `DCIM`. Android only allows videos under `DCIM` and `Movies` and photos under `DCIM` and `Pictures`, so a video moved into a `Pictures/...` album lands in the matching `Movies/...` folder. Renaming merges into an existing folder if one already has that name, and the camera folder and apps' private folders (like WhatsApp) cannot be renamed or used as destinations.
 - **Unlocking** restores a photo to its original folder when that is Pictures, DCIM or Movies; anything else (for example WhatsApp's private folder) goes to `Pictures/Restored` or `Movies/Restored`, and the date it appears under becomes the date it was restored.
 - **The Locked folder needs a phone screen lock** (PIN, pattern, password, fingerprint or face).
 - Tested on one device (Pixel 7, Android 17). Other devices and manufacturers' MediaStore quirks are untested.
@@ -251,6 +253,8 @@ The app was built incrementally as a series of reviewable patches:
 | 17 | License | Released into the public domain (Unlicense) |
 | 18 | Search | File/folder/date/type search with the shared timeline |
 | 19 | Locked folder | Private, biometric-protected folder; lock, unlock, delete |
+| 20 | Secure window fix | Screenshot protection now stays on when opening a locked photo |
+| 21 | Album management | Move and copy to albums, new albums, rename album |
 
 ---
 

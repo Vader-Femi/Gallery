@@ -2,6 +2,7 @@ package com.femi.gallery.data.mediastore
 
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.content.IntentSender
 import android.database.Cursor
@@ -10,6 +11,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.model.Album
+import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.SpecialAlbums
@@ -228,6 +230,80 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.createDeleteRequest(resolver, chunk.map(Uri::parse)).intentSender
         }
     }
+
+    suspend fun createWriteRequests(uris: List<String>): List<IntentSender> = withContext(io) {
+        uris.chunked(WriteLimits.BATCH_SIZE).map { chunk ->
+            MediaStore.createWriteRequest(resolver, chunk.map(Uri::parse)).intentSender
+        }
+    }
+
+    /**
+     * Moves each item by changing its folder. Only works for items the user approved through
+     * [createWriteRequests]; items that fail (e.g. a protected folder) are skipped.
+     */
+    suspend fun moveItems(uris: List<String>, relativePath: String): Int = withContext(io) {
+        uris.count { uri ->
+            runCatching {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, AlbumPaths.forMedia(relativePath, isVideo = isVideoUri(uri)))
+                }
+                resolver.update(Uri.parse(uri), values, null, null) > 0
+            }.getOrDefault(false)
+        }
+    }
+
+    /** Copies each item into a new entry in the album folder; the original is untouched. */
+    suspend fun copyItems(uris: List<String>, relativePath: String): Int = withContext(io) {
+        uris.count { uri -> runCatching { copyItem(Uri.parse(uri), relativePath) }.getOrDefault(false) }
+    }
+
+    private fun copyItem(source: Uri, relativePath: String): Boolean {
+        val projection = arrayOf(
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.MIME_TYPE,
+            MediaStore.MediaColumns.DATE_TAKEN,
+            MediaStore.MediaColumns.DATE_ADDED,
+        )
+        // The generic files table has every column, whichever collection the item came from.
+        val row = ContentUris.withAppendedId(collectionUri, ContentUris.parseId(source))
+        val meta = resolver.query(row, projection, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                CopyMeta(cursor.getString(0), cursor.getString(1), cursor.getLong(2), cursor.getLong(3))
+            } else {
+                null
+            }
+        } ?: return false
+        val name = meta.name ?: return false
+        val mime = meta.mime ?: return false
+        val isVideo = mime.startsWith("video/")
+        val taken = meta.taken.takeIf { it > 0 } ?: (meta.added * 1000L)
+
+        val target = resolver.insert(
+            if (isVideo) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            else MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
+            ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, AlbumPaths.forMedia(relativePath, isVideo))
+                put(MediaStore.MediaColumns.DATE_TAKEN, taken)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            },
+        ) ?: return false
+        return try {
+            val input = resolver.openInputStream(source) ?: error("Cannot read $source")
+            val output = resolver.openOutputStream(target) ?: error("Cannot write $target")
+            input.use { from -> output.use { to -> from.copyTo(to) } }
+            resolver.update(target, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+            true
+        } catch (e: Exception) {
+            resolver.delete(target, null, null)
+            false
+        }
+    }
+
+    private class CopyMeta(val name: String?, val mime: String?, val taken: Long, val added: Long)
+
+    private fun isVideoUri(uri: String): Boolean = uri.contains("/video/")
 
     private fun contentUri(id: Long, isVideo: Boolean): Uri {
         val base = if (isVideo) {

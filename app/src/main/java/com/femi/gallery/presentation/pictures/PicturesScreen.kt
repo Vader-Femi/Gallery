@@ -31,8 +31,9 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
 import com.femi.gallery.presentation.selection.SelectionBars
-import com.femi.gallery.presentation.selection.WriteRequestHandler
+import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.libraryActions
+import com.femi.gallery.presentation.selection.libraryMoreActions
 
 @Composable
 fun PicturesScreen(
@@ -54,7 +55,7 @@ fun PicturesScreen(
 
     HideBottomBarWhile(selectionState.active)
     BackHandler(enabled = selectionState.active) { viewModel.selection.clear() }
-    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel.selection::clear)
+    SelectionHost(controller = viewModel.selection, onSuccess = viewModel.selection::clear)
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -94,6 +95,7 @@ fun PicturesScreen(
             SelectionBars(
                 count = selectionState.count,
                 actions = libraryActions(context, selectionState, viewModel.selection),
+                moreActions = libraryMoreActions(context, viewModel.selection),
                 onClose = viewModel.selection::clear,
                 onSelectAll = viewModel.selection::selectAll,
             )

@@ -1,20 +1,28 @@
 package com.femi.gallery.presentation.selection
 
+import com.femi.gallery.domain.model.Album
+import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.model.WriteLimits
 import com.femi.gallery.domain.model.WriteRequest
 import com.femi.gallery.domain.search.SearchCriteria
+import com.femi.gallery.domain.usecase.CopyMediaUseCase
 import com.femi.gallery.domain.usecase.DeleteLockedUseCase
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.LockMediaUseCase
+import com.femi.gallery.domain.usecase.MoveMediaUseCase
 import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
+import com.femi.gallery.domain.usecase.RequestWriteAccessUseCase
 import com.femi.gallery.domain.usecase.UnlockMediaUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,9 +35,20 @@ enum class WriteKind {
     Unlock,
     /** Deleted from the Locked folder. */
     DeleteLocked,
+    /** Permission to change the files is being requested; the move itself follows. */
+    Move,
+    Moved,
+    Copied,
+    Renamed,
     /** Something went wrong before any dialog could be shown. */
     Failed,
 }
+
+/** Whether the album picker is choosing where to move or where to copy. */
+enum class PickerMode { Move, Copy }
+
+/** The items waiting for the user to pick a destination album. */
+class AlbumPickerRequest(val mode: PickerMode, val refs: List<MediaRef>)
 
 /**
  * One user action: the system confirmation dialogs to show in order (possibly none, for work
@@ -41,6 +60,8 @@ class WriteBatch(
     val requests: List<WriteRequest>,
     /** Called with the index of the declined dialog, e.g. to undo a half-finished lock. */
     val onDeclined: ((requestIndex: Int) -> Unit)? = null,
+    /** Called once every dialog was approved; used for work that must wait for the permission. */
+    val onApproved: (() -> Unit)? = null,
 )
 
 /**
@@ -57,6 +78,9 @@ class MediaSelectionController(
     private val lockMedia: LockMediaUseCase,
     private val unlockMedia: UnlockMediaUseCase,
     private val deleteLockedMedia: DeleteLockedUseCase,
+    private val requestWriteAccess: RequestWriteAccessUseCase,
+    private val moveMedia: MoveMediaUseCase,
+    private val copyMedia: CopyMediaUseCase,
     /** The active search, so "Select all" only selects matching items. */
     private val currentSearch: () -> SearchCriteria? = { null },
 ) {
@@ -65,6 +89,11 @@ class MediaSelectionController(
 
     private val channel = Channel<WriteBatch>(Channel.BUFFERED)
     val batches: Flow<WriteBatch> = channel.receiveAsFlow()
+
+    private val _picker = MutableStateFlow<AlbumPickerRequest?>(null)
+
+    /** Set while the user is choosing a destination album for a move or copy. */
+    val picker: StateFlow<AlbumPickerRequest?> = _picker.asStateFlow()
 
     fun begin(ref: MediaRef) = selection.begin(ref)
 
@@ -89,6 +118,81 @@ class MediaSelectionController(
     fun deleteLockedSelected() = deleteLocked(state.value.selected.values)
 
     fun toggleFavoriteSelected() = toggleFavorite(state.value.selected.values)
+
+    fun moveSelectedToAlbum() = askForAlbum(PickerMode.Move, state.value.selected.values)
+
+    fun copySelectedToAlbum() = askForAlbum(PickerMode.Copy, state.value.selected.values)
+
+    private fun askForAlbum(mode: PickerMode, refs: Collection<MediaRef>) {
+        if (refs.isNotEmpty()) _picker.value = AlbumPickerRequest(mode, refs.toList())
+    }
+
+    fun dismissPicker() {
+        _picker.value = null
+    }
+
+    /** The user picked (or created) an album folder: carry out the pending move or copy. */
+    fun choosePath(relativePath: String) {
+        val request = _picker.value ?: return
+        _picker.value = null
+        when (request.mode) {
+            PickerMode.Move -> moveTo(request.refs, relativePath)
+            PickerMode.Copy -> copyTo(request.refs, relativePath)
+        }
+    }
+
+    /** Moves items into the folder; Android first asks permission to change files other apps created. */
+    fun moveTo(refs: Collection<MediaRef>, relativePath: String) {
+        if (refs.isEmpty()) return
+        scope.launch {
+            val uris = refs.map { it.uri }
+            val requests = requestWriteAccess(uris)
+            channel.send(
+                WriteBatch(
+                    kind = WriteKind.Move,
+                    itemCount = uris.size,
+                    requests = requests,
+                    onApproved = { scope.launch { reportMove(WriteKind.Moved, moveMedia(uris, relativePath)) } },
+                ),
+            )
+        }
+    }
+
+    fun copyTo(refs: Collection<MediaRef>, relativePath: String) {
+        if (refs.isEmpty()) return
+        scope.launch { reportMove(WriteKind.Copied, copyMedia(refs.map { it.uri }, relativePath)) }
+    }
+
+    /**
+     * Renames an album by moving everything in it to the renamed folder. The rename only changes
+     * the folder name; the album keeps its place (Pictures, DCIM, ...).
+     */
+    fun renameAlbum(album: Album, newName: String) {
+        val name = AlbumPaths.sanitizeName(newName)
+        if (name == null || !AlbumPaths.canRename(album.relativePath)) {
+            scope.launch { channel.send(WriteBatch(WriteKind.Failed, 0, emptyList())) }
+            return
+        }
+        val newPath = AlbumPaths.renamed(album.relativePath, name)
+        if (newPath == album.relativePath) return
+        scope.launch {
+            val uris = getAllRefs(album.bucketId).map { it.uri }
+            if (uris.isEmpty()) return@launch
+            val requests = requestWriteAccess(uris)
+            channel.send(
+                WriteBatch(
+                    kind = WriteKind.Move,
+                    itemCount = uris.size,
+                    requests = requests,
+                    onApproved = { scope.launch { reportMove(WriteKind.Renamed, moveMedia(uris, newPath)) } },
+                ),
+            )
+        }
+    }
+
+    private suspend fun reportMove(kind: WriteKind, count: Int) {
+        channel.send(WriteBatch(if (count > 0) kind else WriteKind.Failed, count, emptyList()))
+    }
 
     fun trash(refs: Collection<MediaRef>) {
         if (refs.isEmpty()) return
@@ -188,6 +292,9 @@ class MediaSelectionControllerFactory @Inject constructor(
     private val lockMedia: LockMediaUseCase,
     private val unlockMedia: UnlockMediaUseCase,
     private val deleteLocked: DeleteLockedUseCase,
+    private val requestWriteAccess: RequestWriteAccessUseCase,
+    private val moveMedia: MoveMediaUseCase,
+    private val copyMedia: CopyMediaUseCase,
 ) {
     fun create(
         scope: CoroutineScope,
@@ -203,6 +310,9 @@ class MediaSelectionControllerFactory @Inject constructor(
         lockMedia = lockMedia,
         unlockMedia = unlockMedia,
         deleteLockedMedia = deleteLocked,
+        requestWriteAccess = requestWriteAccess,
+        moveMedia = moveMedia,
+        copyMedia = copyMedia,
         currentSearch = currentSearch,
     )
 }

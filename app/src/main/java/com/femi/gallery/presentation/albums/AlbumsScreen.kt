@@ -1,7 +1,8 @@
 package com.femi.gallery.presentation.albums
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,11 +22,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,7 +46,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.Album
+import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.presentation.selection.NameDialog
+import com.femi.gallery.presentation.selection.SelectionHost
 
 @Composable
 fun AlbumsScreen(
@@ -54,6 +63,21 @@ fun AlbumsScreen(
     LifecycleResumeEffect(viewModel) {
         viewModel.onResumed()
         onPauseOrDispose { }
+    }
+
+    SelectionHost(controller = viewModel.actions, onSuccess = {})
+    var renaming by remember { mutableStateOf<Album?>(null) }
+    renaming?.let { album ->
+        NameDialog(
+            title = stringResource(R.string.rename_album_title),
+            confirmLabel = stringResource(R.string.rename_album_confirm),
+            initialName = album.name,
+            onConfirm = { name ->
+                viewModel.actions.renameAlbum(album, name)
+                renaming = null
+            },
+            onDismiss = { renaming = null },
+        )
     }
 
     LazyVerticalGrid(
@@ -71,14 +95,38 @@ fun AlbumsScreen(
             )
         }
         items(albums, key = { it.bucketId }) { album ->
-            AlbumCard(album = album, onClick = { onAlbumClick(album.bucketId) })
+            AlbumCard(
+                album = album,
+                onClick = { onAlbumClick(album.bucketId) },
+                onRename = { renaming = album },
+            )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AlbumCard(album: Album, onClick: () -> Unit) {
-    Column(modifier = Modifier.clickable(onClick = onClick)) {
+private fun AlbumCard(album: Album, onClick: () -> Unit, onRename: () -> Unit) {
+    var menuOpen by remember { mutableStateOf(false) }
+    // Only real folders under DCIM, Pictures or Movies can be renamed (not the camera folder or virtual albums).
+    val canRename = album.bucketId !in setOf(SpecialAlbums.FAVORITES, SpecialAlbums.TRASH, SpecialAlbums.LOCKED) &&
+        AlbumPaths.canRename(album.relativePath)
+
+    Column(
+        modifier = Modifier.combinedClickable(
+            onClick = onClick,
+            onLongClick = { if (canRename) menuOpen = true },
+        ),
+    ) {
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_rename_album)) },
+                onClick = {
+                    menuOpen = false
+                    onRename()
+                },
+            )
+        }
         if (album.bucketId == SpecialAlbums.LOCKED) {
             // Nothing from the Locked folder is shown outside it, so it gets a lock instead of a cover.
             Box(

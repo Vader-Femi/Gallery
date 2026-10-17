@@ -12,13 +12,20 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -40,6 +47,8 @@ fun BoxScope.SelectionBars(
     actions: List<SelectionAction>,
     onClose: () -> Unit,
     onSelectAll: () -> Unit,
+    /** Less common actions, shown in a "More" menu at the end of the bar. */
+    moreActions: List<SelectionAction> = emptyList(),
 ) {
     Surface(
         modifier = Modifier.align(Alignment.TopCenter),
@@ -78,6 +87,7 @@ fun BoxScope.SelectionBars(
             actions.forEach { action ->
                 BarAction(action.icon, action.label, enabled = count > 0, onClick = action.onClick)
             }
+            if (moreActions.isNotEmpty()) MoreMenu(moreActions, enabled = count > 0)
         }
     }
 }
@@ -89,5 +99,28 @@ private fun BarAction(icon: ImageVector, label: String, enabled: Boolean, onClic
             Icon(icon, contentDescription = label)
         }
         Text(text = label, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun MoreMenu(actions: List<SelectionAction>, enabled: Boolean) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(onClick = { expanded = true }, enabled = enabled) {
+            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
+        }
+        Text(text = stringResource(R.string.action_more), style = MaterialTheme.typography.labelSmall)
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            actions.forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(action.label) },
+                    leadingIcon = { Icon(action.icon, contentDescription = null) },
+                    onClick = {
+                        expanded = false
+                        action.onClick()
+                    },
+                )
+            }
+        }
     }
 }

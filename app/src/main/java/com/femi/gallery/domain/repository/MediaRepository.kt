@@ -39,6 +39,18 @@ interface MediaRepository {
     /** Confirmation dialogs to delete [uris] permanently (used from the recycle bin). */
     suspend fun createDeleteRequests(uris: List<String>): List<WriteRequest>
 
+    /**
+     * Confirmation dialogs that let the app change [uris] (needed to move files other apps
+     * created). Approve them first, then call [moveToFolder].
+     */
+    suspend fun createWriteRequests(uris: List<String>): List<WriteRequest>
+
+    /** Moves already-approved items into the album folder [relativePath]; returns how many moved. */
+    suspend fun moveToFolder(uris: List<String>, relativePath: String): Int
+
+    /** Copies items into the album folder [relativePath]; returns how many were copied. */
+    suspend fun copyToFolder(uris: List<String>, relativePath: String): Int
+
     /** Copies photos/videos into the private Locked folder. The originals are left untouched. */
     suspend fun copyToLocked(uris: List<String>): List<LockedCopy>
 

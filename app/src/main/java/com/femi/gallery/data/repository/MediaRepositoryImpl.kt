@@ -99,6 +99,15 @@ class MediaRepositoryImpl @Inject constructor(
             dataSource.loadRefs(bucketId, search)
         }
 
+    override suspend fun createWriteRequests(uris: List<String>): List<WriteRequest> =
+        dataSource.createWriteRequests(uris).map(::WriteRequest)
+
+    override suspend fun moveToFolder(uris: List<String>, relativePath: String): Int =
+        dataSource.moveItems(uris, relativePath)
+
+    override suspend fun copyToFolder(uris: List<String>, relativePath: String): Int =
+        dataSource.copyItems(uris, relativePath)
+
     override suspend fun copyToLocked(uris: List<String>): List<LockedCopy> = lockedStore.copyIn(uris)
 
     override suspend fun unlockItems(ids: List<Long>): Int = lockedStore.restore(ids)

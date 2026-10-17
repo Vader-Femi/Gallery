@@ -78,7 +78,7 @@ import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.findActivity
 import com.femi.gallery.presentation.locked.LockedGate
-import com.femi.gallery.presentation.selection.WriteRequestHandler
+import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
 import java.time.Instant
 import java.time.ZoneId
@@ -115,7 +115,7 @@ private fun ViewerContent(
     val context = LocalContext.current
 
     ImmersiveMode(enabled = !chromeVisible)
-    WriteRequestHandler(batches = viewModel.actions.batches, onSuccess = {})
+    SelectionHost(controller = viewModel.actions, onSuccess = {})
 
     // Leave the viewer once the last photo has been moved to the trash.
     LaunchedEffect(items.loadState.refresh, items.itemCount) {

@@ -43,8 +43,14 @@ fun WriteRequestHandler(
             index + 1 < batch.requests.size -> inFlight = batch to index + 1
             else -> {
                 inFlight = null
-                Toast.makeText(context, successMessage(context, batch), Toast.LENGTH_SHORT).show()
-                latestOnSuccess()
+                val afterApproval = batch.onApproved
+                if (afterApproval != null) {
+                    // The real work (and its result message) comes next.
+                    afterApproval()
+                } else {
+                    Toast.makeText(context, successMessage(context, batch), Toast.LENGTH_SHORT).show()
+                    latestOnSuccess()
+                }
             }
         }
     }
@@ -79,5 +85,9 @@ private fun successMessage(context: Context, batch: WriteBatch): String = when (
     WriteKind.Lock -> context.resources.getQuantityString(R.plurals.toast_locked, batch.itemCount, batch.itemCount)
     WriteKind.Unlock -> context.resources.getQuantityString(R.plurals.toast_unlocked, batch.itemCount, batch.itemCount)
     WriteKind.DeleteLocked -> context.resources.getQuantityString(R.plurals.toast_deleted_locked, batch.itemCount, batch.itemCount)
+    WriteKind.Move -> ""
+    WriteKind.Moved -> context.resources.getQuantityString(R.plurals.toast_moved, batch.itemCount, batch.itemCount)
+    WriteKind.Copied -> context.resources.getQuantityString(R.plurals.toast_copied, batch.itemCount, batch.itemCount)
+    WriteKind.Renamed -> context.getString(R.string.toast_album_renamed)
     WriteKind.Failed -> context.getString(R.string.toast_failed)
 }

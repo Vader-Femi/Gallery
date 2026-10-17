@@ -5,7 +5,9 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Lock
@@ -36,11 +38,21 @@ fun libraryActions(
             onClick = controller::toggleFavoriteSelected,
         ),
         SelectionAction(Icons.Outlined.Delete, stringResource(R.string.action_delete), controller::trashSelected),
-        SelectionAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
-            lockWithScreenLockCheck(context) { controller.lockSelected() }
-        },
     )
 }
+
+/** Move, copy and lock: the less common actions behind the bar's "More" button. */
+@Composable
+fun libraryMoreActions(
+    context: Context,
+    controller: MediaSelectionController,
+): List<SelectionAction> = listOf(
+    SelectionAction(Icons.Outlined.DriveFileMove, stringResource(R.string.action_move_to_album), controller::moveSelectedToAlbum),
+    SelectionAction(Icons.Outlined.ContentCopy, stringResource(R.string.action_copy_to_album), controller::copySelectedToAlbum),
+    SelectionAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
+        lockWithScreenLockCheck(context) { controller.lockSelected() }
+    },
+)
 
 /** Moving to the Locked folder only makes sense if the phone has a screen lock to protect it. */
 fun lockWithScreenLockCheck(context: Context, lock: () -> Unit) {

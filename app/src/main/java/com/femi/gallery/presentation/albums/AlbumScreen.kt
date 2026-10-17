@@ -36,9 +36,10 @@ import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.pictures.TimelineGrid
 import com.femi.gallery.presentation.selection.SelectionBars
 import com.femi.gallery.presentation.selection.libraryActions
+import com.femi.gallery.presentation.selection.libraryMoreActions
 import com.femi.gallery.presentation.selection.lockedActions
 import com.femi.gallery.presentation.selection.recycleBinActions
-import com.femi.gallery.presentation.selection.WriteRequestHandler
+import com.femi.gallery.presentation.selection.SelectionHost
 
 @Composable
 fun AlbumScreen(
@@ -78,7 +79,7 @@ private fun AlbumContent(
 
     HideBottomBarWhile(selectionState.active)
     BackHandler(enabled = selectionState.active) { viewModel.selection.clear() }
-    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel.selection::clear)
+    SelectionHost(controller = viewModel.selection, onSuccess = viewModel.selection::clear)
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -137,6 +138,11 @@ private fun AlbumContent(
                     viewModel.isRecycleBin -> recycleBinActions(viewModel.selection)
                     viewModel.isLocked -> lockedActions(viewModel.selection)
                     else -> libraryActions(context, selectionState, viewModel.selection)
+                },
+                moreActions = if (viewModel.isRecycleBin || viewModel.isLocked) {
+                    emptyList()
+                } else {
+                    libraryMoreActions(context, viewModel.selection)
                 },
                 onClose = viewModel.selection::clear,
                 onSelectAll = viewModel.selection::selectAll,

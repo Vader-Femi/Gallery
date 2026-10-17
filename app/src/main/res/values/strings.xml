@@ -46,6 +46,27 @@
     <string name="toast_favorited">Added to favorites</string>
     <string name="toast_unfavorited">Removed from favorites</string>
 
+    <string name="action_more">More</string>
+    <string name="action_move_to_album">Move to album</string>
+    <string name="action_copy_to_album">Copy to album</string>
+    <string name="action_rename_album">Rename album</string>
+    <string name="picker_move_title">Move to album</string>
+    <string name="picker_copy_title">Copy to album</string>
+    <string name="picker_new_album">New album</string>
+    <string name="picker_create">Create</string>
+    <string name="picker_cancel">Cancel</string>
+    <string name="picker_album_name">Album name</string>
+    <string name="rename_album_title">Rename album</string>
+    <string name="rename_album_confirm">Rename</string>
+    <plurals name="toast_moved">
+        <item quantity="one">Moved %d item</item>
+        <item quantity="other">Moved %d items</item>
+    </plurals>
+    <plurals name="toast_copied">
+        <item quantity="one">Copied %d item</item>
+        <item quantity="other">Copied %d items</item>
+    </plurals>
+    <string name="toast_album_renamed">Album renamed</string>
     <string name="album_locked">Locked folder</string>
     <string name="action_lock">Lock</string>
     <string name="action_unlock">Unlock</string>
