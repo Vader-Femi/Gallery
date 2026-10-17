@@ -54,6 +54,14 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Details panel**: file name, date, folder, resolution, size, duration, camera, aperture, shutter speed, ISO, focal length and GPS (from EXIF)
 - [x] Share, favorite and move to trash
 
+**Photo editor**
+- [x] **Edit** button in the viewer opens the editor (photos only)
+- [x] **Crop** with free or fixed shapes (1:1, 4:3, 3:4, 16:9, 9:16, original), rule-of-thirds grid and draggable corners
+- [x] **Rotate** in 90° steps and **flip**
+- [x] **Adjust** brightness, contrast, saturation and warmth with live preview
+- [x] **Filters**: Vivid, Warm, Cool, Mono, Noir, Sepia, Fade and Dramatic, previewed on your photo
+- [x] **Save copy** next to the original — the original is never touched
+
 **Locked folder**
 - [x] **Move photos and videos into a private Locked folder** that other apps — including other galleries and the system photo picker — cannot see
 - [x] Opens only after **fingerprint / face / screen lock**, and re-locks when you leave it or the app goes to the background
@@ -77,7 +85,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Next up**
 - [ ] **Search by place** (needs reverse geocoding) and by content (see ML below)
 - [ ] **Stories** tab — automatic collections by date and place, plus slideshow *(the tab exists as a placeholder)*
-- [ ] **Basic photo editor** — crop, rotate, filters, brightness / contrast and other adjustments
 - [ ] **Map view** of geotagged photos
 
 **Later**
@@ -225,6 +232,7 @@ When you favorite, trash or permanently delete files, Android asks you to confir
 - **Trashed photos may not open full-size in the viewer**; thumbnails always show. This depends on how a given Android version exposes trashed files.
 - **System confirmation dialogs** appear for every favorite / trash / delete action, and very large selections show several in a row.
 - **Zoom level is not remembered** between launches.
+- **The editor saves a copy, never replaces the original,** and renders it from the original at up to 4096 px on the longest side (a 50 MP photo would not fit in memory). Copies are JPEG (PNG stays PNG); camera details (EXIF), location and HDR gain maps are not carried over, and the copy appears under the original's date taken.
 - **The Locked folder lives inside the app.** Uninstalling the app or clearing its data deletes everything in it, and it is excluded from backups (so it is also not copied to a new phone by cloud restore). Files are protected by Android's per-app storage and your screen lock, but not separately encrypted. Moving items in permanently deletes the originals from your gallery (after Android asks you to confirm).
 - **Moving and renaming need Android's permission** to change files other apps created, so a system dialog appears first. New albums are created under `DCIM`. Android only allows videos under `DCIM` and `Movies` and photos under `DCIM` and `Pictures`, so a video moved into a `Pictures/...` album lands in the matching `Movies/...` folder. Renaming merges into an existing folder if one already has that name, and the camera folder and apps' private folders (like WhatsApp) cannot be renamed or used as destinations.
 - **Unlocking** restores a photo to its original folder when that is Pictures, DCIM or Movies; anything else (for example WhatsApp's private folder) goes to `Pictures/Restored` or `Movies/Restored`, and the date it appears under becomes the date it was restored.
@@ -256,6 +264,7 @@ The app was built incrementally as a series of reviewable patches:
 | 20 | Secure window fix | Screenshot protection now stays on when opening a locked photo |
 | 21 | Album management | Move and copy to albums, new albums, rename album |
 | 22 | Ordering fix | Sorted by date taken (else date added) so unlocked/restored photos return to their real place |
+| 23 | Photo editor | Crop, rotate, flip, brightness/contrast/saturation/warmth and filters; saves a copy |
 
 ---
 

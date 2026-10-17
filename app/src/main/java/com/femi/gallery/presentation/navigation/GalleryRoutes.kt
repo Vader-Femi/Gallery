@@ -8,9 +8,13 @@ object GalleryRoutes {
 
     const val ALBUM = "album/{bucketId}"
     const val SEARCH = "search"
+    const val EDITOR = "editor?uri={uri}"
     const val VIEWER = "viewer/{index}?bucketId={bucketId}&query={query}"
 
     fun album(bucketId: Long) = "album/$bucketId"
+
+    /** The photo editor for the photo at content [uri]. */
+    fun editor(uri: String) = "editor?uri=${Uri.encode(uri)}"
 
     /**
      * Opens the viewer at [mediaIndex] within the library, within one album if [bucketId] is set,

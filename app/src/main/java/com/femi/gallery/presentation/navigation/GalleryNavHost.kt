@@ -11,6 +11,8 @@ import androidx.navigation.navArgument
 import com.femi.gallery.presentation.albums.AlbumScreen
 import com.femi.gallery.presentation.albums.AlbumViewModel
 import com.femi.gallery.presentation.albums.AlbumsScreen
+import com.femi.gallery.presentation.editor.EditorScreen
+import com.femi.gallery.presentation.editor.EditorViewModel
 import com.femi.gallery.presentation.pictures.PicturesScreen
 import com.femi.gallery.presentation.placeholder.PlaceholderScreen
 import com.femi.gallery.presentation.search.SearchScreen
@@ -76,7 +78,16 @@ fun GalleryNavHost(
                 },
             ),
         ) {
-            ViewerScreen(onBack = { navController.popBackStack() })
+            ViewerScreen(
+                onBack = { navController.popBackStack() },
+                onEdit = { uri -> navController.navigate(GalleryRoutes.editor(uri)) },
+            )
+        }
+        composable(
+            route = GalleryRoutes.EDITOR,
+            arguments = listOf(navArgument(EditorViewModel.URI_ARG) { type = NavType.StringType }),
+        ) {
+            EditorScreen(onClose = { navController.popBackStack() })
         }
     }
 }

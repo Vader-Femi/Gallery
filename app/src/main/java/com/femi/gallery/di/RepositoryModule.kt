@@ -1,6 +1,8 @@
 package com.femi.gallery.di
 
+import com.femi.gallery.data.edit.BitmapEditor
 import com.femi.gallery.data.repository.MediaRepositoryImpl
+import com.femi.gallery.domain.repository.EditRepository
 import com.femi.gallery.domain.repository.MediaRepository
 import dagger.Binds
 import dagger.Module
@@ -13,4 +15,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindMediaRepository(impl: MediaRepositoryImpl): MediaRepository
+
+    @Binds
+    abstract fun bindEditRepository(impl: BitmapEditor): EditRepository
 }

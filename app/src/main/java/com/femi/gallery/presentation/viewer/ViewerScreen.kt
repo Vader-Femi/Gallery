@@ -29,6 +29,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
@@ -95,21 +96,23 @@ private val BottomGradient = Brush.verticalGradient(listOf(Color.Transparent, Co
 @Composable
 fun ViewerScreen(
     onBack: () -> Unit,
+    onEdit: (uri: String) -> Unit,
     viewModel: ViewerViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, viewModel)
+            ViewerContent(onBack, onEdit, viewModel)
         }
     } else {
-        ViewerContent(onBack, viewModel)
+        ViewerContent(onBack, onEdit, viewModel)
     }
 }
 
 @Composable
 private fun ViewerContent(
     onBack: () -> Unit,
+    onEdit: (uri: String) -> Unit,
     viewModel: ViewerViewModel,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
@@ -192,9 +195,16 @@ private fun ViewerContent(
                                 viewModel.showDetails(current)
                             },
                         )
-                        else -> listOf(
+                        else -> listOfNotNull(
                             ViewerAction(Icons.Outlined.Share, stringResource(R.string.viewer_share)) {
                                 shareMedia(context, current)
+                            },
+                            if (current.isVideo) {
+                                null
+                            } else {
+                                ViewerAction(Icons.Outlined.Edit, stringResource(R.string.viewer_edit)) {
+                                    onEdit(current.uri)
+                                }
                             },
                             ViewerAction(
                                 icon = if (current.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
