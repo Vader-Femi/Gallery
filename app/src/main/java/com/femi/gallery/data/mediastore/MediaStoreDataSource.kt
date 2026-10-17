@@ -110,31 +110,58 @@ class MediaStoreDataSource @Inject constructor(
             val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
             val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
 
-            // Rows arrive newest first, so the first row seen for a bucket is its cover.
-            val covers = LinkedHashMap<Long, Album>()
-            val counts = HashMap<Long, Int>()
+            val albumsMap = androidx.collection.LongSparseArray<AlbumBuilder>()
+            val order = mutableListOf<Long>()
+
             while (cursor.moveToNext()) {
                 val bucketId = cursor.getLong(bucketColumn)
-                counts[bucketId] = (counts[bucketId] ?: 0) + 1
-                if (bucketId !in covers) {
+                val existing = albumsMap.get(bucketId)
+                if (existing != null) {
+                    existing.itemCount++
+                } else {
                     val isVideo = cursor.getInt(typeColumn) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-                    covers[bucketId] = Album(
-                        bucketId = bucketId,
-                        name = cursor.getString(nameColumn).orEmpty(),
-                        relativePath = cursor.getString(pathColumn).orEmpty(),
-                        coverUri = contentUri(cursor.getLong(idColumn), isVideo).toString(),
-                        itemCount = 0,
+                    albumsMap.put(
+                        bucketId,
+                        AlbumBuilder(
+                            name = cursor.getString(nameColumn).orEmpty(),
+                            relativePath = cursor.getString(pathColumn).orEmpty(),
+                            coverUri = contentUri(cursor.getLong(idColumn), isVideo).toString(),
+                            itemCount = 1
+                        )
                     )
+                    order.add(bucketId)
                 }
             }
-            covers.values
-                .map { it.copy(itemCount = counts[it.bucketId] ?: 0) }
-                .sortedByDescending { it.relativePath == CAMERA_PATH } // stable: keeps recency order otherwise
+
+            order.mapNotNull { bucketId ->
+                val builder = albumsMap.get(bucketId) ?: return@mapNotNull null
+                Album(
+                    bucketId = bucketId,
+                    name = builder.name,
+                    relativePath = builder.relativePath,
+                    coverUri = builder.coverUri,
+                    itemCount = builder.itemCount
+                )
+            }.sortedByDescending { it.relativePath == CAMERA_PATH } // stable: keeps recency order otherwise
         } ?: emptyList()
 
         // Favorites first and the recycle bin last; both only appear when they have something in them.
         listOfNotNull(loadCollection(SpecialAlbums.FAVORITES)) + folders + listOfNotNull(loadCollection(SpecialAlbums.TRASH))
     }
+
+    suspend fun loadAlbumName(bucketId: Long): String = withContext(io) {
+        val projection = arrayOf(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
+        resolver.query(collectionUri, projection, queryArgs(sorted = false, bucketId = bucketId), null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else ""
+        }.orEmpty()
+    }
+
+    private class AlbumBuilder(
+        val name: String,
+        val relativePath: String,
+        val coverUri: String,
+        var itemCount: Int
+    )
 
     /** A virtual album ([SpecialAlbums]) with its newest item as cover, or null when empty. */
     private fun loadCollection(id: Long): Album? {

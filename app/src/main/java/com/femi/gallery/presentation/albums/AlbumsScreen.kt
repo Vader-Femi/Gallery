@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +81,8 @@ fun AlbumsScreen(
         )
     }
 
+    val handleAlbumClick by rememberUpdatedState(onAlbumClick)
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
@@ -95,10 +98,12 @@ fun AlbumsScreen(
             )
         }
         items(albums, key = { it.bucketId }) { album ->
+            val handleClick: () -> Unit = remember(album.bucketId) { { handleAlbumClick(album.bucketId) } }
+            val handleRename: () -> Unit = remember(album.bucketId) { { renaming = album } }
             AlbumCard(
                 album = album,
-                onClick = { onAlbumClick(album.bucketId) },
-                onRename = { renaming = album },
+                onClick = handleClick,
+                onRename = handleRename,
             )
         }
     }

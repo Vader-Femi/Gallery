@@ -22,6 +22,9 @@ interface MediaRepository {
     /** Device folders with cover and count, recomputed when MediaStore changes. */
     fun observeAlbums(): Flow<List<Album>>
 
+    /** Fetches the localized or user-defined name of a specific folder. */
+    suspend fun getAlbumName(bucketId: Long): String
+
     /** EXIF and file details for the info panel. Never throws; missing data is simply null. */
     suspend fun getDetails(item: MediaItem): MediaDetails
 
