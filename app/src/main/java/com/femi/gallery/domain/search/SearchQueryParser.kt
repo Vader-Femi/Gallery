@@ -4,6 +4,8 @@ import com.femi.gallery.domain.model.MediaType
 import java.time.LocalDate
 import java.time.ZoneId
 
+import java.time.YearMonth
+
 /**
  * Turns what the user typed into [SearchCriteria].
  *
@@ -35,6 +37,7 @@ object SearchQueryParser {
     private val videoWords = setOf("video", "videos")
     private val photoWords = setOf("photo", "photos", "picture", "pictures", "image", "images")
     private val favoriteWords = setOf("favorite", "favorites", "favourite", "favourites")
+    private val spaceRegex = Regex("\\s+")
 
     fun parse(
         query: String,
@@ -43,7 +46,7 @@ object SearchQueryParser {
     ): SearchCriteria {
         val tokens = query.lowercase()
             .replace('%', ' ')
-            .split(Regex("\\s+"))
+            .split(spaceRegex)
             .filter { it.isNotEmpty() }
 
         var mediaType: MediaType? = null
@@ -83,12 +86,17 @@ object SearchQueryParser {
 
         val dateRanges = when {
             relativeDay != null -> listOf(dayRange(relativeDay!!, zone))
-            month != null && year != null && day != null ->
-                listOfNotNull(runCatching { dayRange(LocalDate.of(year!!, month!!, day!!), zone) }.getOrNull())
+            month != null && year != null && day != null -> {
+                if (isValidDate(year!!, month!!, day!!)) {
+                    listOf(dayRange(LocalDate.of(year!!, month!!, day!!), zone))
+                } else emptyList()
+            }
             month != null && year != null -> listOf(monthRange(year!!, month!!, zone))
             month != null && day != null ->
                 (FIRST_YEAR..today.year).mapNotNull { y ->
-                    runCatching { dayRange(LocalDate.of(y, month!!, day!!), zone) }.getOrNull()
+                    if (isValidDate(y, month!!, day!!)) {
+                        dayRange(LocalDate.of(y, month!!, day!!), zone)
+                    } else null
                 }
             month != null -> (FIRST_YEAR..today.year).map { y -> monthRange(y, month!!, zone) }
             year != null -> listOf(yearRange(year!!, zone))
@@ -104,6 +112,9 @@ object SearchQueryParser {
             favoritesOnly = favoritesOnly,
         )
     }
+
+    private fun isValidDate(year: Int, month: Int, day: Int): Boolean =
+        day in 1..YearMonth.of(year, month).lengthOfMonth()
 
     private fun isYear(token: String): Boolean =
         token.length == 4 && token.all { it.isDigit() } && token.toInt() in 1990..2100

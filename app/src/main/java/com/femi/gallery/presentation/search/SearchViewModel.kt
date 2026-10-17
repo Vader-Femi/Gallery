@@ -47,8 +47,15 @@ class SearchViewModel @Inject constructor(
 
     /** What the typed text means; recomputed shortly after the user stops typing. */
     val criteria: StateFlow<SearchCriteria> = _query
-        .debounce(TYPING_DEBOUNCE_MS)
-        .map { SearchQueryParser.parse(it) }
+        .map { it.trim() }
+        .distinctUntilChanged()
+        .flatMapLatest { text ->
+            if (text.isEmpty()) {
+                flowOf(SearchCriteria.None)
+            } else {
+                flowOf(text).debounce(TYPING_DEBOUNCE_MS).map { SearchQueryParser.parse(it) }
+            }
+        }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, SearchCriteria.None)
 
