@@ -20,6 +20,8 @@ import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.search.SearchCriteria
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -242,19 +244,23 @@ class MediaStoreDataSource @Inject constructor(
      * [createWriteRequests]; items that fail (e.g. a protected folder) are skipped.
      */
     suspend fun moveItems(uris: List<String>, relativePath: String): Int = withContext(io) {
-        uris.count { uri ->
-            runCatching {
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, AlbumPaths.forMedia(relativePath, isVideo = isVideoUri(uri)))
-                }
-                resolver.update(Uri.parse(uri), values, null, null) > 0
-            }.getOrDefault(false)
-        }
+        uris.map { uri ->
+            async {
+                runCatching {
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, AlbumPaths.forMedia(relativePath, isVideo = isVideoUri(uri)))
+                    }
+                    resolver.update(Uri.parse(uri), values, null, null) > 0
+                }.getOrDefault(false)
+            }
+        }.awaitAll().count { it }
     }
 
     /** Copies each item into a new entry in the album folder; the original is untouched. */
     suspend fun copyItems(uris: List<String>, relativePath: String): Int = withContext(io) {
-        uris.count { uri -> runCatching { copyItem(Uri.parse(uri), relativePath) }.getOrDefault(false) }
+        uris.map { uri ->
+            async { runCatching { copyItem(Uri.parse(uri), relativePath) }.getOrDefault(false) }
+        }.awaitAll().count { it }
     }
 
     private fun copyItem(source: Uri, relativePath: String): Boolean {

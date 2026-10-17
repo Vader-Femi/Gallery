@@ -16,6 +16,9 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -72,30 +75,34 @@ class LockedStore @Inject constructor(
     /** Copies [uris] into the folder. Items that fail to copy are skipped. */
     suspend fun copyIn(uris: List<String>): List<LockedCopy> = withContext(io) {
         dir.mkdirs()
-        val copies = uris.mapNotNull { uri ->
-            runCatching { copyOne(Uri.parse(uri)) }.getOrNull()?.let { LockedCopy(it, uri) }
-        }
+        val copies = uris.map { uri ->
+            async { runCatching { copyOne(Uri.parse(uri)) }.getOrNull()?.let { LockedCopy(it, uri) } }
+        }.awaitAll().filterNotNull()
+        
         if (copies.isNotEmpty()) changed()
         copies
     }
 
     /** Puts items back into the gallery (Pictures / Movies / DCIM); returns how many succeeded. */
     suspend fun restore(ids: List<Long>): Int = withContext(io) {
-        val restored = ids.count { id -> runCatching { restoreOne(id) }.getOrDefault(false) }
+        val restored = ids.map { id ->
+            async { runCatching { restoreOne(id) }.getOrDefault(false) }
+        }.awaitAll().count { it }
+        
         if (restored > 0) changed()
         restored
     }
 
     suspend fun delete(ids: List<Long>) = withContext(io) {
-        ids.forEach { id ->
-            dir.listFiles { file -> file.name.startsWith("$id.") }?.forEach { it.delete() }
-        }
+        ids.map { id ->
+            async { dir.listFiles { file -> file.name.startsWith("$id.") }?.forEach { it.delete() } }
+        }.awaitAll()
         changed()
     }
 
     private fun changed() {
         cache = null
-        _version.value = _version.value + 1
+        _version.update { it + 1 }
         listeners.forEach { it() }
     }
 
@@ -127,9 +134,12 @@ class LockedStore @Inject constructor(
     }
 
     private fun restoreOne(id: Long): Boolean {
-        val json = JSONObject(File(dir, "$id.json").readText())
-        val dataFile = File(dir, json.getString("file"))
-        val mime = json.getString("mime")
+        val jsonFile = File(dir, "$id.json")
+        if (!jsonFile.exists()) return false
+        val json = JSONObject(jsonFile.readText())
+        val dataFile = File(dir, json.optString("file", "$id.bin"))
+        if (!dataFile.exists()) return false
+        val mime = json.optString("mime", "application/octet-stream")
         val isVideo = mime.startsWith("video/")
         val collection = if (isVideo) {
             MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
@@ -137,7 +147,7 @@ class LockedStore @Inject constructor(
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         }
         val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, json.getString("name"))
+            put(MediaStore.MediaColumns.DISPLAY_NAME, json.optString("name", "item"))
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
             put(MediaStore.MediaColumns.RELATIVE_PATH, restorePath(json.optString("relativePath"), isVideo))
             put(MediaStore.MediaColumns.DATE_TAKEN, json.optLong("dateTaken"))
@@ -154,7 +164,7 @@ class LockedStore @Inject constructor(
             return false
         }
         dataFile.delete()
-        File(dir, "$id.json").delete()
+        jsonFile.delete()
         return true
     }
 
@@ -172,12 +182,12 @@ class LockedStore @Inject constructor(
     private fun toItem(json: JSONObject): MediaItem? {
         val file = File(dir, json.getString("file"))
         if (!file.exists()) return null
-        val mime = json.getString("mime")
+        val mime = json.optString("mime", "application/octet-stream")
         val isVideo = mime.startsWith("video/")
         return MediaItem(
             id = json.getLong("id"),
             uri = Uri.fromFile(file).toString(),
-            displayName = json.getString("name"),
+            displayName = json.optString("name", "item"),
             mimeType = mime,
             type = if (isVideo) MediaType.Video else MediaType.Image,
             dateTakenMillis = json.optLong("dateTaken"),
