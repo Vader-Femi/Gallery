@@ -1,0 +1,1260 @@
+From c670a2be8f203f4d7caf5e8696ccc5b6a9a41cd7 Mon Sep 17 00:00:00 2001
+From: Claude <claude@example.com>
+Date: Sat, 17 Oct 2026 11:06:57 +0000
+Subject: [PATCH] Patch 21: album management
+
+- Move to album / Copy to album from the selection bar's More menu (also holds Lock)
+- Album picker sheet with a New album option and name validation
+- Rename album from a long-press in the Albums tab
+- Moves use MediaStore write requests (system confirmation) then change the folder; copies create new entries
+- AlbumPaths rules (allowed folders, sanitising names, renaming) with tests
+- README updated
+---
+ README.md                                     |   6 +-
+ .../data/mediastore/MediaStoreDataSource.kt   |  76 ++++++++
+ .../data/repository/MediaRepositoryImpl.kt    |   9 +
+ .../femi/gallery/domain/model/AlbumPaths.kt   |  61 +++++++
+ .../domain/repository/MediaRepository.kt      |  12 ++
+ .../gallery/domain/usecase/AlbumUseCases.kt   |  28 +++
+ .../presentation/albums/AlbumScreen.kt        |  10 +-
+ .../presentation/albums/AlbumsScreen.kt       |  56 +++++-
+ .../presentation/albums/AlbumsViewModel.kt    |   6 +
+ .../presentation/pictures/PicturesScreen.kt   |   6 +-
+ .../presentation/search/SearchScreen.kt       |   6 +-
+ .../selection/AlbumPickerSheet.kt             | 170 ++++++++++++++++++
+ .../selection/AlbumPickerViewModel.kt         |  31 ++++
+ .../selection/MediaSelectionController.kt     | 110 ++++++++++++
+ .../selection/SelectionActions.kt             |  18 +-
+ .../presentation/selection/SelectionBars.kt   |  33 ++++
+ .../presentation/selection/SelectionHost.kt   |  27 +++
+ .../selection/WriteRequestHandler.kt          |  14 +-
+ .../presentation/viewer/ViewerScreen.kt       |   4 +-
+ app/src/main/res/values/strings.xml           |  21 +++
+ .../gallery/domain/model/AlbumPathsTest.kt    |  65 +++++++
+ 21 files changed, 751 insertions(+), 18 deletions(-)
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/model/AlbumPaths.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/usecase/AlbumUseCases.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/presentation/selection/AlbumPickerSheet.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/presentation/selection/AlbumPickerViewModel.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/presentation/selection/SelectionHost.kt
+ create mode 100644 app/src/test/java/com/femi/gallery/domain/model/AlbumPathsTest.kt
+
+diff --git a/README.md b/README.md
+index 7d03526..badf289 100644
+--- a/README.md
++++ b/README.md
+@@ -36,6 +36,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
+ **Albums**
+ - [x] Albums tab with device folders (cover + item count), **Camera pinned first**
+ - [x] Album detail screen with the same timeline, zoom and fast scroller, scoped to one folder
++- [x] **Move or copy** photos and videos to an album, or to a **new album** you name (in the selection bar's More menu)
++- [x] **Rename an album** (long-press it in the Albums tab)
+ - [x] **Favorites** album and **Recycle bin**, shown only when they contain something
+ 
+ **Search**
+@@ -74,7 +76,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
+ 
+ **Next up**
+ - [ ] **Search by place** (needs reverse geocoding) and by content (see ML below)
+-- [ ] **Create, rename, move and copy** albums and photos (needs the same system write confirmations as trash)
+ - [ ] **Stories** tab — automatic collections by date and place, plus slideshow *(the tab exists as a placeholder)*
+ - [ ] **Basic photo editor** — crop, rotate, filters, brightness / contrast and other adjustments
+ - [ ] **Map view** of geotagged photos
+@@ -225,6 +226,7 @@ When you favorite, trash or permanently delete files, Android asks you to confir
+ - **System confirmation dialogs** appear for every favorite / trash / delete action, and very large selections show several in a row.
+ - **Zoom level is not remembered** between launches.
+ - **The Locked folder lives inside the app.** Uninstalling the app or clearing its data deletes everything in it, and it is excluded from backups (so it is also not copied to a new phone by cloud restore). Files are protected by Android's per-app storage and your screen lock, but not separately encrypted. Moving items in permanently deletes the originals from your gallery (after Android asks you to confirm).
++- **Moving and renaming need Android's permission** to change files other apps created, so a system dialog appears first. New albums are created under `DCIM`. Android only allows videos under `DCIM` and `Movies` and photos under `DCIM` and `Pictures`, so a video moved into a `Pictures/...` album lands in the matching `Movies/...` folder. Renaming merges into an existing folder if one already has that name, and the camera folder and apps' private folders (like WhatsApp) cannot be renamed or used as destinations.
+ - **Unlocking** restores a photo to its original folder when that is Pictures, DCIM or Movies; anything else (for example WhatsApp's private folder) goes to `Pictures/Restored` or `Movies/Restored`, and the date it appears under becomes the date it was restored.
+ - **The Locked folder needs a phone screen lock** (PIN, pattern, password, fingerprint or face).
+ - Tested on one device (Pixel 7, Android 17). Other devices and manufacturers' MediaStore quirks are untested.
+@@ -251,6 +253,8 @@ The app was built incrementally as a series of reviewable patches:
+ | 17 | License | Released into the public domain (Unlicense) |
+ | 18 | Search | File/folder/date/type search with the shared timeline |
+ | 19 | Locked folder | Private, biometric-protected folder; lock, unlock, delete |
++| 20 | Secure window fix | Screenshot protection now stays on when opening a locked photo |
++| 21 | Album management | Move and copy to albums, new albums, rename album |
+ 
+ ---
+ 
+diff --git a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+index 49aca47..ae3f876 100644
+--- a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
++++ b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+@@ -2,6 +2,7 @@ package com.femi.gallery.data.mediastore
+ 
+ import android.content.ContentResolver
+ import android.content.ContentUris
++import android.content.ContentValues
+ import android.content.Context
+ import android.content.IntentSender
+ import android.database.Cursor
+@@ -10,6 +11,7 @@ import android.os.Bundle
+ import android.provider.MediaStore
+ import com.femi.gallery.di.IoDispatcher
+ import com.femi.gallery.domain.model.Album
++import com.femi.gallery.domain.model.AlbumPaths
+ import com.femi.gallery.domain.model.MediaItem
+ import com.femi.gallery.domain.model.MediaRef
+ import com.femi.gallery.domain.model.SpecialAlbums
+@@ -230,6 +232,80 @@ class MediaStoreDataSource @Inject constructor(
+         }
+     }
+ 
++    suspend fun createWriteRequests(uris: List<String>): List<IntentSender> = withContext(io) {
++        uris.chunked(WriteLimits.BATCH_SIZE).map { chunk ->
++            MediaStore.createWriteRequest(resolver, chunk.map(Uri::parse)).intentSender
++        }
++    }
++
++    /**
++     * Moves each item by changing its folder. Only works for items the user approved through
++     * [createWriteRequests]; items that fail (e.g. a protected folder) are skipped.
++     */
++    suspend fun moveItems(uris: List<String>, relativePath: String): Int = withContext(io) {
++        uris.count { uri ->
++            runCatching {
++                val values = ContentValues().apply {
++                    put(MediaStore.MediaColumns.RELATIVE_PATH, AlbumPaths.forMedia(relativePath, isVideo = isVideoUri(uri)))
++                }
++                resolver.update(Uri.parse(uri), values, null, null) > 0
++            }.getOrDefault(false)
++        }
++    }
++
++    /** Copies each item into a new entry in the album folder; the original is untouched. */
++    suspend fun copyItems(uris: List<String>, relativePath: String): Int = withContext(io) {
++        uris.count { uri -> runCatching { copyItem(Uri.parse(uri), relativePath) }.getOrDefault(false) }
++    }
++
++    private fun copyItem(source: Uri, relativePath: String): Boolean {
++        val projection = arrayOf(
++            MediaStore.MediaColumns.DISPLAY_NAME,
++            MediaStore.MediaColumns.MIME_TYPE,
++            MediaStore.MediaColumns.DATE_TAKEN,
++            MediaStore.MediaColumns.DATE_ADDED,
++        )
++        // The generic files table has every column, whichever collection the item came from.
++        val row = ContentUris.withAppendedId(collectionUri, ContentUris.parseId(source))
++        val meta = resolver.query(row, projection, null, null, null)?.use { cursor ->
++            if (cursor.moveToFirst()) {
++                CopyMeta(cursor.getString(0), cursor.getString(1), cursor.getLong(2), cursor.getLong(3))
++            } else {
++                null
++            }
++        } ?: return false
++        val name = meta.name ?: return false
++        val mime = meta.mime ?: return false
++        val isVideo = mime.startsWith("video/")
++        val taken = meta.taken.takeIf { it > 0 } ?: (meta.added * 1000L)
++
++        val target = resolver.insert(
++            if (isVideo) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
++            else MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
++            ContentValues().apply {
++                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
++                put(MediaStore.MediaColumns.MIME_TYPE, mime)
++                put(MediaStore.MediaColumns.RELATIVE_PATH, AlbumPaths.forMedia(relativePath, isVideo))
++                put(MediaStore.MediaColumns.DATE_TAKEN, taken)
++                put(MediaStore.MediaColumns.IS_PENDING, 1)
++            },
++        ) ?: return false
++        return try {
++            val input = resolver.openInputStream(source) ?: error("Cannot read $source")
++            val output = resolver.openOutputStream(target) ?: error("Cannot write $target")
++            input.use { from -> output.use { to -> from.copyTo(to) } }
++            resolver.update(target, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
++            true
++        } catch (e: Exception) {
++            resolver.delete(target, null, null)
++            false
++        }
++    }
++
++    private class CopyMeta(val name: String?, val mime: String?, val taken: Long, val added: Long)
++
++    private fun isVideoUri(uri: String): Boolean = uri.contains("/video/")
++
+     private fun contentUri(id: Long, isVideo: Boolean): Uri {
+         val base = if (isVideo) {
+             MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+diff --git a/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt b/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
+index 7da8106..74dd7bb 100644
+--- a/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
++++ b/app/src/main/java/com/femi/gallery/data/repository/MediaRepositoryImpl.kt
+@@ -99,6 +99,15 @@ class MediaRepositoryImpl @Inject constructor(
+             dataSource.loadRefs(bucketId, search)
+         }
+ 
++    override suspend fun createWriteRequests(uris: List<String>): List<WriteRequest> =
++        dataSource.createWriteRequests(uris).map(::WriteRequest)
++
++    override suspend fun moveToFolder(uris: List<String>, relativePath: String): Int =
++        dataSource.moveItems(uris, relativePath)
++
++    override suspend fun copyToFolder(uris: List<String>, relativePath: String): Int =
++        dataSource.copyItems(uris, relativePath)
++
+     override suspend fun copyToLocked(uris: List<String>): List<LockedCopy> = lockedStore.copyIn(uris)
+ 
+     override suspend fun unlockItems(ids: List<Long>): Int = lockedStore.restore(ids)
+diff --git a/app/src/main/java/com/femi/gallery/domain/model/AlbumPaths.kt b/app/src/main/java/com/femi/gallery/domain/model/AlbumPaths.kt
+new file mode 100644
+index 0000000..3b105a7
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/model/AlbumPaths.kt
+@@ -0,0 +1,61 @@
++package com.femi.gallery.domain.model
++
++/**
++ * Rules for album folders. An album is a folder under shared storage; Android only lets apps
++ * put photos under DCIM or Pictures and videos under DCIM or Movies.
++ */
++object AlbumPaths {
++
++    private val IMAGE_ROOTS = setOf("DCIM", "Pictures")
++    private val VIDEO_ROOTS = setOf("DCIM", "Movies")
++    private val FOLDER_ROOTS = setOf("DCIM", "Pictures", "Movies")
++    private val FORBIDDEN_CHARACTERS = Regex("[\\\\/:*?\"<>|]")
++    private const val MAX_NAME_LENGTH = 60
++
++    /** A safe folder name from what the user typed, or null if nothing usable is left. */
++    fun sanitizeName(raw: String): String? =
++        raw.replace(FORBIDDEN_CHARACTERS, "")
++            .trim()
++            .trimStart('.')
++            .take(MAX_NAME_LENGTH)
++            .trim()
++            .takeIf { it.isNotEmpty() }
++
++    /** New albums go under DCIM, the one place both photos and videos are allowed. */
++    fun newAlbumPath(name: String): String = "DCIM/$name/"
++
++    /** `Pictures/Trips/` -> `Pictures/`. */
++    fun parent(path: String): String {
++        val trimmed = path.trimEnd('/')
++        val parent = trimmed.substringBeforeLast('/', missingDelimiterValue = "")
++        return if (parent.isEmpty()) "" else "$parent/"
++    }
++
++    /** `Pictures/Trips/` renamed to `Holiday` -> `Pictures/Holiday/`. */
++    fun renamed(path: String, newName: String): String = parent(path) + newName + "/"
++
++    /** A folder directly or deeper under DCIM, Pictures or Movies (never those roots themselves). */
++    fun isAlbumFolder(path: String): Boolean {
++        val parts = path.trimEnd('/').split('/')
++        return parts.size >= 2 && parts.first() in FOLDER_ROOTS
++    }
++
++    /** The camera folder keeps its name, since the camera app writes there. */
++    fun canRename(path: String): Boolean =
++        isAlbumFolder(path) && path.trimEnd('/') != "DCIM/Camera"
++
++    /**
++     * The same album folder for a photo or a video: `Pictures/Trips/` is not allowed for videos,
++     * so they go to `Movies/Trips/` instead (and the other way round).
++     */
++    fun forMedia(path: String, isVideo: Boolean): String {
++        val allowed = if (isVideo) VIDEO_ROOTS else IMAGE_ROOTS
++        val top = path.substringBefore('/')
++        return when {
++            top in allowed -> path
++            top == "Pictures" && isVideo -> "Movies/" + path.substringAfter('/')
++            top == "Movies" && !isVideo -> "Pictures/" + path.substringAfter('/')
++            else -> path
++        }
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt b/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
+index 7612aac..3074e12 100644
+--- a/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
++++ b/app/src/main/java/com/femi/gallery/domain/repository/MediaRepository.kt
+@@ -39,6 +39,18 @@ interface MediaRepository {
+     /** Confirmation dialogs to delete [uris] permanently (used from the recycle bin). */
+     suspend fun createDeleteRequests(uris: List<String>): List<WriteRequest>
+ 
++    /**
++     * Confirmation dialogs that let the app change [uris] (needed to move files other apps
++     * created). Approve them first, then call [moveToFolder].
++     */
++    suspend fun createWriteRequests(uris: List<String>): List<WriteRequest>
++
++    /** Moves already-approved items into the album folder [relativePath]; returns how many moved. */
++    suspend fun moveToFolder(uris: List<String>, relativePath: String): Int
++
++    /** Copies items into the album folder [relativePath]; returns how many were copied. */
++    suspend fun copyToFolder(uris: List<String>, relativePath: String): Int
++
+     /** Copies photos/videos into the private Locked folder. The originals are left untouched. */
+     suspend fun copyToLocked(uris: List<String>): List<LockedCopy>
+ 
+diff --git a/app/src/main/java/com/femi/gallery/domain/usecase/AlbumUseCases.kt b/app/src/main/java/com/femi/gallery/domain/usecase/AlbumUseCases.kt
+new file mode 100644
+index 0000000..9785c2d
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/usecase/AlbumUseCases.kt
+@@ -0,0 +1,28 @@
++package com.femi.gallery.domain.usecase
++
++import com.femi.gallery.domain.model.WriteRequest
++import com.femi.gallery.domain.repository.MediaRepository
++import javax.inject.Inject
++
++/** Builds the system dialogs that allow the app to move [uris]. */
++class RequestWriteAccessUseCase @Inject constructor(
++    private val repository: MediaRepository,
++) {
++    suspend operator fun invoke(uris: List<String>): List<WriteRequest> = repository.createWriteRequests(uris)
++}
++
++/** Moves items (whose write access was already approved) into an album folder. */
++class MoveMediaUseCase @Inject constructor(
++    private val repository: MediaRepository,
++) {
++    suspend operator fun invoke(uris: List<String>, relativePath: String): Int =
++        repository.moveToFolder(uris, relativePath)
++}
++
++/** Copies items into an album folder. */
++class CopyMediaUseCase @Inject constructor(
++    private val repository: MediaRepository,
++) {
++    suspend operator fun invoke(uris: List<String>, relativePath: String): Int =
++        repository.copyToFolder(uris, relativePath)
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
+index 3d18178..a032159 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
+@@ -36,9 +36,10 @@ import com.femi.gallery.presentation.locked.LockedGate
+ import com.femi.gallery.presentation.pictures.TimelineGrid
+ import com.femi.gallery.presentation.selection.SelectionBars
+ import com.femi.gallery.presentation.selection.libraryActions
++import com.femi.gallery.presentation.selection.libraryMoreActions
+ import com.femi.gallery.presentation.selection.lockedActions
+ import com.femi.gallery.presentation.selection.recycleBinActions
+-import com.femi.gallery.presentation.selection.WriteRequestHandler
++import com.femi.gallery.presentation.selection.SelectionHost
+ 
+ @Composable
+ fun AlbumScreen(
+@@ -78,7 +79,7 @@ private fun AlbumContent(
+ 
+     HideBottomBarWhile(selectionState.active)
+     BackHandler(enabled = selectionState.active) { viewModel.selection.clear() }
+-    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel.selection::clear)
++    SelectionHost(controller = viewModel.selection, onSuccess = viewModel.selection::clear)
+ 
+     Box(modifier = modifier.fillMaxSize()) {
+         Column(modifier = Modifier.fillMaxSize()) {
+@@ -138,6 +139,11 @@ private fun AlbumContent(
+                     viewModel.isLocked -> lockedActions(viewModel.selection)
+                     else -> libraryActions(context, selectionState, viewModel.selection)
+                 },
++                moreActions = if (viewModel.isRecycleBin || viewModel.isLocked) {
++                    emptyList()
++                } else {
++                    libraryMoreActions(context, viewModel.selection)
++                },
+                 onClose = viewModel.selection::clear,
+                 onSelectAll = viewModel.selection::selectAll,
+             )
+diff --git a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumsScreen.kt b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumsScreen.kt
+index 5fc3d72..a6b44dd 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumsScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumsScreen.kt
+@@ -1,7 +1,8 @@
+ package com.femi.gallery.presentation.albums
+ 
+ import androidx.compose.foundation.background
+-import androidx.compose.foundation.clickable
++import androidx.compose.foundation.ExperimentalFoundationApi
++import androidx.compose.foundation.combinedClickable
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.PaddingValues
+@@ -21,11 +22,16 @@ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.outlined.Lock
++import androidx.compose.material3.DropdownMenu
++import androidx.compose.material3.DropdownMenuItem
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+@@ -40,7 +46,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import coil3.compose.AsyncImage
+ import com.femi.gallery.R
+ import com.femi.gallery.domain.model.Album
++import com.femi.gallery.domain.model.AlbumPaths
+ import com.femi.gallery.domain.model.SpecialAlbums
++import com.femi.gallery.presentation.selection.NameDialog
++import com.femi.gallery.presentation.selection.SelectionHost
+ 
+ @Composable
+ fun AlbumsScreen(
+@@ -56,6 +65,21 @@ fun AlbumsScreen(
+         onPauseOrDispose { }
+     }
+ 
++    SelectionHost(controller = viewModel.actions, onSuccess = {})
++    var renaming by remember { mutableStateOf<Album?>(null) }
++    renaming?.let { album ->
++        NameDialog(
++            title = stringResource(R.string.rename_album_title),
++            confirmLabel = stringResource(R.string.rename_album_confirm),
++            initialName = album.name,
++            onConfirm = { name ->
++                viewModel.actions.renameAlbum(album, name)
++                renaming = null
++            },
++            onDismiss = { renaming = null },
++        )
++    }
++
+     LazyVerticalGrid(
+         columns = GridCells.Fixed(2),
+         modifier = modifier.fillMaxSize(),
+@@ -71,14 +95,38 @@ fun AlbumsScreen(
+             )
+         }
+         items(albums, key = { it.bucketId }) { album ->
+-            AlbumCard(album = album, onClick = { onAlbumClick(album.bucketId) })
++            AlbumCard(
++                album = album,
++                onClick = { onAlbumClick(album.bucketId) },
++                onRename = { renaming = album },
++            )
+         }
+     }
+ }
+ 
++@OptIn(ExperimentalFoundationApi::class)
+ @Composable
+-private fun AlbumCard(album: Album, onClick: () -> Unit) {
+-    Column(modifier = Modifier.clickable(onClick = onClick)) {
++private fun AlbumCard(album: Album, onClick: () -> Unit, onRename: () -> Unit) {
++    var menuOpen by remember { mutableStateOf(false) }
++    // Only real folders under DCIM, Pictures or Movies can be renamed (not the camera folder or virtual albums).
++    val canRename = album.bucketId !in setOf(SpecialAlbums.FAVORITES, SpecialAlbums.TRASH, SpecialAlbums.LOCKED) &&
++        AlbumPaths.canRename(album.relativePath)
++
++    Column(
++        modifier = Modifier.combinedClickable(
++            onClick = onClick,
++            onLongClick = { if (canRename) menuOpen = true },
++        ),
++    ) {
++        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
++            DropdownMenuItem(
++                text = { Text(stringResource(R.string.action_rename_album)) },
++                onClick = {
++                    menuOpen = false
++                    onRename()
++                },
++            )
++        }
+         if (album.bucketId == SpecialAlbums.LOCKED) {
+             // Nothing from the Locked folder is shown outside it, so it gets a lock instead of a cover.
+             Box(
+diff --git a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumsViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumsViewModel.kt
+index c47f6b1..80deae2 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumsViewModel.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumsViewModel.kt
+@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
+ import com.femi.gallery.domain.model.Album
+ import com.femi.gallery.domain.usecase.ObserveAlbumsUseCase
+ import com.femi.gallery.domain.usecase.RefreshMediaUseCase
++import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import kotlinx.coroutines.flow.SharingStarted
+ import kotlinx.coroutines.flow.StateFlow
+@@ -14,9 +15,14 @@ import javax.inject.Inject
+ @HiltViewModel
+ class AlbumsViewModel @Inject constructor(
+     observeAlbums: ObserveAlbumsUseCase,
++    selectionFactory: MediaSelectionControllerFactory,
+     private val refreshMedia: RefreshMediaUseCase,
+ ) : ViewModel() {
+ 
++    /** Runs album actions (rename) with their system confirmations; there is no selection on this screen. */
++    val actions = selectionFactory.create(scope = viewModelScope, bucketId = null)
++
++
+     val albums: StateFlow<List<Album>> = observeAlbums()
+         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+ 
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+index 5498d9b..6e5d5f2 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+@@ -31,8 +31,9 @@ import com.femi.gallery.R
+ import com.femi.gallery.domain.model.toRef
+ import com.femi.gallery.presentation.common.HideBottomBarWhile
+ import com.femi.gallery.presentation.selection.SelectionBars
+-import com.femi.gallery.presentation.selection.WriteRequestHandler
++import com.femi.gallery.presentation.selection.SelectionHost
+ import com.femi.gallery.presentation.selection.libraryActions
++import com.femi.gallery.presentation.selection.libraryMoreActions
+ 
+ @Composable
+ fun PicturesScreen(
+@@ -54,7 +55,7 @@ fun PicturesScreen(
+ 
+     HideBottomBarWhile(selectionState.active)
+     BackHandler(enabled = selectionState.active) { viewModel.selection.clear() }
+-    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel.selection::clear)
++    SelectionHost(controller = viewModel.selection, onSuccess = viewModel.selection::clear)
+ 
+     Box(modifier = modifier.fillMaxSize()) {
+         Column(modifier = Modifier.fillMaxSize()) {
+@@ -94,6 +95,7 @@ fun PicturesScreen(
+             SelectionBars(
+                 count = selectionState.count,
+                 actions = libraryActions(context, selectionState, viewModel.selection),
++                moreActions = libraryMoreActions(context, viewModel.selection),
+                 onClose = viewModel.selection::clear,
+                 onSelectAll = viewModel.selection::selectAll,
+             )
+diff --git a/app/src/main/java/com/femi/gallery/presentation/search/SearchScreen.kt b/app/src/main/java/com/femi/gallery/presentation/search/SearchScreen.kt
+index ac68e47..0880393 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/search/SearchScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/search/SearchScreen.kt
+@@ -48,8 +48,9 @@ import com.femi.gallery.domain.model.toRef
+ import com.femi.gallery.presentation.common.HideBottomBarWhile
+ import com.femi.gallery.presentation.pictures.TimelineGrid
+ import com.femi.gallery.presentation.selection.SelectionBars
+-import com.femi.gallery.presentation.selection.WriteRequestHandler
++import com.femi.gallery.presentation.selection.SelectionHost
+ import com.femi.gallery.presentation.selection.libraryActions
++import com.femi.gallery.presentation.selection.libraryMoreActions
+ 
+ /** Suggestion chips: the label shown, and the (English) query it fills in. */
+ private val Suggestions = listOf(
+@@ -85,7 +86,7 @@ fun SearchScreen(
+ 
+     HideBottomBarWhile(selectionState.active)
+     BackHandler(enabled = selectionState.active) { viewModel.selection.clear() }
+-    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel.selection::clear)
++    SelectionHost(controller = viewModel.selection, onSuccess = viewModel.selection::clear)
+ 
+     Box(modifier = modifier.fillMaxSize()) {
+         Column(modifier = Modifier.fillMaxSize()) {
+@@ -158,6 +159,7 @@ fun SearchScreen(
+             SelectionBars(
+                 count = selectionState.count,
+                 actions = libraryActions(context, selectionState, viewModel.selection),
++                moreActions = libraryMoreActions(context, viewModel.selection),
+                 onClose = viewModel.selection::clear,
+                 onSelectAll = viewModel.selection::selectAll,
+             )
+diff --git a/app/src/main/java/com/femi/gallery/presentation/selection/AlbumPickerSheet.kt b/app/src/main/java/com/femi/gallery/presentation/selection/AlbumPickerSheet.kt
+new file mode 100644
+index 0000000..fbbb601
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/presentation/selection/AlbumPickerSheet.kt
+@@ -0,0 +1,170 @@
++package com.femi.gallery.presentation.selection
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.navigationBarsPadding
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Add
++import androidx.compose.material3.AlertDialog
++import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.ModalBottomSheet
++import androidx.compose.material3.OutlinedTextField
++import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.saveable.rememberSaveable
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.layout.ContentScale
++import androidx.compose.ui.res.pluralStringResource
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.text.style.TextOverflow
++import androidx.compose.ui.unit.dp
++import androidx.hilt.navigation.compose.hiltViewModel
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import coil3.compose.AsyncImage
++import com.femi.gallery.R
++import com.femi.gallery.domain.model.AlbumPaths
++
++/** Bottom sheet for choosing the album to move or copy to, with a "New album" option. */
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++fun AlbumPickerSheet(
++    mode: PickerMode,
++    onChoose: (relativePath: String) -> Unit,
++    onDismiss: () -> Unit,
++    viewModel: AlbumPickerViewModel = hiltViewModel(),
++) {
++    val albums by viewModel.albums.collectAsStateWithLifecycle()
++    var creating by rememberSaveable { mutableStateOf(false) }
++
++    ModalBottomSheet(onDismissRequest = onDismiss) {
++        Text(
++            text = stringResource(if (mode == PickerMode.Move) R.string.picker_move_title else R.string.picker_copy_title),
++            style = MaterialTheme.typography.titleLarge,
++            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
++        )
++        LazyColumn(modifier = Modifier.navigationBarsPadding()) {
++            item(key = "new") {
++                PickerRow(
++                    onClick = { creating = true },
++                    leading = {
++                        Icon(
++                            imageVector = Icons.Filled.Add,
++                            contentDescription = null,
++                            tint = MaterialTheme.colorScheme.primary,
++                        )
++                    },
++                    title = stringResource(R.string.picker_new_album),
++                    subtitle = null,
++                )
++            }
++            items(albums, key = { it.bucketId }) { album ->
++                PickerRow(
++                    onClick = { onChoose(album.relativePath) },
++                    leading = {
++                        AsyncImage(
++                            model = album.coverUri,
++                            contentDescription = null,
++                            contentScale = ContentScale.Crop,
++                            modifier = Modifier.size(48.dp),
++                        )
++                    },
++                    title = album.name.ifEmpty { stringResource(R.string.album_unnamed) },
++                    subtitle = pluralStringResource(R.plurals.album_item_count, album.itemCount, album.itemCount),
++                )
++            }
++        }
++    }
++
++    if (creating) {
++        NameDialog(
++            title = stringResource(R.string.picker_new_album),
++            confirmLabel = stringResource(R.string.picker_create),
++            initialName = "",
++            onConfirm = { name -> onChoose(AlbumPaths.newAlbumPath(name)) },
++            onDismiss = { creating = false },
++        )
++    }
++}
++
++@Composable
++private fun PickerRow(
++    onClick: () -> Unit,
++    leading: @Composable () -> Unit,
++    title: String,
++    subtitle: String?,
++) {
++    Row(
++        modifier = Modifier
++            .fillMaxWidth()
++            .clickable(onClick = onClick)
++            .padding(horizontal = 24.dp, vertical = 8.dp),
++        verticalAlignment = Alignment.CenterVertically,
++        horizontalArrangement = Arrangement.spacedBy(16.dp),
++    ) {
++        Box(
++            modifier = Modifier
++                .size(48.dp)
++                .clip(RoundedCornerShape(12.dp))
++                .background(MaterialTheme.colorScheme.surfaceVariant),
++            contentAlignment = Alignment.Center,
++        ) { leading() }
++        androidx.compose.foundation.layout.Column {
++            Text(text = title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
++            if (subtitle != null) {
++                Text(
++                    text = subtitle,
++                    style = MaterialTheme.typography.bodySmall,
++                    color = MaterialTheme.colorScheme.onSurfaceVariant,
++                )
++            }
++        }
++    }
++}
++
++/** Asks for an album name; the confirm button stays disabled until the name is usable. */
++@Composable
++fun NameDialog(
++    title: String,
++    confirmLabel: String,
++    initialName: String,
++    onConfirm: (cleanName: String) -> Unit,
++    onDismiss: () -> Unit,
++) {
++    var text by rememberSaveable { mutableStateOf(initialName) }
++    val cleanName = AlbumPaths.sanitizeName(text)
++
++    AlertDialog(
++        onDismissRequest = onDismiss,
++        title = { Text(title) },
++        text = {
++            OutlinedTextField(
++                value = text,
++                onValueChange = { text = it },
++                singleLine = true,
++                label = { Text(stringResource(R.string.picker_album_name)) },
++            )
++        },
++        confirmButton = {
++            TextButton(enabled = cleanName != null, onClick = { cleanName?.let(onConfirm) }) { Text(confirmLabel) }
++        },
++        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.picker_cancel)) } },
++    )
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/selection/AlbumPickerViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/selection/AlbumPickerViewModel.kt
+new file mode 100644
+index 0000000..a9bbbdf
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/presentation/selection/AlbumPickerViewModel.kt
+@@ -0,0 +1,31 @@
++package com.femi.gallery.presentation.selection
++
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.viewModelScope
++import com.femi.gallery.domain.model.Album
++import com.femi.gallery.domain.model.AlbumPaths
++import com.femi.gallery.domain.model.SpecialAlbums
++import com.femi.gallery.domain.usecase.ObserveAlbumsUseCase
++import dagger.hilt.android.lifecycle.HiltViewModel
++import kotlinx.coroutines.flow.SharingStarted
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.flow.stateIn
++import javax.inject.Inject
++
++/** The albums a photo can be moved or copied into: real folders under DCIM, Pictures or Movies. */
++@HiltViewModel
++class AlbumPickerViewModel @Inject constructor(
++    observeAlbums: ObserveAlbumsUseCase,
++) : ViewModel() {
++
++    val albums: StateFlow<List<Album>> = observeAlbums()
++        .map { all ->
++            all.filter { it.bucketId !in SPECIAL_IDS && AlbumPaths.isAlbumFolder(it.relativePath) }
++        }
++        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
++
++    private companion object {
++        val SPECIAL_IDS = setOf(SpecialAlbums.FAVORITES, SpecialAlbums.TRASH, SpecialAlbums.LOCKED)
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/selection/MediaSelectionController.kt b/app/src/main/java/com/femi/gallery/presentation/selection/MediaSelectionController.kt
+index 5121728..90123ba 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/selection/MediaSelectionController.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/selection/MediaSelectionController.kt
+@@ -1,20 +1,28 @@
+ package com.femi.gallery.presentation.selection
+ 
++import com.femi.gallery.domain.model.Album
++import com.femi.gallery.domain.model.AlbumPaths
+ import com.femi.gallery.domain.model.MediaRef
+ import com.femi.gallery.domain.model.SpecialAlbums
+ import com.femi.gallery.domain.model.WriteLimits
+ import com.femi.gallery.domain.model.WriteRequest
+ import com.femi.gallery.domain.search.SearchCriteria
++import com.femi.gallery.domain.usecase.CopyMediaUseCase
+ import com.femi.gallery.domain.usecase.DeleteLockedUseCase
+ import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
+ import com.femi.gallery.domain.usecase.LockMediaUseCase
++import com.femi.gallery.domain.usecase.MoveMediaUseCase
+ import com.femi.gallery.domain.usecase.RequestDeleteUseCase
+ import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
+ import com.femi.gallery.domain.usecase.RequestTrashUseCase
++import com.femi.gallery.domain.usecase.RequestWriteAccessUseCase
+ import com.femi.gallery.domain.usecase.UnlockMediaUseCase
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.channels.Channel
+ import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.flow.receiveAsFlow
+ import kotlinx.coroutines.launch
+ import javax.inject.Inject
+@@ -27,10 +35,21 @@ enum class WriteKind {
+     Unlock,
+     /** Deleted from the Locked folder. */
+     DeleteLocked,
++    /** Permission to change the files is being requested; the move itself follows. */
++    Move,
++    Moved,
++    Copied,
++    Renamed,
+     /** Something went wrong before any dialog could be shown. */
+     Failed,
+ }
+ 
++/** Whether the album picker is choosing where to move or where to copy. */
++enum class PickerMode { Move, Copy }
++
++/** The items waiting for the user to pick a destination album. */
++class AlbumPickerRequest(val mode: PickerMode, val refs: List<MediaRef>)
++
+ /**
+  * One user action: the system confirmation dialogs to show in order (possibly none, for work
+  * that needs no confirmation) and what to do if the user declines one of them.
+@@ -41,6 +60,8 @@ class WriteBatch(
+     val requests: List<WriteRequest>,
+     /** Called with the index of the declined dialog, e.g. to undo a half-finished lock. */
+     val onDeclined: ((requestIndex: Int) -> Unit)? = null,
++    /** Called once every dialog was approved; used for work that must wait for the permission. */
++    val onApproved: (() -> Unit)? = null,
+ )
+ 
+ /**
+@@ -57,6 +78,9 @@ class MediaSelectionController(
+     private val lockMedia: LockMediaUseCase,
+     private val unlockMedia: UnlockMediaUseCase,
+     private val deleteLockedMedia: DeleteLockedUseCase,
++    private val requestWriteAccess: RequestWriteAccessUseCase,
++    private val moveMedia: MoveMediaUseCase,
++    private val copyMedia: CopyMediaUseCase,
+     /** The active search, so "Select all" only selects matching items. */
+     private val currentSearch: () -> SearchCriteria? = { null },
+ ) {
+@@ -66,6 +90,11 @@ class MediaSelectionController(
+     private val channel = Channel<WriteBatch>(Channel.BUFFERED)
+     val batches: Flow<WriteBatch> = channel.receiveAsFlow()
+ 
++    private val _picker = MutableStateFlow<AlbumPickerRequest?>(null)
++
++    /** Set while the user is choosing a destination album for a move or copy. */
++    val picker: StateFlow<AlbumPickerRequest?> = _picker.asStateFlow()
++
+     fun begin(ref: MediaRef) = selection.begin(ref)
+ 
+     fun toggle(ref: MediaRef) = selection.toggle(ref)
+@@ -90,6 +119,81 @@ class MediaSelectionController(
+ 
+     fun toggleFavoriteSelected() = toggleFavorite(state.value.selected.values)
+ 
++    fun moveSelectedToAlbum() = askForAlbum(PickerMode.Move, state.value.selected.values)
++
++    fun copySelectedToAlbum() = askForAlbum(PickerMode.Copy, state.value.selected.values)
++
++    private fun askForAlbum(mode: PickerMode, refs: Collection<MediaRef>) {
++        if (refs.isNotEmpty()) _picker.value = AlbumPickerRequest(mode, refs.toList())
++    }
++
++    fun dismissPicker() {
++        _picker.value = null
++    }
++
++    /** The user picked (or created) an album folder: carry out the pending move or copy. */
++    fun choosePath(relativePath: String) {
++        val request = _picker.value ?: return
++        _picker.value = null
++        when (request.mode) {
++            PickerMode.Move -> moveTo(request.refs, relativePath)
++            PickerMode.Copy -> copyTo(request.refs, relativePath)
++        }
++    }
++
++    /** Moves items into the folder; Android first asks permission to change files other apps created. */
++    fun moveTo(refs: Collection<MediaRef>, relativePath: String) {
++        if (refs.isEmpty()) return
++        scope.launch {
++            val uris = refs.map { it.uri }
++            val requests = requestWriteAccess(uris)
++            channel.send(
++                WriteBatch(
++                    kind = WriteKind.Move,
++                    itemCount = uris.size,
++                    requests = requests,
++                    onApproved = { scope.launch { reportMove(WriteKind.Moved, moveMedia(uris, relativePath)) } },
++                ),
++            )
++        }
++    }
++
++    fun copyTo(refs: Collection<MediaRef>, relativePath: String) {
++        if (refs.isEmpty()) return
++        scope.launch { reportMove(WriteKind.Copied, copyMedia(refs.map { it.uri }, relativePath)) }
++    }
++
++    /**
++     * Renames an album by moving everything in it to the renamed folder. The rename only changes
++     * the folder name; the album keeps its place (Pictures, DCIM, ...).
++     */
++    fun renameAlbum(album: Album, newName: String) {
++        val name = AlbumPaths.sanitizeName(newName)
++        if (name == null || !AlbumPaths.canRename(album.relativePath)) {
++            scope.launch { channel.send(WriteBatch(WriteKind.Failed, 0, emptyList())) }
++            return
++        }
++        val newPath = AlbumPaths.renamed(album.relativePath, name)
++        if (newPath == album.relativePath) return
++        scope.launch {
++            val uris = getAllRefs(album.bucketId).map { it.uri }
++            if (uris.isEmpty()) return@launch
++            val requests = requestWriteAccess(uris)
++            channel.send(
++                WriteBatch(
++                    kind = WriteKind.Move,
++                    itemCount = uris.size,
++                    requests = requests,
++                    onApproved = { scope.launch { reportMove(WriteKind.Renamed, moveMedia(uris, newPath)) } },
++                ),
++            )
++        }
++    }
++
++    private suspend fun reportMove(kind: WriteKind, count: Int) {
++        channel.send(WriteBatch(if (count > 0) kind else WriteKind.Failed, count, emptyList()))
++    }
++
+     fun trash(refs: Collection<MediaRef>) {
+         if (refs.isEmpty()) return
+         scope.launch {
+@@ -188,6 +292,9 @@ class MediaSelectionControllerFactory @Inject constructor(
+     private val lockMedia: LockMediaUseCase,
+     private val unlockMedia: UnlockMediaUseCase,
+     private val deleteLocked: DeleteLockedUseCase,
++    private val requestWriteAccess: RequestWriteAccessUseCase,
++    private val moveMedia: MoveMediaUseCase,
++    private val copyMedia: CopyMediaUseCase,
+ ) {
+     fun create(
+         scope: CoroutineScope,
+@@ -203,6 +310,9 @@ class MediaSelectionControllerFactory @Inject constructor(
+         lockMedia = lockMedia,
+         unlockMedia = unlockMedia,
+         deleteLockedMedia = deleteLocked,
++        requestWriteAccess = requestWriteAccess,
++        moveMedia = moveMedia,
++        copyMedia = copyMedia,
+         currentSearch = currentSearch,
+     )
+ }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/selection/SelectionActions.kt b/app/src/main/java/com/femi/gallery/presentation/selection/SelectionActions.kt
+index 918f10b..2544a6b 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/selection/SelectionActions.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/selection/SelectionActions.kt
+@@ -5,7 +5,9 @@ import android.net.Uri
+ import android.widget.Toast
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.Favorite
++import androidx.compose.material.icons.outlined.ContentCopy
+ import androidx.compose.material.icons.outlined.Delete
++import androidx.compose.material.icons.outlined.DriveFileMove
+ import androidx.compose.material.icons.outlined.DeleteForever
+ import androidx.compose.material.icons.outlined.FavoriteBorder
+ import androidx.compose.material.icons.outlined.Lock
+@@ -36,12 +38,22 @@ fun libraryActions(
+             onClick = controller::toggleFavoriteSelected,
+         ),
+         SelectionAction(Icons.Outlined.Delete, stringResource(R.string.action_delete), controller::trashSelected),
+-        SelectionAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
+-            lockWithScreenLockCheck(context) { controller.lockSelected() }
+-        },
+     )
+ }
+ 
++/** Move, copy and lock: the less common actions behind the bar's "More" button. */
++@Composable
++fun libraryMoreActions(
++    context: Context,
++    controller: MediaSelectionController,
++): List<SelectionAction> = listOf(
++    SelectionAction(Icons.Outlined.DriveFileMove, stringResource(R.string.action_move_to_album), controller::moveSelectedToAlbum),
++    SelectionAction(Icons.Outlined.ContentCopy, stringResource(R.string.action_copy_to_album), controller::copySelectedToAlbum),
++    SelectionAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
++        lockWithScreenLockCheck(context) { controller.lockSelected() }
++    },
++)
++
+ /** Moving to the Locked folder only makes sense if the phone has a screen lock to protect it. */
+ fun lockWithScreenLockCheck(context: Context, lock: () -> Unit) {
+     if (BiometricAuth.isAvailable(context)) {
+diff --git a/app/src/main/java/com/femi/gallery/presentation/selection/SelectionBars.kt b/app/src/main/java/com/femi/gallery/presentation/selection/SelectionBars.kt
+index 78a8410..75b9cdf 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/selection/SelectionBars.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/selection/SelectionBars.kt
+@@ -12,13 +12,20 @@ import androidx.compose.foundation.layout.statusBars
+ import androidx.compose.foundation.layout.windowInsetsPadding
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.Close
++import androidx.compose.material.icons.filled.MoreVert
+ import androidx.compose.material3.Icon
++import androidx.compose.material3.DropdownMenu
++import androidx.compose.material3.DropdownMenuItem
+ import androidx.compose.material3.IconButton
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.TextButton
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.vector.ImageVector
+@@ -40,6 +47,8 @@ fun BoxScope.SelectionBars(
+     actions: List<SelectionAction>,
+     onClose: () -> Unit,
+     onSelectAll: () -> Unit,
++    /** Less common actions, shown in a "More" menu at the end of the bar. */
++    moreActions: List<SelectionAction> = emptyList(),
+ ) {
+     Surface(
+         modifier = Modifier.align(Alignment.TopCenter),
+@@ -78,6 +87,7 @@ fun BoxScope.SelectionBars(
+             actions.forEach { action ->
+                 BarAction(action.icon, action.label, enabled = count > 0, onClick = action.onClick)
+             }
++            if (moreActions.isNotEmpty()) MoreMenu(moreActions, enabled = count > 0)
+         }
+     }
+ }
+@@ -91,3 +101,26 @@ private fun BarAction(icon: ImageVector, label: String, enabled: Boolean, onClic
+         Text(text = label, style = MaterialTheme.typography.labelSmall)
+     }
+ }
++
++@Composable
++private fun MoreMenu(actions: List<SelectionAction>, enabled: Boolean) {
++    var expanded by remember { mutableStateOf(false) }
++    Column(horizontalAlignment = Alignment.CenterHorizontally) {
++        IconButton(onClick = { expanded = true }, enabled = enabled) {
++            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
++        }
++        Text(text = stringResource(R.string.action_more), style = MaterialTheme.typography.labelSmall)
++        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
++            actions.forEach { action ->
++                DropdownMenuItem(
++                    text = { Text(action.label) },
++                    leadingIcon = { Icon(action.icon, contentDescription = null) },
++                    onClick = {
++                        expanded = false
++                        action.onClick()
++                    },
++                )
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/selection/SelectionHost.kt b/app/src/main/java/com/femi/gallery/presentation/selection/SelectionHost.kt
+new file mode 100644
+index 0000000..c20c295
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/presentation/selection/SelectionHost.kt
+@@ -0,0 +1,27 @@
++package com.femi.gallery.presentation.selection
++
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++
++/**
++ * Everything a screen needs to run selection actions: the system confirmation dialogs plus the
++ * album picker for move and copy. [onSuccess] runs after an action finished (e.g. to leave
++ * selection mode).
++ */
++@Composable
++fun SelectionHost(
++    controller: MediaSelectionController,
++    onSuccess: () -> Unit,
++) {
++    WriteRequestHandler(batches = controller.batches, onSuccess = onSuccess)
++
++    val picker by controller.picker.collectAsStateWithLifecycle()
++    picker?.let { request ->
++        AlbumPickerSheet(
++            mode = request.mode,
++            onChoose = controller::choosePath,
++            onDismiss = controller::dismissPicker,
++        )
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/selection/WriteRequestHandler.kt b/app/src/main/java/com/femi/gallery/presentation/selection/WriteRequestHandler.kt
+index de498e1..cf4fbd1 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/selection/WriteRequestHandler.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/selection/WriteRequestHandler.kt
+@@ -43,8 +43,14 @@ fun WriteRequestHandler(
+             index + 1 < batch.requests.size -> inFlight = batch to index + 1
+             else -> {
+                 inFlight = null
+-                Toast.makeText(context, successMessage(context, batch), Toast.LENGTH_SHORT).show()
+-                latestOnSuccess()
++                val afterApproval = batch.onApproved
++                if (afterApproval != null) {
++                    // The real work (and its result message) comes next.
++                    afterApproval()
++                } else {
++                    Toast.makeText(context, successMessage(context, batch), Toast.LENGTH_SHORT).show()
++                    latestOnSuccess()
++                }
+             }
+         }
+     }
+@@ -79,5 +85,9 @@ private fun successMessage(context: Context, batch: WriteBatch): String = when (
+     WriteKind.Lock -> context.resources.getQuantityString(R.plurals.toast_locked, batch.itemCount, batch.itemCount)
+     WriteKind.Unlock -> context.resources.getQuantityString(R.plurals.toast_unlocked, batch.itemCount, batch.itemCount)
+     WriteKind.DeleteLocked -> context.resources.getQuantityString(R.plurals.toast_deleted_locked, batch.itemCount, batch.itemCount)
++    WriteKind.Move -> ""
++    WriteKind.Moved -> context.resources.getQuantityString(R.plurals.toast_moved, batch.itemCount, batch.itemCount)
++    WriteKind.Copied -> context.resources.getQuantityString(R.plurals.toast_copied, batch.itemCount, batch.itemCount)
++    WriteKind.Renamed -> context.getString(R.string.toast_album_renamed)
+     WriteKind.Failed -> context.getString(R.string.toast_failed)
+ }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerScreen.kt b/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerScreen.kt
+index 6cd0854..e38593a 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerScreen.kt
+@@ -78,7 +78,7 @@ import com.femi.gallery.domain.model.MediaItem
+ import com.femi.gallery.domain.model.toRef
+ import com.femi.gallery.presentation.common.findActivity
+ import com.femi.gallery.presentation.locked.LockedGate
+-import com.femi.gallery.presentation.selection.WriteRequestHandler
++import com.femi.gallery.presentation.selection.SelectionHost
+ import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
+ import java.time.Instant
+ import java.time.ZoneId
+@@ -115,7 +115,7 @@ private fun ViewerContent(
+     val context = LocalContext.current
+ 
+     ImmersiveMode(enabled = !chromeVisible)
+-    WriteRequestHandler(batches = viewModel.actions.batches, onSuccess = {})
++    SelectionHost(controller = viewModel.actions, onSuccess = {})
+ 
+     // Leave the viewer once the last photo has been moved to the trash.
+     LaunchedEffect(items.loadState.refresh, items.itemCount) {
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index a24c46b..27c5ef0 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -46,6 +46,27 @@
+     <string name="toast_favorited">Added to favorites</string>
+     <string name="toast_unfavorited">Removed from favorites</string>
+ 
++    <string name="action_more">More</string>
++    <string name="action_move_to_album">Move to album</string>
++    <string name="action_copy_to_album">Copy to album</string>
++    <string name="action_rename_album">Rename album</string>
++    <string name="picker_move_title">Move to album</string>
++    <string name="picker_copy_title">Copy to album</string>
++    <string name="picker_new_album">New album</string>
++    <string name="picker_create">Create</string>
++    <string name="picker_cancel">Cancel</string>
++    <string name="picker_album_name">Album name</string>
++    <string name="rename_album_title">Rename album</string>
++    <string name="rename_album_confirm">Rename</string>
++    <plurals name="toast_moved">
++        <item quantity="one">Moved %d item</item>
++        <item quantity="other">Moved %d items</item>
++    </plurals>
++    <plurals name="toast_copied">
++        <item quantity="one">Copied %d item</item>
++        <item quantity="other">Copied %d items</item>
++    </plurals>
++    <string name="toast_album_renamed">Album renamed</string>
+     <string name="album_locked">Locked folder</string>
+     <string name="action_lock">Lock</string>
+     <string name="action_unlock">Unlock</string>
+diff --git a/app/src/test/java/com/femi/gallery/domain/model/AlbumPathsTest.kt b/app/src/test/java/com/femi/gallery/domain/model/AlbumPathsTest.kt
+new file mode 100644
+index 0000000..03e9292
+--- /dev/null
++++ b/app/src/test/java/com/femi/gallery/domain/model/AlbumPathsTest.kt
+@@ -0,0 +1,65 @@
++package com.femi.gallery.domain.model
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertNull
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class AlbumPathsTest {
++
++    @Test
++    fun sanitizeRemovesForbiddenCharactersAndTrims() {
++        assertEquals("Holiday 2025", AlbumPaths.sanitizeName("  Holiday 2025  "))
++        assertEquals("ab", AlbumPaths.sanitizeName("a/b\\"))
++        assertEquals("hidden", AlbumPaths.sanitizeName("..hidden"))
++        assertEquals("name", AlbumPaths.sanitizeName("na:me?"))
++    }
++
++    @Test
++    fun sanitizeRejectsEmptyResults() {
++        assertNull(AlbumPaths.sanitizeName(""))
++        assertNull(AlbumPaths.sanitizeName("   "))
++        assertNull(AlbumPaths.sanitizeName("///"))
++        assertNull(AlbumPaths.sanitizeName("..."))
++    }
++
++    @Test
++    fun sanitizeLimitsLength() {
++        assertEquals(60, AlbumPaths.sanitizeName("a".repeat(100))!!.length)
++    }
++
++    @Test
++    fun newAlbumsLiveUnderDcim() {
++        assertEquals("DCIM/Trips/", AlbumPaths.newAlbumPath("Trips"))
++    }
++
++    @Test
++    fun renamingKeepsTheParentFolder() {
++        assertEquals("Pictures/", AlbumPaths.parent("Pictures/Trips/"))
++        assertEquals("DCIM/Camera/", AlbumPaths.parent("DCIM/Camera/Raw/"))
++        assertEquals("", AlbumPaths.parent("Pictures/"))
++        assertEquals("Pictures/Holiday/", AlbumPaths.renamed("Pictures/Trips/", "Holiday"))
++    }
++
++    @Test
++    fun onlyRealAlbumFoldersCanBeTargetsOrRenamed() {
++        assertTrue(AlbumPaths.isAlbumFolder("Pictures/Trips/"))
++        assertTrue(AlbumPaths.isAlbumFolder("DCIM/Camera/"))
++        assertFalse(AlbumPaths.isAlbumFolder("Pictures/"))
++        assertFalse(AlbumPaths.isAlbumFolder("Android/media/com.whatsapp/WhatsApp Images/"))
++        assertFalse(AlbumPaths.isAlbumFolder(""))
++
++        assertTrue(AlbumPaths.canRename("Pictures/Trips/"))
++        assertFalse(AlbumPaths.canRename("DCIM/Camera/"))
++        assertFalse(AlbumPaths.canRename("Android/media/x/y/"))
++    }
++
++    @Test
++    fun videosAndPhotosGetAllowedRoots() {
++        assertEquals("Pictures/Trips/", AlbumPaths.forMedia("Pictures/Trips/", isVideo = false))
++        assertEquals("Movies/Trips/", AlbumPaths.forMedia("Pictures/Trips/", isVideo = true))
++        assertEquals("Pictures/Edits/", AlbumPaths.forMedia("Movies/Edits/", isVideo = false))
++        assertEquals("DCIM/Trips/", AlbumPaths.forMedia("DCIM/Trips/", isVideo = true))
++    }
++}
+-- 
+2.43.0
+
