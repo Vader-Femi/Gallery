@@ -37,6 +37,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -55,6 +59,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.TimelineSection
@@ -62,6 +67,7 @@ import com.femi.gallery.presentation.viewer.formatDuration
 
 private const val ContentTypeHeader = 0
 private const val ContentTypeMedia = 1
+private const val GridThumbnailSize = 512
 
 /** Pinch distance (as a ratio) needed to move one zoom level. */
 private const val ZoomStep = 1.25f
@@ -94,6 +100,7 @@ fun TimelineGrid(
     val labeler = rememberDayLabeler()
     val gridState = rememberLazyGridState()
     val haptic = LocalHapticFeedback.current
+    val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     var anchorMediaIndex by remember { mutableIntStateOf(-1) }
 
@@ -161,7 +168,7 @@ fun TimelineGrid(
             columns = GridCells.Fixed(zoom.columns),
             state = gridState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = topInset),
+            contentPadding = PaddingValues(top = topInset, bottom = navBarBottom + 80.dp),
             horizontalArrangement = Arrangement.spacedBy(1.dp),
             verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
@@ -240,6 +247,7 @@ private fun MediaCell(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .aspectRatio(1f)
@@ -256,6 +264,13 @@ private fun MediaCell(
             ),
     ) {
         if (item != null) {
+            val imageRequest = remember(item.uri) {
+                ImageRequest.Builder(context)
+                    .data(item.uri)
+                    .size(GridThumbnailSize)
+                    .memoryCacheKey("thumb_${item.id}")
+                    .build()
+            }
             val baseModifier = Modifier
                 .fillMaxSize()
                 .padding(if (selected) 6.dp else 0.dp)
@@ -267,7 +282,7 @@ private fun MediaCell(
                         boundsTransform = { _, _ ->
                             androidx.compose.animation.core.spring(
                                 dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-                                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
                             )
                         },
                     )
@@ -277,7 +292,7 @@ private fun MediaCell(
             }
 
             AsyncImage(
-                model = item.uri,
+                model = imageRequest,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 // Selected photos shrink slightly, like Samsung Gallery.

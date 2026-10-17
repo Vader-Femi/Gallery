@@ -1,7 +1,12 @@
 package com.femi.gallery.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -54,6 +59,7 @@ fun GalleryApp(
     }
 }
 
+@Suppress("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 private fun GalleryScaffold() {
     val navController = rememberNavController()
@@ -81,33 +87,39 @@ private fun GalleryScaffold() {
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             // The full-screen viewer takes over the whole window.
-            if (isTopLevel && !chrome.bottomBarHidden) NavigationBar {
-                GalleryDestination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                            (isAlbumDetail && destination == GalleryDestination.Albums),
-                        onClick = {
-                            if (isAlbumDetail && destination == GalleryDestination.Albums) {
-                                // Tapping Albums while inside an album goes back to the album list.
-                                navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
-                            } else {
-                                navController.navigate(destination.route) {
-                                    popUpTo(GalleryDestination.Pictures.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+            AnimatedVisibility(
+                visible = isTopLevel && !chrome.bottomBarHidden,
+                enter = slideInVertically(tween(220)) { it } + fadeIn(tween(180)),
+                exit = slideOutVertically(tween(220)) { it } + fadeOut(tween(150)),
+            ) {
+                NavigationBar {
+                    GalleryDestination.entries.forEach { destination ->
+                        NavigationBarItem(
+                            selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                                (isAlbumDetail && destination == GalleryDestination.Albums),
+                            onClick = {
+                                if (isAlbumDetail && destination == GalleryDestination.Albums) {
+                                    // Tapping Albums while inside an album goes back to the album list.
+                                    navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
+                                } else {
+                                    navController.navigate(destination.route) {
+                                        popUpTo(GalleryDestination.Pictures.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
-                            }
-                        },
-                        icon = { Icon(destination.icon, contentDescription = null) },
-                        label = { Text(stringResource(destination.label)) },
-                    )
+                            },
+                            icon = { Icon(destination.icon, contentDescription = null) },
+                            label = { Text(stringResource(destination.label)) },
+                        )
+                    }
                 }
             }
         },
-    ) { innerPadding ->
+    ) { _ ->
         GalleryNavHost(
             navController = navController,
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }

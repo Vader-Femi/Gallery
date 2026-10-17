@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
@@ -167,7 +166,9 @@ private fun ViewerContent(
             ) { items.itemCount }
 
             LaunchedEffect(pagerState.settledPage) {
-                onPageChange(pagerState.settledPage)
+                if (pagerState.settledPage != viewModel.startIndex) {
+                    onPageChange(pagerState.settledPage)
+                }
             }
 
             HorizontalPager(
@@ -305,85 +306,72 @@ private fun PhotoPage(
 ) {
     val context = LocalContext.current
     var isZoomed by remember { mutableStateOf(false) }
+    val isTransitionActive = sharedTransitionScope?.isTransitionActive == true
 
-    val thumbnail = remember(item.uri) {
-        ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()
+    val thumbnail = remember(item.id, item.uri) {
+        ImageRequest.Builder(context)
+            .data(item.uri)
+            .size(ThumbnailRequestSize)
+            .memoryCacheKey("thumb_${item.id}")
+            .placeholderMemoryCacheKey("thumb_${item.id}")
+            .build()
     }
-    val full = remember(item.uri) {
-        ImageRequest.Builder(context).data(item.uri).size(FullRequestSize).crossfade(true).build()
+    val full = remember(item.id, item.uri) {
+        ImageRequest.Builder(context)
+            .data(item.uri)
+            .size(FullRequestSize)
+            .placeholderMemoryCacheKey("thumb_${item.id}")
+            .crossfade(false)
+            .build()
     }
     val handleTap = remember(onTap) { { onTap() } }
 
-    val aspectRatio = remember(item.width, item.height) {
-        if (item.width > 0 && item.height > 0) item.width.toFloat() / item.height.toFloat() else null
-    }
-    var loadedSize by remember { mutableStateOf(Size.Zero) }
-    val effectiveAspectRatio = aspectRatio ?: if (loadedSize.width > 0f && loadedSize.height > 0f) {
-        loadedSize.width / loadedSize.height
+    val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
+                animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = { _, _ ->
+                    spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    )
+                },
+            )
+        }
     } else {
-        null
+        Modifier
     }
 
     DragToDismissBox(
+        contentModifier = sharedModifier,
         enabled = isCurrent && !isZoomed,
         onDismiss = onBack,
         onDragStateChange = { isDragging ->
             if (isDragging) onChromeChange(false)
         },
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            ZoomableBox(
-                isCurrent = isCurrent,
-                onTap = handleTap,
-                onZoomStateChange = { isZoomed = it },
-            ) { onImageSize ->
-                val baseModifier = if (effectiveAspectRatio != null) {
-                    Modifier.aspectRatio(effectiveAspectRatio)
-                } else {
-                    Modifier.fillMaxSize()
-                }
-
-                val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                    with(sharedTransitionScope) {
-                        baseModifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            boundsTransform = { _, _ ->
-                                spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                )
-                            },
-                        )
-                    }
-                } else {
-                    baseModifier
-                }
-
-                Box(modifier = sharedModifier) {
-                    AsyncImage(
-                        model = thumbnail,
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
-                        onSuccess = { if (aspectRatio == null) onImageSize(it.painter.intrinsicSize) },
-                    )
-                    AsyncImage(
-                        model = full,
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
-                        onSuccess = {
-                            if (aspectRatio == null) {
-                                onImageSize(it.painter.intrinsicSize)
-                                loadedSize = it.painter.intrinsicSize
-                            }
-                        },
-                    )
-                }
+        ZoomableBox(
+            isCurrent = isCurrent,
+            onTap = handleTap,
+            onZoomStateChange = { isZoomed = it },
+        ) { onImageSize ->
+            AsyncImage(
+                model = thumbnail,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+                onSuccess = { onImageSize(it.painter.intrinsicSize) },
+            )
+            // Defer decoding the 2160px image until the shared transition settles so frames never drop.
+            if (isCurrent && !isTransitionActive) {
+                AsyncImage(
+                    model = full,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                    onSuccess = { onImageSize(it.painter.intrinsicSize) },
+                )
             }
         }
     }
@@ -400,68 +388,57 @@ private fun VideoPage(
     animatedVisibilityScope: AnimatedVisibilityScope?,
 ) {
     val context = LocalContext.current
-    val thumbnail = remember(item.uri) {
-        ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()
+    val thumbnail = remember(item.id, item.uri) {
+        ImageRequest.Builder(context)
+            .data(item.uri)
+            .size(ThumbnailRequestSize)
+            .memoryCacheKey("thumb_${item.id}")
+            .placeholderMemoryCacheKey("thumb_${item.id}")
+            .build()
     }
-
-    val aspectRatio = remember(item.width, item.height) {
-        if (item.width > 0 && item.height > 0) item.width.toFloat() / item.height.toFloat() else null
+    val videoModifier = remember {
+        Modifier
+            .fillMaxSize()
+            .padding(bottom = 72.dp)
     }
-
-    val videoModifier = remember(aspectRatio) {
-        if (aspectRatio != null) {
-            Modifier
-                .aspectRatio(aspectRatio)
-                .fillMaxWidth()
-        } else {
-            Modifier
-                .fillMaxSize()
-                .padding(bottom = 72.dp)
+    val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
+                animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = { _, _ ->
+                    spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    )
+                },
+            )
         }
+    } else {
+        Modifier
     }
 
     DragToDismissBox(
+        contentModifier = sharedModifier,
         enabled = isCurrent,
         onDismiss = onBack,
         onDragStateChange = { isDragging ->
             if (isDragging) onChromeChange(false)
         },
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            val sharedModifier = if (isCurrent && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                with(sharedTransitionScope) {
-                    videoModifier.sharedElement(
-                        sharedContentState = rememberSharedContentState(key = "media_${item.id}"),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        boundsTransform = { _, _ ->
-                            spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow,
-                            )
-                        },
-                    )
-                }
-            } else {
-                videoModifier
-            }
-
-            Box(modifier = sharedModifier) {
-                AsyncImage(
-                    model = thumbnail,
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
+        Box(modifier = videoModifier) {
+            AsyncImage(
+                model = thumbnail,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (isCurrent) {
+                VideoPlayer(
+                    uri = item.uri,
+                    onControllerVisibilityChange = onChromeChange,
                     modifier = Modifier.fillMaxSize(),
                 )
-                if (isCurrent) {
-                    VideoPlayer(
-                        uri = item.uri,
-                        onControllerVisibilityChange = onChromeChange,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
             }
         }
     }
@@ -472,6 +449,7 @@ private fun DragToDismissBox(
     enabled: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
     onDragStateChange: (isDragging: Boolean) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -622,7 +600,8 @@ private fun DragToDismissBox(
                     clip = progress > 0.01f
                     val cornerRadiusPx = (ViewerDragState.calculateCornerRadiusDp(progress)).dp.toPx()
                     shape = RoundedCornerShape(cornerRadiusPx)
-                },
+                }
+                .then(contentModifier),
         ) {
             content()
         }
