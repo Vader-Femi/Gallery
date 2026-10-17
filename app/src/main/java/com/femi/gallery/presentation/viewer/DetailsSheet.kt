@@ -32,10 +32,11 @@ import java.util.Locale
 fun DetailsSheet(details: MediaDetails, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val item = details.item
-    val taken = remember(item.dateTakenMillis) {
-        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
-            .withLocale(Locale.getDefault())
-            .format(Instant.ofEpochMilli(item.dateTakenMillis).atZone(ZoneId.systemDefault()))
+    val formatter = remember {
+        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+    }
+    val taken = remember(item.dateTakenMillis, formatter) {
+        formatter.format(Instant.ofEpochMilli(item.dateTakenMillis).atZone(ZoneId.systemDefault()))
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {

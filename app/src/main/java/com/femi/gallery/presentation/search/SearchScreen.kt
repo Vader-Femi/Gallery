@@ -28,7 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.key
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -90,6 +92,7 @@ fun SearchScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
+            val handleClear: () -> Unit = remember { { viewModel.onQueryChange("") } }
             OutlinedTextField(
                 value = query,
                 onValueChange = viewModel::onQueryChange,
@@ -106,7 +109,7 @@ fun SearchScreen(
                 },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onQueryChange("") }) {
+                        IconButton(onClick = handleClear) {
                             Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.search_clear))
                         }
                     }
@@ -133,18 +136,27 @@ fun SearchScreen(
 
                     // A new search starts with a fresh grid (scroll position, zoom anchor).
                     else -> key(criteria) {
+                        val active by rememberUpdatedState(selectionState.active)
+                        val trimmedQuery by remember { derivedStateOf { query.trim() } }
+                        val handleMediaClick: (Int, com.femi.gallery.domain.model.MediaItem) -> Unit = remember {
+                            { mediaIndex, item ->
+                                if (active) {
+                                    viewModel.selection.toggle(item.toRef())
+                                } else {
+                                    onMediaClick(mediaIndex, trimmedQuery)
+                                }
+                            }
+                        }
+                        val handleMediaLongClick: (com.femi.gallery.domain.model.MediaItem) -> Unit = remember {
+                            { item -> viewModel.selection.begin(item.toRef()) }
+                        }
+
                         TimelineGrid(
                             items = items,
                             sections = sections,
                             zoom = zoom,
-                            onMediaClick = { mediaIndex, item ->
-                                if (selectionState.active) {
-                                    viewModel.selection.toggle(item.toRef())
-                                } else {
-                                    onMediaClick(mediaIndex, query.trim())
-                                }
-                            },
-                            onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
+                            onMediaClick = handleMediaClick,
+                            onMediaLongClick = handleMediaLongClick,
                             onZoomIn = viewModel.timeline::zoomIn,
                             onZoomOut = viewModel.timeline::zoomOut,
                             selectionActive = selectionState.active,

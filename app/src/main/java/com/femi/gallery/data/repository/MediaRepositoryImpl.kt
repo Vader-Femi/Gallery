@@ -92,6 +92,8 @@ class MediaRepositoryImpl @Inject constructor(
 
     override suspend fun getDetails(item: MediaItem): MediaDetails = exifReader.read(item)
 
+    override suspend fun getAlbumName(bucketId: Long): String = dataSource.loadAlbumName(bucketId)
+
     override suspend fun getAllRefs(bucketId: Long?, search: SearchCriteria?): List<MediaRef> =
         if (bucketId == SpecialAlbums.LOCKED) {
             lockedStore.list().map { MediaRef(it.id, it.uri, isFavorite = false) }
