@@ -82,4 +82,27 @@ class SearchQueryParserTest {
         assertTrue(criteria.dateRanges.isNotEmpty())
         assertNull(criteria.mediaType)
     }
+
+    @Test
+    fun explicitDayRangeIncludesBothEndDays() {
+        val criteria = parse("from:2026-10-03 to:2026-10-05")
+        assertEquals(listOf(epoch(2026, 10, 3)..(epoch(2026, 10, 6) - 1)), criteria.dateRanges)
+        assertTrue(criteria.terms.isEmpty())
+    }
+
+    @Test
+    fun rangeWithOneEndOpenRunsToTodayOrFromTheStart() {
+        assertEquals(listOf(epoch(2026, 10, 1)..(epoch(2026, 10, 17) - 1)), parse("from:2026-10-01").dateRanges)
+        assertEquals(epoch(2000, 1, 1), parse("to:2026-10-05").dateRanges.single().first)
+    }
+
+    @Test
+    fun betweenDaysAndItsQueryAgree() {
+        val from = LocalDate.of(2026, 10, 3)
+        val to = LocalDate.of(2026, 10, 5)
+        assertEquals(
+            SearchQueryParser.betweenDays(from, to, ZoneOffset.UTC),
+            SearchQueryParser.parse(SearchQueryParser.betweenDaysQuery(from, to), today, ZoneOffset.UTC),
+        )
+    }
 }

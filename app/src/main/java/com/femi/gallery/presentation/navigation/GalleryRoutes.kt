@@ -8,10 +8,18 @@ object GalleryRoutes {
 
     const val ALBUM = "album/{bucketId}"
     const val SEARCH = "search"
+    const val STORY = "story/{fromDay}/{toDay}"
+    const val SLIDESHOW = "slideshow?query={query}"
     const val EDITOR = "editor?uri={uri}"
     const val VIEWER = "viewer/{index}?bucketId={bucketId}&query={query}"
 
     fun album(bucketId: Long) = "album/$bucketId"
+
+    /** A story covering the local days [fromDay]..[toDay] (`LocalDate.toEpochDay()`). */
+    fun story(fromDay: Long, toDay: Long) = "story/$fromDay/$toDay"
+
+    /** A slideshow of the photos a search [query] describes. */
+    fun slideshow(query: String) = "slideshow?query=${Uri.encode(query)}"
 
     /** The photo editor for the photo at content [uri]. */
     fun editor(uri: String) = "editor?uri=${Uri.encode(uri)}"

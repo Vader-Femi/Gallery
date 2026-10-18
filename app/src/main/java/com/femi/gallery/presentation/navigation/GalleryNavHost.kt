@@ -2,7 +2,6 @@ package com.femi.gallery.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -14,8 +13,12 @@ import com.femi.gallery.presentation.albums.AlbumsScreen
 import com.femi.gallery.presentation.editor.EditorScreen
 import com.femi.gallery.presentation.editor.EditorViewModel
 import com.femi.gallery.presentation.pictures.PicturesScreen
-import com.femi.gallery.presentation.placeholder.PlaceholderScreen
 import com.femi.gallery.presentation.search.SearchScreen
+import com.femi.gallery.presentation.stories.SlideshowScreen
+import com.femi.gallery.presentation.stories.SlideshowViewModel
+import com.femi.gallery.presentation.stories.StoriesScreen
+import com.femi.gallery.presentation.stories.StoryScreen
+import com.femi.gallery.presentation.stories.StoryViewModel
 import com.femi.gallery.presentation.viewer.ViewerScreen
 import com.femi.gallery.presentation.viewer.ViewerViewModel
 
@@ -59,9 +62,31 @@ fun GalleryNavHost(
                 },
             )
         }
-        // Replaced by a real screen in a later patch.
         composable(GalleryDestination.Stories.route) {
-            PlaceholderScreen(title = stringResource(GalleryDestination.Stories.label))
+            StoriesScreen(
+                onStoryClick = { fromDay, toDay -> navController.navigate(GalleryRoutes.story(fromDay, toDay)) },
+            )
+        }
+        composable(
+            route = GalleryRoutes.STORY,
+            arguments = listOf(
+                navArgument(StoryViewModel.FROM_ARG) { type = NavType.LongType },
+                navArgument(StoryViewModel.TO_ARG) { type = NavType.LongType },
+            ),
+        ) {
+            StoryScreen(
+                onBack = { navController.popBackStack() },
+                onMediaClick = { mediaIndex, query ->
+                    navController.navigate(GalleryRoutes.viewer(mediaIndex, query = query))
+                },
+                onPlaySlideshow = { query -> navController.navigate(GalleryRoutes.slideshow(query)) },
+            )
+        }
+        composable(
+            route = GalleryRoutes.SLIDESHOW,
+            arguments = listOf(navArgument(SlideshowViewModel.QUERY_ARG) { type = NavType.StringType }),
+        ) {
+            SlideshowScreen(onClose = { navController.popBackStack() })
         }
         composable(
             route = GalleryRoutes.VIEWER,

@@ -102,6 +102,14 @@
     <string name="viewer_info">Details</string>
     <string name="viewer_edit">Edit</string>
 
+    <string name="stories_empty">No stories yet. A story appears when you take at least 12 photos on one day, or over a few days in a row.</string>
+    <plurals name="story_item_count">
+        <item quantity="one">%d photo or video</item>
+        <item quantity="other">%d photos and videos</item>
+    </plurals>
+    <string name="story_slideshow">Play slideshow</string>
+    <string name="slideshow_close">Close slideshow</string>
+
     <string name="editor_close">Close editor</string>
     <string name="editor_reset">Reset</string>
     <string name="editor_save">Save copy</string>

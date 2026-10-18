@@ -19,6 +19,8 @@ import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.domain.model.Story
+import com.femi.gallery.domain.model.StoryDetector
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
@@ -153,6 +155,26 @@ class MediaRepositoryImpl @Inject constructor(
             }
             .distinctUntilChanged()
 
+    override fun observeStories(): Flow<List<Story>> =
+        changeTriggers()
+            .map {
+                val order = dataSource.loadOrder()
+                val days = TimelineGrouper.group(LongArray(order.size) { order.datesMillis[it] / 1000 })
+                val candidates = StoryDetector.detect(days).take(MAX_STORIES)
+
+                // One batch of queries for all the covers (a story's cover is a photo from its middle).
+                val coverIds = candidates.map { order.ids[it.coverIndex] }
+                val covers = coverIds.chunked(COVER_BATCH_SIZE)
+                    .flatMap { dataSource.loadByIds(it.toLongArray()) }
+                    .associateBy { it.id }
+                candidates.mapNotNull { candidate ->
+                    covers[order.ids[candidate.coverIndex]]?.let { cover ->
+                        Story(candidate.fromDay, candidate.toDay, candidate.count, cover.uri)
+                    }
+                }
+            }
+            .distinctUntilChanged()
+
     /** Emits once on start, then (debounced) whenever MediaStore changes or the app resumes after a change. */
     @OptIn(FlowPreview::class)
     private fun changeTriggers(): Flow<Unit> =
@@ -172,5 +194,7 @@ class MediaRepositoryImpl @Inject constructor(
 
     private companion object {
         const val CHANGE_DEBOUNCE_MS = 300L
+        const val MAX_STORIES = 300
+        const val COVER_BATCH_SIZE = 300
     }
 }

@@ -73,7 +73,8 @@ private fun GalleryScaffold() {
     LaunchedEffect(inLockedFolder) { if (!inLockedFolder) lockSession.lock() }
 
     val isAlbumDetail = currentDestination?.route == GalleryRoutes.ALBUM
-    val isTopLevel = isAlbumDetail || GalleryDestination.entries.any { destination ->
+    val isStoryDetail = currentDestination?.route == GalleryRoutes.STORY
+    val isTopLevel = isAlbumDetail || isStoryDetail || GalleryDestination.entries.any { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     }
 
@@ -85,11 +86,14 @@ private fun GalleryScaffold() {
                 GalleryDestination.entries.forEach { destination ->
                     NavigationBarItem(
                         selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                            (isAlbumDetail && destination == GalleryDestination.Albums),
+                            (isAlbumDetail && destination == GalleryDestination.Albums) ||
+                            (isStoryDetail && destination == GalleryDestination.Stories),
                         onClick = {
                             if (isAlbumDetail && destination == GalleryDestination.Albums) {
                                 // Tapping Albums while inside an album goes back to the album list.
                                 navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
+                            } else if (isStoryDetail && destination == GalleryDestination.Stories) {
+                                navController.popBackStack(GalleryDestination.Stories.route, inclusive = false)
                             } else {
                                 navController.navigate(destination.route) {
                                     popUpTo(GalleryDestination.Pictures.route) { saveState = true }

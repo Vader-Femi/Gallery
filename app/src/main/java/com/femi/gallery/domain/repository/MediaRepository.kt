@@ -6,6 +6,7 @@ import com.femi.gallery.domain.model.LockedCopy
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
+import com.femi.gallery.domain.model.Story
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
 import com.femi.gallery.domain.search.SearchCriteria
@@ -21,6 +22,9 @@ interface MediaRepository {
 
     /** Device folders with cover and count, recomputed when MediaStore changes. */
     fun observeAlbums(): Flow<List<Album>>
+
+    /** Automatically found events (busy days or runs of days), newest first. */
+    fun observeStories(): Flow<List<Story>>
 
     /** Fetches the localized or user-defined name of a specific folder. */
     suspend fun getAlbumName(bucketId: Long): String
