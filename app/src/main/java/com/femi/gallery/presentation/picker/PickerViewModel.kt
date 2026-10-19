@@ -30,13 +30,12 @@ class PickerViewModel @Inject constructor(
     private val filter = MutableStateFlow(PickerFilter.All)
 
     val media: Flow<PagingData<MediaItem>> = filter
-        .distinctUntilChanged()
         .flatMapLatest { getPagedMedia(search = it.toCriteria()) }
         .cachedIn(viewModelScope)
 
     val timeline = TimelineZoomState(
         scope = viewModelScope,
-        daySections = filter.distinctUntilChanged().flatMapLatest { observeTimeline(search = it.toCriteria()) },
+        daySections = filter.flatMapLatest { observeTimeline(search = it.toCriteria()) },
     )
 
     /** What the user has ticked when the other app allows several results. */
