@@ -1,10 +1,14 @@
 package com.femi.gallery
 
+import android.content.ClipData
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import com.femi.gallery.presentation.GalleryApp
+import com.femi.gallery.presentation.launch.LaunchRequest
 import com.femi.gallery.ui.theme.GalleryTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -14,10 +18,35 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Opened from the launcher, or by another app to view or pick photos.
+        val launch = LaunchRequest.from(intent, this)
         setContent {
             GalleryTheme {
-                GalleryApp()
+                GalleryApp(
+                    launch = launch,
+                    onPick = ::finishWithPicked,
+                    onFinish = ::finish,
+                )
             }
         }
+    }
+
+    /** Hands the chosen photos or videos back to the app that asked for them. */
+    private fun finishWithPicked(uris: List<String>) {
+        if (uris.isEmpty()) {
+            setResult(RESULT_CANCELED)
+        } else {
+            val parsed = uris.map(Uri::parse)
+            val clip = ClipData.newRawUri(null, parsed.first()).also { data ->
+                parsed.drop(1).forEach { data.addItem(ClipData.Item(it)) }
+            }
+            val result = Intent().apply {
+                data = parsed.first()
+                clipData = clip
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            setResult(RESULT_OK, result)
+        }
+        finish()
     }
 }

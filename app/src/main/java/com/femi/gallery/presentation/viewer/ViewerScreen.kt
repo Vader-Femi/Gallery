@@ -246,7 +246,7 @@ private fun ViewerPage(
 }
 
 @Composable
-private fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
+internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
     val context = LocalContext.current
     // Layer 1: the system thumbnail appears instantly. Layer 2: the sharper image fades in on top.
     val thumbnail = remember(item.uri) {
@@ -275,7 +275,7 @@ private fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
 }
 
 @Composable
-private fun VideoPage(item: MediaItem, isCurrent: Boolean, onChromeChange: (Boolean) -> Unit) {
+internal fun VideoPage(item: MediaItem, isCurrent: Boolean, onChromeChange: (Boolean) -> Unit) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) {
         ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()

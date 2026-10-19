@@ -12,6 +12,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -29,25 +32,52 @@ import com.femi.gallery.presentation.navigation.GalleryDestination
 import com.femi.gallery.presentation.navigation.GalleryNavHost
 import com.femi.gallery.presentation.navigation.GalleryRoutes
 import com.femi.gallery.presentation.permission.MediaPermissionViewModel
+import com.femi.gallery.presentation.launch.LaunchRequest
 import com.femi.gallery.presentation.permission.PermissionScreen
+import com.femi.gallery.presentation.picker.PickerScreen
+import com.femi.gallery.presentation.viewer.ExternalViewerScreen
 
 @Composable
 fun GalleryApp(
+    launch: LaunchRequest = LaunchRequest.Normal,
+    onPick: (uris: List<String>) -> Unit = {},
+    onFinish: () -> Unit = {},
     permissionViewModel: MediaPermissionViewModel = hiltViewModel(),
 ) {
     val state by permissionViewModel.uiState.collectAsStateWithLifecycle()
+
+    // "Open Gallery" in the external viewer switches to the normal app and stays there.
+    var openedGallery by rememberSaveable { mutableStateOf(false) }
+    val request = if (openedGallery) LaunchRequest.Normal else launch
 
     LifecycleResumeEffect(Unit) {
         permissionViewModel.refresh()
         onPauseOrDispose { }
     }
 
-    if (state.hasAccess) {
-        CompositionLocalProvider(LocalChromeState provides remember { ChromeState() }) {
-            GalleryScaffold()
+    when {
+        // A single photo opened by another app needs no library access, only the URI it was given.
+        request is LaunchRequest.ViewExternal -> ExternalViewerScreen(
+            uri = request.uri,
+            isVideo = request.isVideo,
+            onClose = onFinish,
+            onOpenGallery = { openedGallery = true },
+        )
+
+        state.hasAccess -> CompositionLocalProvider(LocalChromeState provides remember { ChromeState() }) {
+            if (request is LaunchRequest.Pick) {
+                PickerScreen(
+                    filter = request.filter,
+                    allowMultiple = request.allowMultiple,
+                    onPick = onPick,
+                    onCancel = onFinish,
+                )
+            } else {
+                GalleryScaffold()
+            }
         }
-    } else {
-        PermissionScreen(
+
+        else -> PermissionScreen(
             permanentlyDenied = state.permanentlyDenied,
             onPermissionResult = permissionViewModel::onPermissionResult,
         )

@@ -102,6 +102,13 @@
     <string name="viewer_info">Details</string>
     <string name="viewer_edit">Edit</string>
 
+    <string name="external_open_gallery">Open Gallery</string>
+    <string name="picker_title_any">Choose a photo or video</string>
+    <string name="picker_title_photo">Choose a photo</string>
+    <string name="picker_title_video">Choose a video</string>
+    <string name="picker_done">Done</string>
+    <string name="picker_cancel_selection">Cancel</string>
+
     <string name="stories_empty">No stories yet. A story appears when you take at least 12 photos on one day, or over a few days in a row.</string>
     <plurals name="story_item_count">
         <item quantity="one">%d photo or video</item>

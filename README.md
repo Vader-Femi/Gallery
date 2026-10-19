@@ -77,6 +77,11 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] Same timeline, zoom, viewer and selection as everywhere else; **Unlock** puts items back into the gallery, **Delete** removes them for good
 - [x] Never included in backups
 
+**Works with other apps**
+- [x] **Open with**: photos and videos opened from Files, Chrome, a camera app or a chat show in a simple viewer (zoom, video playback) with an **Open Gallery** button — they don't need to be in your library
+- [x] **Choose from Gallery**: apps that ask you to pick a photo or video (profile pictures, attachments, forms) can use this app as the picker, for one item or several, photos only or videos only
+- [x] Registered as a gallery app, so Android offers it in "Open with" and gallery chooser dialogs (choose **Always** to make it your default)
+
 **Selection and actions**
 - [x] Long-press to select, tap to toggle, **Select all**, Back to exit
 - [x] **Share** several items at once, **favorite / unfavorite**, **move to trash**
@@ -93,7 +98,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [ ] **Map view** of geotagged photos
-- [ ] **Open photos from other apps** and act as a photo picker (`VIEW` / `PICK` intents), so the app can be set as the default gallery
 - [ ] **Better stories**: "On this day" memories, a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album
 - [ ] **Editor extras**: draw, text and stickers, straighten, sharpen/vignette, keep camera details (EXIF) and offer to replace the original
 - [ ] **Search by place** (needs reverse geocoding, so it has to be an opt-in network feature)
@@ -185,7 +189,9 @@ app/src/main/java/com/femi/gallery/
 │   ├── search/               Search screen and ViewModel
 │   ├── albums/               Albums list and album detail
 │   ├── stories/              Stories list, story detail, slideshow, story titles
-│   ├── viewer/               Pager, zoomable image, video player, details sheet
+│   ├── viewer/               Pager, zoomable image, video player, details sheet, external viewer
+│   ├── launch/               How the app was opened (launcher, "Open with", picker)
+│   ├── picker/               Photo picker for other apps
 │   ├── editor/               Editor screen, crop overlay, ViewModel
 │   ├── locked/               Biometric prompt and the lock gate
 │   ├── selection/            Selection state, actions, album picker, system confirmations
@@ -272,6 +278,7 @@ The pure logic is covered by JVM unit tests (`app/src/test`): day/month/year gro
 - **The Locked folder lives inside the app.** Uninstalling the app or clearing its data deletes everything in it, and it is excluded from backups (so it is also not copied to a new phone by cloud restore). Files are protected by Android's per-app storage and your screen lock, but not separately encrypted. Moving items in permanently deletes the originals from your gallery (after Android asks you to confirm).
 - **Unlocking** restores a photo to its original folder when that is Pictures, DCIM or Movies; anything else (for example WhatsApp's private folder) goes to `Pictures/Restored` or `Movies/Restored`, and the date it appears under is its date taken.
 - **The Locked folder needs a phone screen lock** (PIN, pattern, password, fingerprint or face).
+- **Photos opened from other apps are shown one at a time:** there is no swiping to neighbouring photos, editing or sharing from that viewer — press **Open Gallery** for the full app. The picker only offers the whole library, not albums or search.
 - **Zoom level is not remembered** between launches.
 - Tested on one device (Pixel 7, Android 17). Other devices and manufacturers' MediaStore quirks are untested.
 
@@ -303,6 +310,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 23 | Photo editor | Crop, rotate, flip, brightness/contrast/saturation/warmth and filters; saves a copy |
 | 25 | Stories | Automatic events, story screen, slideshow, `from:`/`to:` search ranges |
 | 26 | README | This document, brought up to date |
+| 27 | Default gallery | Open with, camera review and photo picker for other apps |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
