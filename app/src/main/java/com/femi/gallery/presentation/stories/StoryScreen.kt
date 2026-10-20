@@ -32,6 +32,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
+import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.pictures.TimelineGrid
 import com.femi.gallery.presentation.selection.SelectionBars
 import com.femi.gallery.presentation.selection.SelectionHost
@@ -41,9 +42,9 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
 @Composable
 fun StoryScreen(
     onBack: () -> Unit,
-    onMediaClick: (mediaIndex: Int, query: String) -> Unit,
+    onMediaClick: (mediaIndex: Int, mediaId: Long, query: String) -> Unit,
     onPlaySlideshow: (query: String) -> Unit,
-    viewedMediaIndex: Int = -1,
+    viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: StoryViewModel = hiltViewModel(),
@@ -94,7 +95,7 @@ fun StoryScreen(
                     if (selectionState.active) {
                         viewModel.selection.toggle(item.toRef())
                     } else {
-                        onMediaClick(mediaIndex, viewModel.query)
+                        onMediaClick(mediaIndex, item.id, viewModel.query)
                     }
                 },
                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
@@ -103,7 +104,7 @@ fun StoryScreen(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
-                viewedMediaIndex = viewedMediaIndex,
+                viewed = viewed,
                 onViewedConsumed = onViewedConsumed,
             )
         }

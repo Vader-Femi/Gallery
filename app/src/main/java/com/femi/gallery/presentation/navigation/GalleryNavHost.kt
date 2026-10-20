@@ -30,6 +30,7 @@ import com.femi.gallery.presentation.stories.SlideshowViewModel
 import com.femi.gallery.presentation.stories.StoriesScreen
 import com.femi.gallery.presentation.stories.StoryScreen
 import com.femi.gallery.presentation.stories.StoryViewModel
+import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.viewer.ViewerScreen
 import com.femi.gallery.presentation.viewer.ViewerViewModel
 
@@ -52,9 +53,9 @@ fun GalleryNavHost(
             ) {
                 sharedComposable(GalleryDestination.Pictures.route) { entry ->
                     PicturesScreen(
-                        onMediaClick = { mediaIndex -> navController.navigate(GalleryRoutes.viewer(mediaIndex)) },
+                        onMediaClick = { mediaIndex, mediaId -> navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId)) },
                         onSearchClick = { navController.navigate(GalleryRoutes.SEARCH) },
-                        viewedMediaIndex = entry.viewedMediaIndex(),
+                        viewed = entry.viewedMedia(),
                         onViewedConsumed = entry::clearViewedMediaIndex,
                     )
                 }
@@ -69,20 +70,20 @@ fun GalleryNavHost(
                 ) { entry ->
                     AlbumScreen(
                         onBack = { navController.popBackStack() },
-                        onMediaClick = { bucketId, mediaIndex ->
-                            navController.navigate(GalleryRoutes.viewer(mediaIndex, bucketId))
+                        onMediaClick = { bucketId, mediaIndex, mediaId ->
+                            navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId, bucketId))
                         },
-                        viewedMediaIndex = entry.viewedMediaIndex(),
+                        viewed = entry.viewedMedia(),
                         onViewedConsumed = entry::clearViewedMediaIndex,
                     )
                 }
                 sharedComposable(GalleryRoutes.SEARCH) { entry ->
                     SearchScreen(
                         onBack = { navController.popBackStack() },
-                        onMediaClick = { mediaIndex, query ->
-                            navController.navigate(GalleryRoutes.viewer(mediaIndex, query = query))
+                        onMediaClick = { mediaIndex, mediaId, query ->
+                            navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId, query = query))
                         },
-                        viewedMediaIndex = entry.viewedMediaIndex(),
+                        viewed = entry.viewedMedia(),
                         onViewedConsumed = entry::clearViewedMediaIndex,
                     )
                 }
@@ -100,11 +101,11 @@ fun GalleryNavHost(
                 ) { entry ->
                     StoryScreen(
                         onBack = { navController.popBackStack() },
-                        onMediaClick = { mediaIndex, query ->
-                            navController.navigate(GalleryRoutes.viewer(mediaIndex, query = query))
+                        onMediaClick = { mediaIndex, mediaId, query ->
+                            navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId, query = query))
                         },
                         onPlaySlideshow = { query -> navController.navigate(GalleryRoutes.slideshow(query)) },
-                        viewedMediaIndex = entry.viewedMediaIndex(),
+                        viewed = entry.viewedMedia(),
                         onViewedConsumed = entry::clearViewedMediaIndex,
                     )
                 }
@@ -118,6 +119,10 @@ fun GalleryNavHost(
                     route = GalleryRoutes.VIEWER,
                     arguments = listOf(
                         navArgument(ViewerViewModel.INDEX_ARG) { type = NavType.IntType },
+                        navArgument(ViewerViewModel.MEDIA_ID_ARG) {
+                            type = NavType.LongType
+                            defaultValue = GalleryRoutes.NO_MEDIA_ID
+                        },
                         navArgument(ViewerViewModel.BUCKET_ARG) {
                             type = NavType.LongType
                             defaultValue = GalleryRoutes.NO_BUCKET
@@ -133,10 +138,11 @@ fun GalleryNavHost(
                         onBack = { navController.popBackStack() },
                         onEdit = { uri -> navController.navigate(GalleryRoutes.editor(uri)) },
                         // Tells the screen behind (the one that opened the viewer) which photo we ended on.
-                        onViewedIndexChange = { mediaIndex ->
-                            navController.previousBackStackEntry
-                                ?.savedStateHandle
-                                ?.set(GalleryRoutes.VIEWED_INDEX_KEY, mediaIndex)
+                        onViewedChange = { mediaIndex, mediaId ->
+                            val handle = navController.previousBackStackEntry?.savedStateHandle
+                            // The id first: the index is what tells the grid there is something to show.
+                            handle?.set(GalleryRoutes.VIEWED_ID_KEY, mediaId)
+                            handle?.set(GalleryRoutes.VIEWED_INDEX_KEY, mediaIndex)
                         },
                     )
                 }
@@ -163,13 +169,17 @@ private fun NavGraphBuilder.sharedComposable(
     }
 }
 
-/** The photo the viewer last showed, or -1 when there is nothing to scroll to. */
+/** The photo the viewer last showed, or null when there is nothing to scroll to. */
 @Composable
-private fun NavBackStackEntry.viewedMediaIndex(): Int {
+private fun NavBackStackEntry.viewedMedia(): ViewedMedia? {
     val index by savedStateHandle.getStateFlow(GalleryRoutes.VIEWED_INDEX_KEY, -1).collectAsStateWithLifecycle()
-    return index
+    val id by savedStateHandle
+        .getStateFlow(GalleryRoutes.VIEWED_ID_KEY, GalleryRoutes.NO_MEDIA_ID)
+        .collectAsStateWithLifecycle()
+    return if (index >= 0) ViewedMedia(index, id) else null
 }
 
 private fun NavBackStackEntry.clearViewedMediaIndex() {
     savedStateHandle[GalleryRoutes.VIEWED_INDEX_KEY] = -1
+    savedStateHandle[GalleryRoutes.VIEWED_ID_KEY] = GalleryRoutes.NO_MEDIA_ID
 }

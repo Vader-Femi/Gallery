@@ -1,20 +1,25 @@
 package com.femi.gallery.presentation.navigation
 
 import android.net.Uri
+import com.femi.gallery.domain.model.MediaPositions
 
 object GalleryRoutes {
     /** Marks "the whole library" in the viewer's optional bucketId argument. */
     const val NO_BUCKET = Long.MIN_VALUE
 
-    /** Saved-state key the viewer uses to tell the screen behind it which photo it ended on. */
+    /** Marks "no photo id" in the viewer's optional mediaId argument. */
+    const val NO_MEDIA_ID = MediaPositions.NO_ID
+
+    /** Saved-state keys the viewer uses to tell the screen behind it which photo it ended on. */
     const val VIEWED_INDEX_KEY = "viewedMediaIndex"
+    const val VIEWED_ID_KEY = "viewedMediaId"
 
     const val ALBUM = "album/{bucketId}"
     const val SEARCH = "search"
     const val STORY = "story/{fromDay}/{toDay}"
     const val SLIDESHOW = "slideshow?query={query}"
     const val EDITOR = "editor?uri={uri}"
-    const val VIEWER = "viewer/{index}?bucketId={bucketId}&query={query}"
+    const val VIEWER = "viewer/{index}?mediaId={mediaId}&bucketId={bucketId}&query={query}"
 
     fun album(bucketId: Long) = "album/$bucketId"
 
@@ -29,10 +34,11 @@ object GalleryRoutes {
 
     /**
      * Opens the viewer at [mediaIndex] within the library, within one album if [bucketId] is set,
-     * or within the results of a search if [query] is set.
+     * or within the results of a search if [query] is set. [mediaId] is the tapped photo, so the
+     * viewer can still open on it if the list shifted since the grid loaded it.
      */
-    fun viewer(mediaIndex: Int, bucketId: Long = NO_BUCKET, query: String? = null): String {
-        val base = "viewer/$mediaIndex?bucketId=$bucketId"
+    fun viewer(mediaIndex: Int, mediaId: Long, bucketId: Long = NO_BUCKET, query: String? = null): String {
+        val base = "viewer/$mediaIndex?mediaId=$mediaId&bucketId=$bucketId"
         return if (query.isNullOrBlank()) base else "$base&query=${Uri.encode(query)}"
     }
 }

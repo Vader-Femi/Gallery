@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.view.View
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
@@ -76,6 +77,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.findActivity
 import com.femi.gallery.presentation.common.mediaSharedBounds
@@ -88,6 +90,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.media3.common.MediaItem as PlayerMediaItem
 
+private const val Tag = "Viewer"
 private const val ThumbnailRequestSize = 512
 private const val FullRequestSize = 2160
 
@@ -99,16 +102,16 @@ fun ViewerScreen(
     onBack: () -> Unit,
     onEdit: (uri: String) -> Unit,
     /** Reports the photo shown, so the grid behind can scroll to it when the viewer closes. */
-    onViewedIndexChange: (mediaIndex: Int) -> Unit = {},
+    onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit = {},
     viewModel: ViewerViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, onEdit, onViewedIndexChange, viewModel)
+            ViewerContent(onBack, onEdit, onViewedChange, viewModel)
         }
     } else {
-        ViewerContent(onBack, onEdit, onViewedIndexChange, viewModel)
+        ViewerContent(onBack, onEdit, onViewedChange, viewModel)
     }
 }
 
@@ -116,7 +119,7 @@ fun ViewerScreen(
 private fun ViewerContent(
     onBack: () -> Unit,
     onEdit: (uri: String) -> Unit,
-    onViewedIndexChange: (mediaIndex: Int) -> Unit,
+    onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit,
     viewModel: ViewerViewModel,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
@@ -138,11 +141,24 @@ private fun ViewerContent(
             .background(Color.Black),
     ) {
         if (items.itemCount > 0) {
-            val pagerState = rememberPagerState(
-                initialPage = viewModel.startIndex.coerceIn(0, items.itemCount - 1),
-            ) { items.itemCount }
+            // Open on the photo that was tapped. The tapped position alone can point at a different
+            // photo, because this list was loaded separately from the grid's.
+            val startPage = remember {
+                val tapped = viewModel.startIndex.coerceIn(0, items.itemCount - 1)
+                val found = MediaPositions.find(tapped, viewModel.mediaId, items.itemCount) { items.peekOrNull(it)?.id }
+                if (found != null && found != tapped) {
+                    Log.w(Tag, "Tapped photo was at $tapped in the grid but is at $found here (${found - tapped})")
+                } else if (found == null && viewModel.mediaId != MediaPositions.NO_ID) {
+                    Log.w(Tag, "Tapped photo ${viewModel.mediaId} not found around position $tapped; using the position")
+                }
+                found ?: tapped
+            }
+            val pagerState = rememberPagerState(initialPage = startPage) { items.itemCount }
 
-            LaunchedEffect(pagerState.settledPage) { onViewedIndexChange(pagerState.settledPage) }
+            val settledId = items.peekOrNull(pagerState.settledPage)?.id
+            LaunchedEffect(pagerState.settledPage, settledId) {
+                onViewedChange(pagerState.settledPage, settledId ?: MediaPositions.NO_ID)
+            }
 
             HorizontalPager(
                 state = pagerState,

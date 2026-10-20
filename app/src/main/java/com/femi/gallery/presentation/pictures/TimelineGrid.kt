@@ -60,7 +60,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.TimelineSection
+import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.common.mediaSharedBounds
 import com.femi.gallery.presentation.viewer.formatDuration
 
@@ -94,8 +96,8 @@ fun TimelineGrid(
     topInset: Dp = 0.dp,
     selectionActive: Boolean = false,
     selectedIds: Set<Long> = emptySet(),
-    /** Index of the photo the viewer ended on after the user came back; the grid scrolls to it. */
-    viewedMediaIndex: Int = -1,
+    /** The photo the viewer ended on after the user came back; the grid scrolls to it. */
+    viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
 ) {
     val layout = remember(sections) { TimelineLayout(sections) }
@@ -108,8 +110,7 @@ fun TimelineGrid(
     // The photo whose thumbnail becomes the shared element: the one just tapped, or after
     // returning from the viewer, the one it ended on (which may be a different photo).
     var openedId by rememberSaveable { mutableStateOf(NoMediaId) }
-    val viewedId = if (viewedMediaIndex >= 0) items.peekOrNull(viewedMediaIndex)?.id else null
-    val sharedId = viewedId ?: openedId
+    val sharedId = viewed?.id?.takeIf { it != MediaPositions.NO_ID } ?: openedId
     
     // Check strictly if at the very top of the grid
     val isAtTop by remember {
@@ -132,18 +133,36 @@ fun TimelineGrid(
     }
     
     // Back from the viewer: bring the photo it ended on into view so the photo can shrink into it.
-    LaunchedEffect(viewedMediaIndex, layout) {
-        if (viewedMediaIndex < 0 || layout.totalCount == 0) return@LaunchedEffect
-        val target = layout.gridIndexForMedia(viewedMediaIndex).coerceIn(0, layout.totalCount - 1)
-        val info = gridState.layoutInfo
-        if (info.visibleItemsInfo.none { it.index == target }) {
-            val cellHeight = info.visibleItemsInfo.minOfOrNull { it.size.height } ?: 0
-            gridState.scrollToItem(target, scrollOffset = -(info.viewportSize.height / 2) + cellHeight / 2)
+    // The viewer reports the photo's id as well as its position, because the viewer's list and this
+    // one are loaded separately and a position alone can point at a different photo here.
+    LaunchedEffect(viewed, layout) {
+        val target = viewed ?: return@LaunchedEffect
+        if (layout.totalCount == 0) return@LaunchedEffect
+
+        fun locate(): Int =
+            MediaPositions.find(target.index, target.id, items.itemCount) { items.peekOrNull(it)?.id }
+                ?: target.index
+
+        suspend fun reveal(mediaIndex: Int) {
+            val gridIndex = layout.gridIndexForMedia(mediaIndex).coerceIn(0, layout.totalCount - 1)
+            val info = gridState.layoutInfo
+            if (info.visibleItemsInfo.none { it.index == gridIndex }) {
+                val cellHeight = info.visibleItemsInfo.minOfOrNull { it.size.height } ?: 0
+                gridState.scrollToItem(gridIndex, scrollOffset = -(info.viewportSize.height / 2) + cellHeight / 2)
+            }
         }
+
+        val firstGuess = locate()
+        reveal(firstGuess)
+        // The photo may be far from anything loaded: wait for its position to load, then look again.
+        withTimeoutOrNull(ViewedPhotoTimeoutMs) {
+            snapshotFlow { items.peekOrNull(firstGuess)?.id }.filterNotNull().first()
+        }
+        val settled = locate()
+        if (settled != firstGuess) reveal(settled)
+
         // Keep marking that photo once the viewer's position has been used up.
-        val id = withTimeoutOrNull(ViewedPhotoTimeoutMs) {
-            snapshotFlow { items.peekOrNull(viewedMediaIndex)?.id }.filterNotNull().first()
-        }
+        val id = target.id.takeIf { it != MediaPositions.NO_ID } ?: items.peekOrNull(settled)?.id
         if (id != null) openedId = id
         onViewedConsumed()
     }

@@ -48,6 +48,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
+import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.pictures.TimelineGrid
 import com.femi.gallery.presentation.selection.SelectionBars
 import com.femi.gallery.presentation.selection.SelectionHost
@@ -66,8 +67,8 @@ private val Suggestions = listOf(
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
-    onMediaClick: (mediaIndex: Int, query: String) -> Unit,
-    viewedMediaIndex: Int = -1,
+    onMediaClick: (mediaIndex: Int, mediaId: Long, query: String) -> Unit,
+    viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel(),
@@ -145,7 +146,7 @@ fun SearchScreen(
                                 if (active) {
                                     viewModel.selection.toggle(item.toRef())
                                 } else {
-                                    onMediaClick(mediaIndex, trimmedQuery)
+                                    onMediaClick(mediaIndex, item.id, trimmedQuery)
                                 }
                             }
                         }
@@ -163,7 +164,7 @@ fun SearchScreen(
                             onZoomOut = viewModel.timeline::zoomOut,
                             selectionActive = selectionState.active,
                             selectedIds = selectionState.ids,
-                            viewedMediaIndex = viewedMediaIndex,
+                            viewed = viewed,
                             onViewedConsumed = onViewedConsumed,
                         )
                     }

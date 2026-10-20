@@ -8,6 +8,7 @@ import androidx.paging.cachedIn
 import com.femi.gallery.core.security.LockSession
 import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.search.SearchCriteria
 import com.femi.gallery.domain.search.SearchQueryParser
@@ -36,8 +37,14 @@ class ViewerViewModel @Inject constructor(
     val lockSession: LockSession,
 ) : ViewModel() {
 
-    /** Position of the tapped item in the full, newest-first media list. */
+    /** Position of the tapped item in the full, newest-first media list, as the grid had it. */
     val startIndex: Int = savedStateHandle.get<Int>(INDEX_ARG) ?: 0
+
+    /**
+     * The tapped photo's id. This list is loaded separately from the grid's, so [startIndex] alone can
+     * point at a different photo; the id lets the screen open on the right one.
+     */
+    val mediaId: Long = savedStateHandle.get<Long>(MEDIA_ID_ARG) ?: MediaPositions.NO_ID
 
     val isRecycleBin: Boolean get() = bucketId == SpecialAlbums.TRASH
     val isLocked: Boolean get() = bucketId == SpecialAlbums.LOCKED
@@ -82,6 +89,7 @@ class ViewerViewModel @Inject constructor(
 
     companion object {
         const val INDEX_ARG = "index"
+        const val MEDIA_ID_ARG = "mediaId"
         const val BUCKET_ARG = "bucketId"
         const val QUERY_ARG = "query"
         private const val NO_BUCKET = Long.MIN_VALUE // keep in sync with GalleryRoutes.NO_BUCKET

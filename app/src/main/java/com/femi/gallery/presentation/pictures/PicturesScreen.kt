@@ -30,6 +30,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
+import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.selection.SelectionBars
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.libraryActions
@@ -37,9 +38,9 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
 
 @Composable
 fun PicturesScreen(
-    onMediaClick: (mediaIndex: Int) -> Unit,
+    onMediaClick: (mediaIndex: Int, mediaId: Long) -> Unit,
     onSearchClick: () -> Unit,
-    viewedMediaIndex: Int = -1,
+    viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PicturesViewModel = hiltViewModel(),
@@ -82,7 +83,7 @@ fun PicturesScreen(
                 sections = sections,
                 zoom = zoom,
                 onMediaClick = { mediaIndex, item ->
-                    if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex)
+                    if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex, item.id)
                 },
                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
                 onZoomIn = viewModel.timeline::zoomIn,
@@ -90,7 +91,7 @@ fun PicturesScreen(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
-                viewedMediaIndex = viewedMediaIndex,
+                viewed = viewed,
                 onViewedConsumed = onViewedConsumed,
             )
         }

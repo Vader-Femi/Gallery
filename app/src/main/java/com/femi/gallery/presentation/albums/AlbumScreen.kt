@@ -32,6 +32,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
+import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.pictures.TimelineGrid
 import com.femi.gallery.presentation.selection.SelectionBars
@@ -44,8 +45,8 @@ import com.femi.gallery.presentation.selection.SelectionHost
 @Composable
 fun AlbumScreen(
     onBack: () -> Unit,
-    onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
-    viewedMediaIndex: Int = -1,
+    onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit,
+    viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: AlbumViewModel = hiltViewModel(),
@@ -53,18 +54,18 @@ fun AlbumScreen(
     if (viewModel.isLocked) {
         // Nothing from the Locked folder is shown until the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            AlbumContent(onBack, onMediaClick, viewedMediaIndex, onViewedConsumed, viewModel, modifier)
+            AlbumContent(onBack, onMediaClick, viewed, onViewedConsumed, viewModel, modifier)
         }
     } else {
-        AlbumContent(onBack, onMediaClick, viewedMediaIndex, onViewedConsumed, viewModel, modifier)
+        AlbumContent(onBack, onMediaClick, viewed, onViewedConsumed, viewModel, modifier)
     }
 }
 
 @Composable
 private fun AlbumContent(
     onBack: () -> Unit,
-    onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
-    viewedMediaIndex: Int,
+    onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit,
+    viewed: ViewedMedia?,
     onViewedConsumed: () -> Unit,
     viewModel: AlbumViewModel,
     modifier: Modifier,
@@ -123,7 +124,7 @@ private fun AlbumContent(
                     if (selectionState.active) {
                         viewModel.selection.toggle(item.toRef())
                     } else {
-                        onMediaClick(viewModel.bucketId, mediaIndex)
+                        onMediaClick(viewModel.bucketId, mediaIndex, item.id)
                     }
                 },
                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
@@ -132,7 +133,7 @@ private fun AlbumContent(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
-                viewedMediaIndex = viewedMediaIndex,
+                viewed = viewed,
                 onViewedConsumed = onViewedConsumed,
             )
         }
