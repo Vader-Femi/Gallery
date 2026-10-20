@@ -8,6 +8,7 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaOrder
+import com.femi.gallery.domain.model.PageWindow
 import com.femi.gallery.domain.search.SearchCriteria
 
 /**
@@ -54,9 +55,12 @@ class MediaPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MediaItem> = try {
         val order = cachedOrder ?: dataSource.loadOrder(bucketId, search).also { cachedOrder = it }
         val total = order.size
-        val offset = (params.key ?: 0).coerceIn(0, maxOf(0, total - 1))
-        val end = minOf(total, offset + params.loadSize)
-        val pageIds = order.ids.copyOfRange(offset, end)
+        val window = when (params) {
+            is LoadParams.Prepend -> PageWindow.backward(params.key, params.loadSize, total)
+            else -> PageWindow.forward(params.key, params.loadSize, total)
+        }
+        val offset = window.start
+        val pageIds = order.ids.copyOfRange(offset, window.end)
         val items = dataSource.loadByIds(pageIds, bucketId, search)
 
         // Something was deleted or changed since the order was read: show what is left and reload.
@@ -64,8 +68,8 @@ class MediaPagingSource(
 
         LoadResult.Page(
             data = items,
-            prevKey = if (offset == 0) null else maxOf(0, offset - params.loadSize),
-            nextKey = if (end >= total) null else end,
+            prevKey = window.prevKey,
+            nextKey = window.nextKey(total),
             itemsBefore = offset,
             itemsAfter = maxOf(0, total - offset - items.size),
         )

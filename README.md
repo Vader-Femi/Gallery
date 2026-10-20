@@ -313,6 +313,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 27 | Default gallery | Open with, camera review and photo picker for other apps |
 | 28 | Shared transition | Grid-to-viewer animation and scrolling back to the viewed photo |
 | 29 | Viewer opens by id | The viewer and the grid now pass the photo's id, not just its position, so a fast scroll can no longer open (or scroll back to) a different photo |
+| 30 | Paging fix | Fixed the real cause of wrong photos after a fast scroll: pages loaded backwards after a jump were placed 120 positions off until the next refresh |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
