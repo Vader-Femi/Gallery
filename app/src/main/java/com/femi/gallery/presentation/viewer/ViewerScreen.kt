@@ -102,7 +102,7 @@ fun ViewerScreen(
     onBack: () -> Unit,
     onEdit: (uri: String) -> Unit,
     /** Reports the photo shown, so the grid behind can scroll to it when the viewer closes. */
-    onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit = {},
+    onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit = { _, _ -> },
     viewModel: ViewerViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
