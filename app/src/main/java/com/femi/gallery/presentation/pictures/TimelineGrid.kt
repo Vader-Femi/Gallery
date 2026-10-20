@@ -32,6 +32,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -52,10 +55,19 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.TimelineSection
+import com.femi.gallery.presentation.common.mediaSharedBounds
 import com.femi.gallery.presentation.viewer.formatDuration
+
+/** Longest wait for the photo the viewer ended on to load before giving up on marking it. */
+private const val ViewedPhotoTimeoutMs = 1_000L
+
+private const val NoMediaId = -1L
 
 private const val ContentTypeHeader = 0
 private const val ContentTypeMedia = 1
@@ -82,6 +94,9 @@ fun TimelineGrid(
     topInset: Dp = 0.dp,
     selectionActive: Boolean = false,
     selectedIds: Set<Long> = emptySet(),
+    /** Index of the photo the viewer ended on after the user came back; the grid scrolls to it. */
+    viewedMediaIndex: Int = -1,
+    onViewedConsumed: () -> Unit = {},
 ) {
     val layout = remember(sections) { TimelineLayout(sections) }
     val labeler = rememberDayLabeler()
@@ -89,6 +104,12 @@ fun TimelineGrid(
     val haptic = LocalHapticFeedback.current
 
     var anchorMediaIndex by remember { mutableIntStateOf(-1) }
+
+    // The photo whose thumbnail becomes the shared element: the one just tapped, or after
+    // returning from the viewer, the one it ended on (which may be a different photo).
+    var openedId by rememberSaveable { mutableStateOf(NoMediaId) }
+    val viewedId = if (viewedMediaIndex >= 0) items.peekOrNull(viewedMediaIndex)?.id else null
+    val sharedId = viewedId ?: openedId
     
     // Check strictly if at the very top of the grid
     val isAtTop by remember {
@@ -110,6 +131,23 @@ fun TimelineGrid(
         }
     }
     
+    // Back from the viewer: bring the photo it ended on into view so the photo can shrink into it.
+    LaunchedEffect(viewedMediaIndex, layout) {
+        if (viewedMediaIndex < 0 || layout.totalCount == 0) return@LaunchedEffect
+        val target = layout.gridIndexForMedia(viewedMediaIndex).coerceIn(0, layout.totalCount - 1)
+        val info = gridState.layoutInfo
+        if (info.visibleItemsInfo.none { it.index == target }) {
+            val cellHeight = info.visibleItemsInfo.minOfOrNull { it.size.height } ?: 0
+            gridState.scrollToItem(target, scrollOffset = -(info.viewportSize.height / 2) + cellHeight / 2)
+        }
+        // Keep marking that photo once the viewer's position has been used up.
+        val id = withTimeoutOrNull(ViewedPhotoTimeoutMs) {
+            snapshotFlow { items.peekOrNull(viewedMediaIndex)?.id }.filterNotNull().first()
+        }
+        if (id != null) openedId = id
+        onViewedConsumed()
+    }
+
     fun captureAnchorMediaIndex() {
         if (layout.totalCount > 0) {
             val gridIndex = gridState.firstVisibleItemIndex
@@ -175,7 +213,11 @@ fun TimelineGrid(
                         mediaIndex = mediaIndex,
                         selectionActive = selectionActive,
                         selected = item != null && item.id in selectedIds,
-                        onClick = onMediaClick,
+                        shared = item != null && item.id == sharedId,
+                        onClick = { index, clicked ->
+                            openedId = clicked.id
+                            onMediaClick(index, clicked)
+                        },
                         onLongClick = onMediaLongClick,
                     )
                 }
@@ -215,12 +257,15 @@ private fun MediaCell(
     mediaIndex: Int,
     selectionActive: Boolean,
     selected: Boolean,
+    shared: Boolean,
     onClick: (Int, MediaItem) -> Unit,
     onLongClick: (MediaItem) -> Unit,
 ) {
+    val sharedModifier = if (shared && item != null) Modifier.mediaSharedBounds(item.id) else Modifier
     Box(
         modifier = Modifier
             .aspectRatio(1f)
+            .then(sharedModifier)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .semantics {
                 if (item != null) {

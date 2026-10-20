@@ -39,6 +39,8 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
 fun PicturesScreen(
     onMediaClick: (mediaIndex: Int) -> Unit,
     onSearchClick: () -> Unit,
+    viewedMediaIndex: Int = -1,
+    onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PicturesViewModel = hiltViewModel(),
 ) {
@@ -88,6 +90,8 @@ fun PicturesScreen(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                viewedMediaIndex = viewedMediaIndex,
+                onViewedConsumed = onViewedConsumed,
             )
         }
 

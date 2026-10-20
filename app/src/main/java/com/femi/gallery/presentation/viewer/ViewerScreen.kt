@@ -78,6 +78,7 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.findActivity
+import com.femi.gallery.presentation.common.mediaSharedBounds
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
@@ -97,15 +98,17 @@ private val BottomGradient = Brush.verticalGradient(listOf(Color.Transparent, Co
 fun ViewerScreen(
     onBack: () -> Unit,
     onEdit: (uri: String) -> Unit,
+    /** Reports the photo shown, so the grid behind can scroll to it when the viewer closes. */
+    onViewedIndexChange: (mediaIndex: Int) -> Unit = {},
     viewModel: ViewerViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, onEdit, viewModel)
+            ViewerContent(onBack, onEdit, onViewedIndexChange, viewModel)
         }
     } else {
-        ViewerContent(onBack, onEdit, viewModel)
+        ViewerContent(onBack, onEdit, onViewedIndexChange, viewModel)
     }
 }
 
@@ -113,6 +116,7 @@ fun ViewerScreen(
 private fun ViewerContent(
     onBack: () -> Unit,
     onEdit: (uri: String) -> Unit,
+    onViewedIndexChange: (mediaIndex: Int) -> Unit,
     viewModel: ViewerViewModel,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
@@ -137,6 +141,8 @@ private fun ViewerContent(
             val pagerState = rememberPagerState(
                 initialPage = viewModel.startIndex.coerceIn(0, items.itemCount - 1),
             ) { items.itemCount }
+
+            LaunchedEffect(pagerState.settledPage) { onViewedIndexChange(pagerState.settledPage) }
 
             HorizontalPager(
                 state = pagerState,
@@ -256,7 +262,9 @@ internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
         ImageRequest.Builder(context).data(item.uri).size(FullRequestSize).crossfade(true).build()
     }
     val handleTap = remember(onTap) { { onTap() } }
-    ZoomableBox(isCurrent = isCurrent, onTap = handleTap) { onImageSize ->
+    // The current photo grows out of (and shrinks back into) its thumbnail in the grid.
+    val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
+    ZoomableBox(isCurrent = isCurrent, onTap = handleTap, modifier = sharedModifier) { onImageSize ->
         AsyncImage(
             model = thumbnail,
             contentDescription = null,

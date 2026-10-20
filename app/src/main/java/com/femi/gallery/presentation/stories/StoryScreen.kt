@@ -43,6 +43,8 @@ fun StoryScreen(
     onBack: () -> Unit,
     onMediaClick: (mediaIndex: Int, query: String) -> Unit,
     onPlaySlideshow: (query: String) -> Unit,
+    viewedMediaIndex: Int = -1,
+    onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: StoryViewModel = hiltViewModel(),
 ) {
@@ -101,6 +103,8 @@ fun StoryScreen(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                viewedMediaIndex = viewedMediaIndex,
+                onViewedConsumed = onViewedConsumed,
             )
         }
 

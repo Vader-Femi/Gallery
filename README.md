@@ -59,6 +59,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] Instant system thumbnail with the sharp image fading in on top
 - [x] **Video playback** (Media3 / ExoPlayer) with standard controls
 - [x] Tap to hide/show the interface and system bars
+- [x] **Shared-element transition**: the tapped thumbnail grows into the viewer and the photo shrinks back into the grid; when you close the viewer after swiping, the grid scrolls to the photo you ended on (from Pictures, albums, search and stories)
 - [x] **Details panel**: file name, date, folder, resolution, size, duration, camera, aperture, shutter speed, ISO, focal length and GPS (from EXIF)
 - [x] Share, favorite, edit, lock and move to trash
 
@@ -108,7 +109,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Duplicate finder (perceptual hashing)
 - [ ] Motion photo playback, set as wallpaper
 - [ ] A local **Room index** — speeds up opening the app on huge libraries and will power search, stories and ML
-- [ ] Shared-element transition from grid to viewer, and scrolling the grid to the photo you were just viewing
 - [ ] Tiled full-resolution zoom for very large photos
 - [ ] Remember zoom level and a small settings screen (DataStore); sort options; hide albums; delete empty albums
 - [ ] Select a whole day by tapping its header; drag-to-select
@@ -311,6 +311,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 25 | Stories | Automatic events, story screen, slideshow, `from:`/`to:` search ranges |
 | 26 | README | This document, brought up to date |
 | 27 | Default gallery | Open with, camera review and photo picker for other apps |
+| 28 | Shared transition | Grid-to-viewer animation and scrolling back to the viewed photo |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

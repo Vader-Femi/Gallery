@@ -6,6 +6,9 @@ object GalleryRoutes {
     /** Marks "the whole library" in the viewer's optional bucketId argument. */
     const val NO_BUCKET = Long.MIN_VALUE
 
+    /** Saved-state key the viewer uses to tell the screen behind it which photo it ended on. */
+    const val VIEWED_INDEX_KEY = "viewedMediaIndex"
+
     const val ALBUM = "album/{bucketId}"
     const val SEARCH = "search"
     const val STORY = "story/{fromDay}/{toDay}"

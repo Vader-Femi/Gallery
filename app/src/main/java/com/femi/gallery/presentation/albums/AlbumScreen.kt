@@ -45,16 +45,18 @@ import com.femi.gallery.presentation.selection.SelectionHost
 fun AlbumScreen(
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
+    viewedMediaIndex: Int = -1,
+    onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: AlbumViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
         // Nothing from the Locked folder is shown until the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            AlbumContent(onBack, onMediaClick, viewModel, modifier)
+            AlbumContent(onBack, onMediaClick, viewedMediaIndex, onViewedConsumed, viewModel, modifier)
         }
     } else {
-        AlbumContent(onBack, onMediaClick, viewModel, modifier)
+        AlbumContent(onBack, onMediaClick, viewedMediaIndex, onViewedConsumed, viewModel, modifier)
     }
 }
 
@@ -62,6 +64,8 @@ fun AlbumScreen(
 private fun AlbumContent(
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
+    viewedMediaIndex: Int,
+    onViewedConsumed: () -> Unit,
     viewModel: AlbumViewModel,
     modifier: Modifier,
 ) {
@@ -128,6 +132,8 @@ private fun AlbumContent(
                 modifier = Modifier.weight(1f),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                viewedMediaIndex = viewedMediaIndex,
+                onViewedConsumed = onViewedConsumed,
             )
         }
 

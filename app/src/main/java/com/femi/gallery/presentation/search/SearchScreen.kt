@@ -67,6 +67,8 @@ private val Suggestions = listOf(
 fun SearchScreen(
     onBack: () -> Unit,
     onMediaClick: (mediaIndex: Int, query: String) -> Unit,
+    viewedMediaIndex: Int = -1,
+    onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
@@ -161,6 +163,8 @@ fun SearchScreen(
                             onZoomOut = viewModel.timeline::zoomOut,
                             selectionActive = selectionState.active,
                             selectedIds = selectionState.ids,
+                            viewedMediaIndex = viewedMediaIndex,
+                            onViewedConsumed = onViewedConsumed,
                         )
                     }
                 }

@@ -48,4 +48,19 @@ class TimelineLayoutTest {
         assertEquals(0, empty.totalCount)
         assertFalse(empty.isHeader(0))
     }
+
+    @Test
+    fun mapsMediaIndexToGridIndex() {
+        // Grid: H0 m0 m1 | H1 m2 m3 | H2 m4  ->  media 0..4 sit at grid 1, 2, 4, 5, 7
+        assertEquals(listOf(1, 2, 4, 5, 7), (0..4).map(layout::gridIndexForMedia))
+    }
+
+    @Test
+    fun gridIndexAndMediaIndexAreInverses() {
+        for (media in 0..4) {
+            val grid = layout.gridIndexForMedia(media)
+            assertFalse(layout.isHeader(grid))
+            assertEquals(media, layout.mediaIndexAt(grid))
+        }
+    }
 }
