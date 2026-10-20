@@ -1,0 +1,745 @@
+From 39254b2d9f1c643e46d13c4ad1785b2275ac8f81 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 20 Oct 2026 19:38:59 +0000
+Subject: [PATCH] Patch 29: open the viewer and scroll back by photo id
+
+The grid and the viewer each load their own copy of the ordered library, and the viewer was
+opened with only the tapped position. After a fast scroll the two lists could disagree, so the
+viewer opened a different photo, and on the way back the grid scrolled to the wrong place.
+
+- The tapped photo's id is passed to the viewer (new optional mediaId route argument) and the
+  viewer opens on the position that actually holds it
+- The viewer reports the photo it ended on as id + position; the grid finds it by id
+- MediaPositions.find (pure Kotlin, unit tested) does the lookup, nearest position first
+- A warning is logged (tag Viewer) when the tapped position and the photo disagree
+- README patch history updated
+---
+ README.md                                     |  1 +
+ .../gallery/domain/model/MediaPositions.kt    | 44 ++++++++++++
+ .../presentation/albums/AlbumScreen.kt        | 17 ++---
+ .../presentation/common/ViewedMedia.kt        |  8 +++
+ .../presentation/navigation/GalleryNavHost.kt | 46 +++++++-----
+ .../presentation/navigation/GalleryRoutes.kt  | 16 +++--
+ .../presentation/pictures/PicturesScreen.kt   |  9 +--
+ .../presentation/pictures/TimelineGrid.kt     | 47 ++++++++----
+ .../presentation/search/SearchScreen.kt       |  9 +--
+ .../presentation/stories/StoryScreen.kt       |  9 +--
+ .../presentation/viewer/ViewerScreen.kt       | 32 ++++++---
+ .../presentation/viewer/ViewerViewModel.kt    | 10 ++-
+ .../domain/model/MediaPositionsTest.kt        | 71 +++++++++++++++++++
+ 13 files changed, 253 insertions(+), 66 deletions(-)
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/model/MediaPositions.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/presentation/common/ViewedMedia.kt
+ create mode 100644 app/src/test/java/com/femi/gallery/domain/model/MediaPositionsTest.kt
+
+diff --git a/README.md b/README.md
+index e58a862..a030d71 100644
+--- a/README.md
++++ b/README.md
+@@ -312,6 +312,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
+ | 26 | README | This document, brought up to date |
+ | 27 | Default gallery | Open with, camera review and photo picker for other apps |
+ | 28 | Shared transition | Grid-to-viewer animation and scrolling back to the viewed photo |
++| 29 | Viewer opens by id | The viewer and the grid now pass the photo's id, not just its position, so a fast scroll can no longer open (or scroll back to) a different photo |
+ 
+ Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
+ 
+diff --git a/app/src/main/java/com/femi/gallery/domain/model/MediaPositions.kt b/app/src/main/java/com/femi/gallery/domain/model/MediaPositions.kt
+new file mode 100644
+index 0000000..4e259ec
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/model/MediaPositions.kt
+@@ -0,0 +1,44 @@
++package com.femi.gallery.domain.model
++
++/**
++ * Finds where a photo really is in a paged list.
++ *
++ * The grid and the viewer each load their own copy of the (ordered) library, and a position alone
++ * can point at a different photo in the other copy if the two were loaded at different moments.
++ * Screens therefore pass the photo's id along with its position, and use this to settle on the
++ * position that actually holds that photo.
++ */
++object MediaPositions {
++
++    /** "No id known" (ids from MediaStore and the Locked folder are never negative). */
++    const val NO_ID: Long = Long.MIN_VALUE
++
++    /** How far from the expected position to look for the photo. */
++    const val DEFAULT_SEARCH_DISTANCE = 2_000
++
++    /**
++     * The position of the photo with [id], looking first at [preferred] and then at the nearest
++     * positions outward (up to [maxDistance] either side), or null if it isn't there.
++     *
++     * [idAt] returns the id at a position, or null while that position is not loaded yet.
++     */
++    fun find(
++        preferred: Int,
++        id: Long,
++        count: Int,
++        maxDistance: Int = DEFAULT_SEARCH_DISTANCE,
++        idAt: (Int) -> Long?,
++    ): Int? {
++        if (id == NO_ID || count <= 0) return null
++        val start = preferred.coerceIn(0, count - 1)
++        if (idAt(start) == id) return start
++        for (distance in 1..maxDistance) {
++            val below = start - distance
++            val above = start + distance
++            if (below < 0 && above >= count) break
++            if (below >= 0 && idAt(below) == id) return below
++            if (above < count && idAt(above) == id) return above
++        }
++        return null
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
+index d8e5482..ae85e9b 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/albums/AlbumScreen.kt
+@@ -32,6 +32,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
+ import com.femi.gallery.R
+ import com.femi.gallery.domain.model.toRef
+ import com.femi.gallery.presentation.common.HideBottomBarWhile
++import com.femi.gallery.presentation.common.ViewedMedia
+ import com.femi.gallery.presentation.locked.LockedGate
+ import com.femi.gallery.presentation.pictures.TimelineGrid
+ import com.femi.gallery.presentation.selection.SelectionBars
+@@ -44,8 +45,8 @@ import com.femi.gallery.presentation.selection.SelectionHost
+ @Composable
+ fun AlbumScreen(
+     onBack: () -> Unit,
+-    onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
+-    viewedMediaIndex: Int = -1,
++    onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit,
++    viewed: ViewedMedia? = null,
+     onViewedConsumed: () -> Unit = {},
+     modifier: Modifier = Modifier,
+     viewModel: AlbumViewModel = hiltViewModel(),
+@@ -53,18 +54,18 @@ fun AlbumScreen(
+     if (viewModel.isLocked) {
+         // Nothing from the Locked folder is shown until the user authenticates.
+         LockedGate(session = viewModel.lockSession, onClose = onBack) {
+-            AlbumContent(onBack, onMediaClick, viewedMediaIndex, onViewedConsumed, viewModel, modifier)
++            AlbumContent(onBack, onMediaClick, viewed, onViewedConsumed, viewModel, modifier)
+         }
+     } else {
+-        AlbumContent(onBack, onMediaClick, viewedMediaIndex, onViewedConsumed, viewModel, modifier)
++        AlbumContent(onBack, onMediaClick, viewed, onViewedConsumed, viewModel, modifier)
+     }
+ }
+ 
+ @Composable
+ private fun AlbumContent(
+     onBack: () -> Unit,
+-    onMediaClick: (bucketId: Long, mediaIndex: Int) -> Unit,
+-    viewedMediaIndex: Int,
++    onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit,
++    viewed: ViewedMedia?,
+     onViewedConsumed: () -> Unit,
+     viewModel: AlbumViewModel,
+     modifier: Modifier,
+@@ -123,7 +124,7 @@ private fun AlbumContent(
+                     if (selectionState.active) {
+                         viewModel.selection.toggle(item.toRef())
+                     } else {
+-                        onMediaClick(viewModel.bucketId, mediaIndex)
++                        onMediaClick(viewModel.bucketId, mediaIndex, item.id)
+                     }
+                 },
+                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
+@@ -132,7 +133,7 @@ private fun AlbumContent(
+                 modifier = Modifier.weight(1f),
+                 selectionActive = selectionState.active,
+                 selectedIds = selectionState.ids,
+-                viewedMediaIndex = viewedMediaIndex,
++                viewed = viewed,
+                 onViewedConsumed = onViewedConsumed,
+             )
+         }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/common/ViewedMedia.kt b/app/src/main/java/com/femi/gallery/presentation/common/ViewedMedia.kt
+new file mode 100644
+index 0000000..fa7680d
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/presentation/common/ViewedMedia.kt
+@@ -0,0 +1,8 @@
++package com.femi.gallery.presentation.common
++
++/**
++ * The photo the viewer ended on, reported back to the screen that opened it. The [id] is what
++ * identifies the photo; the [index] is only where the viewer found it, which can differ from where
++ * the grid has it when the two lists were loaded at different moments.
++ */
++data class ViewedMedia(val index: Int, val id: Long)
+diff --git a/app/src/main/java/com/femi/gallery/presentation/navigation/GalleryNavHost.kt b/app/src/main/java/com/femi/gallery/presentation/navigation/GalleryNavHost.kt
+index 8038c69..da53342 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/navigation/GalleryNavHost.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/navigation/GalleryNavHost.kt
+@@ -30,6 +30,7 @@ import com.femi.gallery.presentation.stories.SlideshowViewModel
+ import com.femi.gallery.presentation.stories.StoriesScreen
+ import com.femi.gallery.presentation.stories.StoryScreen
+ import com.femi.gallery.presentation.stories.StoryViewModel
++import com.femi.gallery.presentation.common.ViewedMedia
+ import com.femi.gallery.presentation.viewer.ViewerScreen
+ import com.femi.gallery.presentation.viewer.ViewerViewModel
+ 
+@@ -52,9 +53,9 @@ fun GalleryNavHost(
+             ) {
+                 sharedComposable(GalleryDestination.Pictures.route) { entry ->
+                     PicturesScreen(
+-                        onMediaClick = { mediaIndex -> navController.navigate(GalleryRoutes.viewer(mediaIndex)) },
++                        onMediaClick = { mediaIndex, mediaId -> navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId)) },
+                         onSearchClick = { navController.navigate(GalleryRoutes.SEARCH) },
+-                        viewedMediaIndex = entry.viewedMediaIndex(),
++                        viewed = entry.viewedMedia(),
+                         onViewedConsumed = entry::clearViewedMediaIndex,
+                     )
+                 }
+@@ -69,20 +70,20 @@ fun GalleryNavHost(
+                 ) { entry ->
+                     AlbumScreen(
+                         onBack = { navController.popBackStack() },
+-                        onMediaClick = { bucketId, mediaIndex ->
+-                            navController.navigate(GalleryRoutes.viewer(mediaIndex, bucketId))
++                        onMediaClick = { bucketId, mediaIndex, mediaId ->
++                            navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId, bucketId))
+                         },
+-                        viewedMediaIndex = entry.viewedMediaIndex(),
++                        viewed = entry.viewedMedia(),
+                         onViewedConsumed = entry::clearViewedMediaIndex,
+                     )
+                 }
+                 sharedComposable(GalleryRoutes.SEARCH) { entry ->
+                     SearchScreen(
+                         onBack = { navController.popBackStack() },
+-                        onMediaClick = { mediaIndex, query ->
+-                            navController.navigate(GalleryRoutes.viewer(mediaIndex, query = query))
++                        onMediaClick = { mediaIndex, mediaId, query ->
++                            navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId, query = query))
+                         },
+-                        viewedMediaIndex = entry.viewedMediaIndex(),
++                        viewed = entry.viewedMedia(),
+                         onViewedConsumed = entry::clearViewedMediaIndex,
+                     )
+                 }
+@@ -100,11 +101,11 @@ fun GalleryNavHost(
+                 ) { entry ->
+                     StoryScreen(
+                         onBack = { navController.popBackStack() },
+-                        onMediaClick = { mediaIndex, query ->
+-                            navController.navigate(GalleryRoutes.viewer(mediaIndex, query = query))
++                        onMediaClick = { mediaIndex, mediaId, query ->
++                            navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId, query = query))
+                         },
+                         onPlaySlideshow = { query -> navController.navigate(GalleryRoutes.slideshow(query)) },
+-                        viewedMediaIndex = entry.viewedMediaIndex(),
++                        viewed = entry.viewedMedia(),
+                         onViewedConsumed = entry::clearViewedMediaIndex,
+                     )
+                 }
+@@ -118,6 +119,10 @@ fun GalleryNavHost(
+                     route = GalleryRoutes.VIEWER,
+                     arguments = listOf(
+                         navArgument(ViewerViewModel.INDEX_ARG) { type = NavType.IntType },
++                        navArgument(ViewerViewModel.MEDIA_ID_ARG) {
++                            type = NavType.LongType
++                            defaultValue = GalleryRoutes.NO_MEDIA_ID
++                        },
+                         navArgument(ViewerViewModel.BUCKET_ARG) {
+                             type = NavType.LongType
+                             defaultValue = GalleryRoutes.NO_BUCKET
+@@ -133,10 +138,11 @@ fun GalleryNavHost(
+                         onBack = { navController.popBackStack() },
+                         onEdit = { uri -> navController.navigate(GalleryRoutes.editor(uri)) },
+                         // Tells the screen behind (the one that opened the viewer) which photo we ended on.
+-                        onViewedIndexChange = { mediaIndex ->
+-                            navController.previousBackStackEntry
+-                                ?.savedStateHandle
+-                                ?.set(GalleryRoutes.VIEWED_INDEX_KEY, mediaIndex)
++                        onViewedChange = { mediaIndex, mediaId ->
++                            val handle = navController.previousBackStackEntry?.savedStateHandle
++                            // The id first: the index is what tells the grid there is something to show.
++                            handle?.set(GalleryRoutes.VIEWED_ID_KEY, mediaId)
++                            handle?.set(GalleryRoutes.VIEWED_INDEX_KEY, mediaIndex)
+                         },
+                     )
+                 }
+@@ -163,13 +169,17 @@ private fun NavGraphBuilder.sharedComposable(
+     }
+ }
+ 
+-/** The photo the viewer last showed, or -1 when there is nothing to scroll to. */
++/** The photo the viewer last showed, or null when there is nothing to scroll to. */
+ @Composable
+-private fun NavBackStackEntry.viewedMediaIndex(): Int {
++private fun NavBackStackEntry.viewedMedia(): ViewedMedia? {
+     val index by savedStateHandle.getStateFlow(GalleryRoutes.VIEWED_INDEX_KEY, -1).collectAsStateWithLifecycle()
+-    return index
++    val id by savedStateHandle
++        .getStateFlow(GalleryRoutes.VIEWED_ID_KEY, GalleryRoutes.NO_MEDIA_ID)
++        .collectAsStateWithLifecycle()
++    return if (index >= 0) ViewedMedia(index, id) else null
+ }
+ 
+ private fun NavBackStackEntry.clearViewedMediaIndex() {
+     savedStateHandle[GalleryRoutes.VIEWED_INDEX_KEY] = -1
++    savedStateHandle[GalleryRoutes.VIEWED_ID_KEY] = GalleryRoutes.NO_MEDIA_ID
+ }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/navigation/GalleryRoutes.kt b/app/src/main/java/com/femi/gallery/presentation/navigation/GalleryRoutes.kt
+index 4c25eda..549c4fa 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/navigation/GalleryRoutes.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/navigation/GalleryRoutes.kt
+@@ -1,20 +1,25 @@
+ package com.femi.gallery.presentation.navigation
+ 
+ import android.net.Uri
++import com.femi.gallery.domain.model.MediaPositions
+ 
+ object GalleryRoutes {
+     /** Marks "the whole library" in the viewer's optional bucketId argument. */
+     const val NO_BUCKET = Long.MIN_VALUE
+ 
+-    /** Saved-state key the viewer uses to tell the screen behind it which photo it ended on. */
++    /** Marks "no photo id" in the viewer's optional mediaId argument. */
++    const val NO_MEDIA_ID = MediaPositions.NO_ID
++
++    /** Saved-state keys the viewer uses to tell the screen behind it which photo it ended on. */
+     const val VIEWED_INDEX_KEY = "viewedMediaIndex"
++    const val VIEWED_ID_KEY = "viewedMediaId"
+ 
+     const val ALBUM = "album/{bucketId}"
+     const val SEARCH = "search"
+     const val STORY = "story/{fromDay}/{toDay}"
+     const val SLIDESHOW = "slideshow?query={query}"
+     const val EDITOR = "editor?uri={uri}"
+-    const val VIEWER = "viewer/{index}?bucketId={bucketId}&query={query}"
++    const val VIEWER = "viewer/{index}?mediaId={mediaId}&bucketId={bucketId}&query={query}"
+ 
+     fun album(bucketId: Long) = "album/$bucketId"
+ 
+@@ -29,10 +34,11 @@ object GalleryRoutes {
+ 
+     /**
+      * Opens the viewer at [mediaIndex] within the library, within one album if [bucketId] is set,
+-     * or within the results of a search if [query] is set.
++     * or within the results of a search if [query] is set. [mediaId] is the tapped photo, so the
++     * viewer can still open on it if the list shifted since the grid loaded it.
+      */
+-    fun viewer(mediaIndex: Int, bucketId: Long = NO_BUCKET, query: String? = null): String {
+-        val base = "viewer/$mediaIndex?bucketId=$bucketId"
++    fun viewer(mediaIndex: Int, mediaId: Long, bucketId: Long = NO_BUCKET, query: String? = null): String {
++        val base = "viewer/$mediaIndex?mediaId=$mediaId&bucketId=$bucketId"
+         return if (query.isNullOrBlank()) base else "$base&query=${Uri.encode(query)}"
+     }
+ }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+index a1a2c27..499448c 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/PicturesScreen.kt
+@@ -30,6 +30,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
+ import com.femi.gallery.R
+ import com.femi.gallery.domain.model.toRef
+ import com.femi.gallery.presentation.common.HideBottomBarWhile
++import com.femi.gallery.presentation.common.ViewedMedia
+ import com.femi.gallery.presentation.selection.SelectionBars
+ import com.femi.gallery.presentation.selection.SelectionHost
+ import com.femi.gallery.presentation.selection.libraryActions
+@@ -37,9 +38,9 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
+ 
+ @Composable
+ fun PicturesScreen(
+-    onMediaClick: (mediaIndex: Int) -> Unit,
++    onMediaClick: (mediaIndex: Int, mediaId: Long) -> Unit,
+     onSearchClick: () -> Unit,
+-    viewedMediaIndex: Int = -1,
++    viewed: ViewedMedia? = null,
+     onViewedConsumed: () -> Unit = {},
+     modifier: Modifier = Modifier,
+     viewModel: PicturesViewModel = hiltViewModel(),
+@@ -82,7 +83,7 @@ fun PicturesScreen(
+                 sections = sections,
+                 zoom = zoom,
+                 onMediaClick = { mediaIndex, item ->
+-                    if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex)
++                    if (selectionState.active) viewModel.selection.toggle(item.toRef()) else onMediaClick(mediaIndex, item.id)
+                 },
+                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
+                 onZoomIn = viewModel.timeline::zoomIn,
+@@ -90,7 +91,7 @@ fun PicturesScreen(
+                 modifier = Modifier.weight(1f),
+                 selectionActive = selectionState.active,
+                 selectedIds = selectionState.ids,
+-                viewedMediaIndex = viewedMediaIndex,
++                viewed = viewed,
+                 onViewedConsumed = onViewedConsumed,
+             )
+         }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineGrid.kt b/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineGrid.kt
+index b2d09d5..6bd53c5 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineGrid.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/pictures/TimelineGrid.kt
+@@ -60,7 +60,9 @@ import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.withTimeoutOrNull
+ import com.femi.gallery.R
+ import com.femi.gallery.domain.model.MediaItem
++import com.femi.gallery.domain.model.MediaPositions
+ import com.femi.gallery.domain.model.TimelineSection
++import com.femi.gallery.presentation.common.ViewedMedia
+ import com.femi.gallery.presentation.common.mediaSharedBounds
+ import com.femi.gallery.presentation.viewer.formatDuration
+ 
+@@ -94,8 +96,8 @@ fun TimelineGrid(
+     topInset: Dp = 0.dp,
+     selectionActive: Boolean = false,
+     selectedIds: Set<Long> = emptySet(),
+-    /** Index of the photo the viewer ended on after the user came back; the grid scrolls to it. */
+-    viewedMediaIndex: Int = -1,
++    /** The photo the viewer ended on after the user came back; the grid scrolls to it. */
++    viewed: ViewedMedia? = null,
+     onViewedConsumed: () -> Unit = {},
+ ) {
+     val layout = remember(sections) { TimelineLayout(sections) }
+@@ -108,8 +110,7 @@ fun TimelineGrid(
+     // The photo whose thumbnail becomes the shared element: the one just tapped, or after
+     // returning from the viewer, the one it ended on (which may be a different photo).
+     var openedId by rememberSaveable { mutableStateOf(NoMediaId) }
+-    val viewedId = if (viewedMediaIndex >= 0) items.peekOrNull(viewedMediaIndex)?.id else null
+-    val sharedId = viewedId ?: openedId
++    val sharedId = viewed?.id?.takeIf { it != MediaPositions.NO_ID } ?: openedId
+     
+     // Check strictly if at the very top of the grid
+     val isAtTop by remember {
+@@ -132,18 +133,36 @@ fun TimelineGrid(
+     }
+     
+     // Back from the viewer: bring the photo it ended on into view so the photo can shrink into it.
+-    LaunchedEffect(viewedMediaIndex, layout) {
+-        if (viewedMediaIndex < 0 || layout.totalCount == 0) return@LaunchedEffect
+-        val target = layout.gridIndexForMedia(viewedMediaIndex).coerceIn(0, layout.totalCount - 1)
+-        val info = gridState.layoutInfo
+-        if (info.visibleItemsInfo.none { it.index == target }) {
+-            val cellHeight = info.visibleItemsInfo.minOfOrNull { it.size.height } ?: 0
+-            gridState.scrollToItem(target, scrollOffset = -(info.viewportSize.height / 2) + cellHeight / 2)
++    // The viewer reports the photo's id as well as its position, because the viewer's list and this
++    // one are loaded separately and a position alone can point at a different photo here.
++    LaunchedEffect(viewed, layout) {
++        val target = viewed ?: return@LaunchedEffect
++        if (layout.totalCount == 0) return@LaunchedEffect
++
++        fun locate(): Int =
++            MediaPositions.find(target.index, target.id, items.itemCount) { items.peekOrNull(it)?.id }
++                ?: target.index
++
++        suspend fun reveal(mediaIndex: Int) {
++            val gridIndex = layout.gridIndexForMedia(mediaIndex).coerceIn(0, layout.totalCount - 1)
++            val info = gridState.layoutInfo
++            if (info.visibleItemsInfo.none { it.index == gridIndex }) {
++                val cellHeight = info.visibleItemsInfo.minOfOrNull { it.size.height } ?: 0
++                gridState.scrollToItem(gridIndex, scrollOffset = -(info.viewportSize.height / 2) + cellHeight / 2)
++            }
+         }
+-        // Keep marking that photo once the viewer's position has been used up.
+-        val id = withTimeoutOrNull(ViewedPhotoTimeoutMs) {
+-            snapshotFlow { items.peekOrNull(viewedMediaIndex)?.id }.filterNotNull().first()
++
++        val firstGuess = locate()
++        reveal(firstGuess)
++        // The photo may be far from anything loaded: wait for its position to load, then look again.
++        withTimeoutOrNull(ViewedPhotoTimeoutMs) {
++            snapshotFlow { items.peekOrNull(firstGuess)?.id }.filterNotNull().first()
+         }
++        val settled = locate()
++        if (settled != firstGuess) reveal(settled)
++
++        // Keep marking that photo once the viewer's position has been used up.
++        val id = target.id.takeIf { it != MediaPositions.NO_ID } ?: items.peekOrNull(settled)?.id
+         if (id != null) openedId = id
+         onViewedConsumed()
+     }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/search/SearchScreen.kt b/app/src/main/java/com/femi/gallery/presentation/search/SearchScreen.kt
+index 70613ca..e8617af 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/search/SearchScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/search/SearchScreen.kt
+@@ -48,6 +48,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
+ import com.femi.gallery.R
+ import com.femi.gallery.domain.model.toRef
+ import com.femi.gallery.presentation.common.HideBottomBarWhile
++import com.femi.gallery.presentation.common.ViewedMedia
+ import com.femi.gallery.presentation.pictures.TimelineGrid
+ import com.femi.gallery.presentation.selection.SelectionBars
+ import com.femi.gallery.presentation.selection.SelectionHost
+@@ -66,8 +67,8 @@ private val Suggestions = listOf(
+ @Composable
+ fun SearchScreen(
+     onBack: () -> Unit,
+-    onMediaClick: (mediaIndex: Int, query: String) -> Unit,
+-    viewedMediaIndex: Int = -1,
++    onMediaClick: (mediaIndex: Int, mediaId: Long, query: String) -> Unit,
++    viewed: ViewedMedia? = null,
+     onViewedConsumed: () -> Unit = {},
+     modifier: Modifier = Modifier,
+     viewModel: SearchViewModel = hiltViewModel(),
+@@ -145,7 +146,7 @@ fun SearchScreen(
+                                 if (active) {
+                                     viewModel.selection.toggle(item.toRef())
+                                 } else {
+-                                    onMediaClick(mediaIndex, trimmedQuery)
++                                    onMediaClick(mediaIndex, item.id, trimmedQuery)
+                                 }
+                             }
+                         }
+@@ -163,7 +164,7 @@ fun SearchScreen(
+                             onZoomOut = viewModel.timeline::zoomOut,
+                             selectionActive = selectionState.active,
+                             selectedIds = selectionState.ids,
+-                            viewedMediaIndex = viewedMediaIndex,
++                            viewed = viewed,
+                             onViewedConsumed = onViewedConsumed,
+                         )
+                     }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/stories/StoryScreen.kt b/app/src/main/java/com/femi/gallery/presentation/stories/StoryScreen.kt
+index 12d4d18..852bb83 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/stories/StoryScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/stories/StoryScreen.kt
+@@ -32,6 +32,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
+ import com.femi.gallery.R
+ import com.femi.gallery.domain.model.toRef
+ import com.femi.gallery.presentation.common.HideBottomBarWhile
++import com.femi.gallery.presentation.common.ViewedMedia
+ import com.femi.gallery.presentation.pictures.TimelineGrid
+ import com.femi.gallery.presentation.selection.SelectionBars
+ import com.femi.gallery.presentation.selection.SelectionHost
+@@ -41,9 +42,9 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
+ @Composable
+ fun StoryScreen(
+     onBack: () -> Unit,
+-    onMediaClick: (mediaIndex: Int, query: String) -> Unit,
++    onMediaClick: (mediaIndex: Int, mediaId: Long, query: String) -> Unit,
+     onPlaySlideshow: (query: String) -> Unit,
+-    viewedMediaIndex: Int = -1,
++    viewed: ViewedMedia? = null,
+     onViewedConsumed: () -> Unit = {},
+     modifier: Modifier = Modifier,
+     viewModel: StoryViewModel = hiltViewModel(),
+@@ -94,7 +95,7 @@ fun StoryScreen(
+                     if (selectionState.active) {
+                         viewModel.selection.toggle(item.toRef())
+                     } else {
+-                        onMediaClick(mediaIndex, viewModel.query)
++                        onMediaClick(mediaIndex, item.id, viewModel.query)
+                     }
+                 },
+                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
+@@ -103,7 +104,7 @@ fun StoryScreen(
+                 modifier = Modifier.weight(1f),
+                 selectionActive = selectionState.active,
+                 selectedIds = selectionState.ids,
+-                viewedMediaIndex = viewedMediaIndex,
++                viewed = viewed,
+                 onViewedConsumed = onViewedConsumed,
+             )
+         }
+diff --git a/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerScreen.kt b/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerScreen.kt
+index 6798578..f8ce079 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerScreen.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerScreen.kt
+@@ -4,6 +4,7 @@ import android.content.ClipData
+ import android.content.Context
+ import android.content.Intent
+ import android.net.Uri
++import android.util.Log
+ import android.view.View
+ import androidx.annotation.OptIn
+ import androidx.compose.animation.AnimatedVisibility
+@@ -76,6 +77,7 @@ import coil3.request.ImageRequest
+ import coil3.request.crossfade
+ import com.femi.gallery.R
+ import com.femi.gallery.domain.model.MediaItem
++import com.femi.gallery.domain.model.MediaPositions
+ import com.femi.gallery.domain.model.toRef
+ import com.femi.gallery.presentation.common.findActivity
+ import com.femi.gallery.presentation.common.mediaSharedBounds
+@@ -88,6 +90,7 @@ import java.time.format.DateTimeFormatter
+ import java.util.Locale
+ import androidx.media3.common.MediaItem as PlayerMediaItem
+ 
++private const val Tag = "Viewer"
+ private const val ThumbnailRequestSize = 512
+ private const val FullRequestSize = 2160
+ 
+@@ -99,16 +102,16 @@ fun ViewerScreen(
+     onBack: () -> Unit,
+     onEdit: (uri: String) -> Unit,
+     /** Reports the photo shown, so the grid behind can scroll to it when the viewer closes. */
+-    onViewedIndexChange: (mediaIndex: Int) -> Unit = {},
++    onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit = {},
+     viewModel: ViewerViewModel = hiltViewModel(),
+ ) {
+     if (viewModel.isLocked) {
+         // Photos from the Locked folder only show after the user authenticates.
+         LockedGate(session = viewModel.lockSession, onClose = onBack) {
+-            ViewerContent(onBack, onEdit, onViewedIndexChange, viewModel)
++            ViewerContent(onBack, onEdit, onViewedChange, viewModel)
+         }
+     } else {
+-        ViewerContent(onBack, onEdit, onViewedIndexChange, viewModel)
++        ViewerContent(onBack, onEdit, onViewedChange, viewModel)
+     }
+ }
+ 
+@@ -116,7 +119,7 @@ fun ViewerScreen(
+ private fun ViewerContent(
+     onBack: () -> Unit,
+     onEdit: (uri: String) -> Unit,
+-    onViewedIndexChange: (mediaIndex: Int) -> Unit,
++    onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit,
+     viewModel: ViewerViewModel,
+ ) {
+     val items = viewModel.media.collectAsLazyPagingItems()
+@@ -138,11 +141,24 @@ private fun ViewerContent(
+             .background(Color.Black),
+     ) {
+         if (items.itemCount > 0) {
+-            val pagerState = rememberPagerState(
+-                initialPage = viewModel.startIndex.coerceIn(0, items.itemCount - 1),
+-            ) { items.itemCount }
++            // Open on the photo that was tapped. The tapped position alone can point at a different
++            // photo, because this list was loaded separately from the grid's.
++            val startPage = remember {
++                val tapped = viewModel.startIndex.coerceIn(0, items.itemCount - 1)
++                val found = MediaPositions.find(tapped, viewModel.mediaId, items.itemCount) { items.peekOrNull(it)?.id }
++                if (found != null && found != tapped) {
++                    Log.w(Tag, "Tapped photo was at $tapped in the grid but is at $found here (${found - tapped})")
++                } else if (found == null && viewModel.mediaId != MediaPositions.NO_ID) {
++                    Log.w(Tag, "Tapped photo ${viewModel.mediaId} not found around position $tapped; using the position")
++                }
++                found ?: tapped
++            }
++            val pagerState = rememberPagerState(initialPage = startPage) { items.itemCount }
+ 
+-            LaunchedEffect(pagerState.settledPage) { onViewedIndexChange(pagerState.settledPage) }
++            val settledId = items.peekOrNull(pagerState.settledPage)?.id
++            LaunchedEffect(pagerState.settledPage, settledId) {
++                onViewedChange(pagerState.settledPage, settledId ?: MediaPositions.NO_ID)
++            }
+ 
+             HorizontalPager(
+                 state = pagerState,
+diff --git a/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerViewModel.kt
+index 418b437..c7a9780 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerViewModel.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/viewer/ViewerViewModel.kt
+@@ -8,6 +8,7 @@ import androidx.paging.cachedIn
+ import com.femi.gallery.core.security.LockSession
+ import com.femi.gallery.domain.model.MediaDetails
+ import com.femi.gallery.domain.model.MediaItem
++import com.femi.gallery.domain.model.MediaPositions
+ import com.femi.gallery.domain.model.SpecialAlbums
+ import com.femi.gallery.domain.search.SearchCriteria
+ import com.femi.gallery.domain.search.SearchQueryParser
+@@ -36,9 +37,15 @@ class ViewerViewModel @Inject constructor(
+     val lockSession: LockSession,
+ ) : ViewModel() {
+ 
+-    /** Position of the tapped item in the full, newest-first media list. */
++    /** Position of the tapped item in the full, newest-first media list, as the grid had it. */
+     val startIndex: Int = savedStateHandle.get<Int>(INDEX_ARG) ?: 0
+ 
++    /**
++     * The tapped photo's id. This list is loaded separately from the grid's, so [startIndex] alone can
++     * point at a different photo; the id lets the screen open on the right one.
++     */
++    val mediaId: Long = savedStateHandle.get<Long>(MEDIA_ID_ARG) ?: MediaPositions.NO_ID
++
+     val isRecycleBin: Boolean get() = bucketId == SpecialAlbums.TRASH
+     val isLocked: Boolean get() = bucketId == SpecialAlbums.LOCKED
+ 
+@@ -82,6 +89,7 @@ class ViewerViewModel @Inject constructor(
+ 
+     companion object {
+         const val INDEX_ARG = "index"
++        const val MEDIA_ID_ARG = "mediaId"
+         const val BUCKET_ARG = "bucketId"
+         const val QUERY_ARG = "query"
+         private const val NO_BUCKET = Long.MIN_VALUE // keep in sync with GalleryRoutes.NO_BUCKET
+diff --git a/app/src/test/java/com/femi/gallery/domain/model/MediaPositionsTest.kt b/app/src/test/java/com/femi/gallery/domain/model/MediaPositionsTest.kt
+new file mode 100644
+index 0000000..9a27ff1
+--- /dev/null
++++ b/app/src/test/java/com/femi/gallery/domain/model/MediaPositionsTest.kt
+@@ -0,0 +1,71 @@
++package com.femi.gallery.domain.model
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertNull
++import org.junit.Test
++
++class MediaPositionsTest {
++
++    /** A list whose position `i` holds id `ids[i]`; null entries are "not loaded yet". */
++    private fun find(
++        ids: List<Long?>,
++        preferred: Int,
++        id: Long,
++        maxDistance: Int = MediaPositions.DEFAULT_SEARCH_DISTANCE,
++    ) = MediaPositions.find(preferred, id, ids.size, maxDistance) { ids.getOrNull(it) }
++
++    private val ids: List<Long?> = (0 until 100).map { 1_000L + it }
++
++    @Test
++    fun keepsThePositionWhenItHoldsThePhoto() {
++        assertEquals(40, find(ids, preferred = 40, id = 1_040L))
++    }
++
++    @Test
++    fun findsThePhotoWhenTheListIsShiftedAbove() {
++        // The position now holds a photo 30 places further up the list.
++        assertEquals(70, find(ids, preferred = 40, id = 1_070L))
++    }
++
++    @Test
++    fun findsThePhotoWhenTheListIsShiftedBelow() {
++        assertEquals(15, find(ids, preferred = 40, id = 1_015L))
++    }
++
++    @Test
++    fun prefersTheNearestPosition() {
++        val duplicated = ids.toMutableList().apply { this[10] = 5L; this[60] = 5L }
++        assertEquals(60, find(duplicated, preferred = 55, id = 5L))
++        assertEquals(10, find(duplicated, preferred = 20, id = 5L))
++    }
++
++    @Test
++    fun skipsPositionsThatAreNotLoaded() {
++        val sparse = ids.mapIndexed { i, id -> if (i in 35..45) null else id }
++        assertEquals(30, find(sparse, preferred = 40, id = 1_030L))
++        assertNull(find(sparse, preferred = 40, id = 1_040L))
++    }
++
++    @Test
++    fun returnsNullWhenThePhotoIsNotInTheList() {
++        assertNull(find(ids, preferred = 40, id = 9_999L))
++    }
++
++    @Test
++    fun returnsNullWithoutAnIdOrItems() {
++        assertNull(find(ids, preferred = 40, id = MediaPositions.NO_ID))
++        assertNull(find(emptyList(), preferred = 0, id = 1L))
++    }
++
++    @Test
++    fun clampsAPreferredPositionOutsideTheList() {
++        assertEquals(99, find(ids, preferred = 500, id = 1_099L))
++        assertEquals(0, find(ids, preferred = -7, id = 1_000L))
++    }
++
++    @Test
++    fun givesUpBeyondTheSearchDistance() {
++        assertNull(find(ids, preferred = 10, id = 1_050L, maxDistance = 30))
++        assertEquals(50, find(ids, preferred = 10, id = 1_050L, maxDistance = 40))
++    }
++}
+-- 
+2.43.0
+
