@@ -1,7 +1,9 @@
 package com.femi.gallery.domain.search
 
+import com.femi.gallery.domain.geo.GeoBox
 import com.femi.gallery.domain.model.MediaType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -104,5 +106,34 @@ class SearchQueryParserTest {
             SearchQueryParser.betweenDays(from, to, ZoneOffset.UTC),
             SearchQueryParser.parse(SearchQueryParser.betweenDaysQuery(from, to), today, ZoneOffset.UTC),
         )
+    }
+
+    @Test
+    fun aMapAreaBecomesTheAreaCriterion() {
+        val criteria = parse("in:6.300000,3.100000,6.700000,3.700000")
+        assertEquals(GeoBox(6.3, 3.1, 6.7, 3.7), criteria.area)
+        assertTrue(criteria.terms.isEmpty())
+        assertFalse(criteria.isEmpty)
+    }
+
+    @Test
+    fun anAreaCombinesWithOtherConditions() {
+        val criteria = parse("videos 2025 in:6.3,3.1,6.7,3.7")
+        assertEquals(GeoBox(6.3, 3.1, 6.7, 3.7), criteria.area)
+        assertEquals(MediaType.Video, criteria.mediaType)
+        assertEquals(1, criteria.dateRanges.size)
+    }
+
+    @Test
+    fun anInvalidAreaIsIgnoredLikeABadDate() {
+        val criteria = parse("in:nonsense")
+        assertNull(criteria.area)
+        assertTrue(criteria.isEmpty)
+    }
+
+    @Test
+    fun anAreaSurvivesTheTripThroughAQueryString() {
+        val box = GeoBox(-33.9, 151.1, -33.8, 151.3)
+        assertEquals(box, parse(box.toQuery()).area)
     }
 }

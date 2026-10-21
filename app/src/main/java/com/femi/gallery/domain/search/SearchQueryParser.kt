@@ -1,5 +1,6 @@
 package com.femi.gallery.domain.search
 
+import com.femi.gallery.domain.geo.GeoBox
 import com.femi.gallery.domain.model.MediaType
 import java.time.LocalDate
 import java.time.ZoneId
@@ -15,6 +16,8 @@ import java.time.YearMonth
  * - dates: `today`, `yesterday`, a year (`2025`), a month (`october`, `oct`), a month and year
  *   (`october 2025`) or a day (`oct 15`, `15 oct`, `15 oct 2025`)
  * - an explicit range of days: `from:2026-10-03 to:2026-10-05` (either end may be left out)
+ * - a part of the map: `in:south,west,north,east` (see [GeoBox.toQuery]); only photos that have a place
+ *   inside it match
  * - anything else is matched against file and folder names (`screenshot`, `whatsapp`, `img_2031`)
  *
  * A month without a year matches that month in every year.
@@ -58,6 +61,7 @@ object SearchQueryParser {
         var day: Int? = null
         var fromDate: LocalDate? = null
         var toDate: LocalDate? = null
+        var area: GeoBox? = null
         val consumed = BooleanArray(tokens.size)
 
         // First pass: words with a fixed meaning.
@@ -72,6 +76,10 @@ object SearchQueryParser {
                 }
                 token.startsWith("to:") -> {
                     toDate = runCatching { LocalDate.parse(token.removePrefix("to:")) }.getOrNull()
+                    consumed[i] = true
+                }
+                token.startsWith(GeoBox.QUERY_PREFIX) -> {
+                    area = GeoBox.parse(token.removePrefix(GeoBox.QUERY_PREFIX))
                     consumed[i] = true
                 }
                 token == "today" -> { relativeDay = today; consumed[i] = true }
@@ -125,6 +133,7 @@ object SearchQueryParser {
             dateRanges = dateRanges,
             mediaType = mediaType,
             favoritesOnly = favoritesOnly,
+            area = area,
         )
     }
 

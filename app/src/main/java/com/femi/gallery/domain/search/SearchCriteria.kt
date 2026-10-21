@@ -1,5 +1,6 @@
 package com.femi.gallery.domain.search
 
+import com.femi.gallery.domain.geo.GeoBox
 import com.femi.gallery.domain.model.MediaType
 
 /** A parsed search: every condition must match (they are ANDed together). */
@@ -10,9 +11,11 @@ data class SearchCriteria(
     val dateRanges: List<LongRange> = emptyList(),
     val mediaType: MediaType? = null,
     val favoritesOnly: Boolean = false,
+    /** Only photos taken inside this part of the map. */
+    val area: GeoBox? = null,
 ) {
     val isEmpty: Boolean
-        get() = terms.isEmpty() && dateRanges.isEmpty() && mediaType == null && !favoritesOnly
+        get() = terms.isEmpty() && dateRanges.isEmpty() && mediaType == null && !favoritesOnly && area == null
 
     companion object {
         val None = SearchCriteria()
