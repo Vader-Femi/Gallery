@@ -16,6 +16,8 @@ object GalleryRoutes {
 
     const val ALBUM = "album/{bucketId}"
     const val SEARCH = "search"
+    const val MAP = "map"
+    const val PLACE = "place?query={query}"
     const val STORY = "story/{fromDay}/{toDay}"
     const val SLIDESHOW = "slideshow?query={query}"
     const val EDITOR = "editor?uri={uri}"
@@ -25,6 +27,9 @@ object GalleryRoutes {
 
     /** A story covering the local days [fromDay]..[toDay] (`LocalDate.toEpochDay()`). */
     fun story(fromDay: Long, toDay: Long) = "story/$fromDay/$toDay"
+
+    /** The photos taken inside a map area; [query] is the area as a search query (`in:...`). */
+    fun place(query: String) = "place?query=${Uri.encode(query)}"
 
     /** A slideshow of the photos a search [query] describes. */
     fun slideshow(query: String) = "slideshow?query=${Uri.encode(query)}"

@@ -24,6 +24,9 @@ import com.femi.gallery.presentation.common.LocalSharedTransitionScope
 import com.femi.gallery.presentation.editor.EditorScreen
 import com.femi.gallery.presentation.editor.EditorViewModel
 import com.femi.gallery.presentation.pictures.PicturesScreen
+import com.femi.gallery.presentation.map.MapScreen
+import com.femi.gallery.presentation.place.PlaceScreen
+import com.femi.gallery.presentation.place.PlaceViewModel
 import com.femi.gallery.presentation.search.SearchScreen
 import com.femi.gallery.presentation.stories.SlideshowScreen
 import com.femi.gallery.presentation.stories.SlideshowViewModel
@@ -55,6 +58,7 @@ fun GalleryNavHost(
                     PicturesScreen(
                         onMediaClick = { mediaIndex, mediaId -> navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId)) },
                         onSearchClick = { navController.navigate(GalleryRoutes.SEARCH) },
+                        onMapClick = { navController.navigate(GalleryRoutes.MAP) },
                         viewed = entry.viewedMedia(),
                         onViewedConsumed = entry::clearViewedMediaIndex,
                     )
@@ -100,6 +104,34 @@ fun GalleryNavHost(
                     ),
                 ) { entry ->
                     StoryScreen(
+                        onBack = { navController.popBackStack() },
+                        onMediaClick = { mediaIndex, mediaId, query ->
+                            navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId, query = query))
+                        },
+                        onPlaySlideshow = { query -> navController.navigate(GalleryRoutes.slideshow(query)) },
+                        viewed = entry.viewedMedia(),
+                        onViewedConsumed = entry::clearViewedMediaIndex,
+                    )
+                }
+                composable(GalleryRoutes.MAP) {
+                    MapScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenCluster = { cluster ->
+                            val query = cluster.box.toQuery()
+                            if (cluster.count == 1) {
+                                // One photo: straight to the viewer, which then holds just that photo.
+                                navController.navigate(GalleryRoutes.viewer(0, cluster.coverId, query = query))
+                            } else {
+                                navController.navigate(GalleryRoutes.place(query))
+                            }
+                        },
+                    )
+                }
+                sharedComposable(
+                    route = GalleryRoutes.PLACE,
+                    arguments = listOf(navArgument(PlaceViewModel.QUERY_ARG) { type = NavType.StringType }),
+                ) { entry ->
+                    PlaceScreen(
                         onBack = { navController.popBackStack() },
                         onMediaClick = { mediaIndex, mediaId, query ->
                             navController.navigate(GalleryRoutes.viewer(mediaIndex, mediaId, query = query))

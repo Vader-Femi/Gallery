@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +41,7 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
 fun PicturesScreen(
     onMediaClick: (mediaIndex: Int, mediaId: Long) -> Unit,
     onSearchClick: () -> Unit,
+    onMapClick: () -> Unit,
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -74,6 +76,9 @@ fun PicturesScreen(
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.weight(1f),
                 )
+                IconButton(onClick = onMapClick) {
+                    Icon(Icons.Outlined.Map, contentDescription = stringResource(R.string.map_open))
+                }
                 IconButton(onClick = onSearchClick) {
                     Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.search_open))
                 }

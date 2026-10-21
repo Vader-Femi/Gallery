@@ -25,6 +25,22 @@ class LocatedMedia(
     internal val xs: DoubleArray = DoubleArray(size) { Mercator.x(longitudes[it]) }
     internal val ys: DoubleArray = DoubleArray(size) { Mercator.y(latitudes[it]) }
 
+    /** The smallest box around all the photos, or null when there are none. */
+    fun boundingBox(): GeoBox? {
+        if (size == 0) return null
+        var south = Double.MAX_VALUE
+        var north = -Double.MAX_VALUE
+        var west = Double.MAX_VALUE
+        var east = -Double.MAX_VALUE
+        for (i in 0 until size) {
+            if (latitudes[i] < south) south = latitudes[i]
+            if (latitudes[i] > north) north = latitudes[i]
+            if (longitudes[i] < west) west = longitudes[i]
+            if (longitudes[i] > east) east = longitudes[i]
+        }
+        return GeoBox(south, west, north, east)
+    }
+
     /** The ids of the photos taken inside [box]. */
     fun idsIn(box: GeoBox): Set<Long> {
         val result = HashSet<Long>()

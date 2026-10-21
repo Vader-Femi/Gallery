@@ -48,13 +48,21 @@ class LocationRepositoryImpl @Inject constructor(
     private var completedGeneration = -1L
 
     override fun startScan() {
-        if (!permissions.hasMediaAccess()) return
+        if (!permissions.hasMediaAccess()) {
+            Log.i(TAG, "Not scanning: no access to photos")
+            return
+        }
         if (!permissions.isGranted(Manifest.permission.ACCESS_MEDIA_LOCATION)) {
+            Log.i(TAG, "Not scanning: ACCESS_MEDIA_LOCATION is not granted")
             _scan.update { it.copy(status = LocationScanStatus.NeedsPermission) }
             return
         }
         synchronized(lock) {
-            if (job?.isActive == true) return
+            if (job?.isActive == true) {
+                Log.d(TAG, "Scan already running")
+                return
+            }
+            Log.i(TAG, "Starting scan")
             job = scope.launch { runScan() }
         }
     }
@@ -65,6 +73,7 @@ class LocationRepositoryImpl @Inject constructor(
     private suspend fun runScan() {
         val generation = dataSource.generation()
         if (generation == completedGeneration) {
+            Log.i(TAG, "Nothing new since the last scan")
             _scan.update { it.copy(status = LocationScanStatus.Idle) }
             return
         }
@@ -79,6 +88,7 @@ class LocationRepositoryImpl @Inject constructor(
             var placed = plan.keep.count { it.place != null }
             var scanned = 0
             var unsaved = 0
+            Log.i(TAG, "${stamps.size} photos, ${plan.keep.size} already known, ${plan.toScan} to read")
             _scan.value = LocationScanState(LocationScanStatus.Scanning, 0, plan.toScan, placed)
 
             scanner.scan(plan.scanIds, plan.scanModified) { entries, covered ->
@@ -89,6 +99,7 @@ class LocationRepositoryImpl @Inject constructor(
                 if (unsaved >= CHECKPOINT_EVERY) {
                     checkpoint(results)
                     unsaved = 0
+                    Log.i(TAG, "Saved: $scanned of ${plan.toScan} read, $placed with a place")
                 }
                 _scan.value = LocationScanState(LocationScanStatus.Scanning, scanned, plan.toScan, placed)
             }

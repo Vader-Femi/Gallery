@@ -11,6 +11,16 @@
     <string name="search_hint">Search photos and videos</string>
     <string name="search_clear">Clear search</string>
     <string name="search_open">Search</string>
+    <string name="map_open">Map</string>
+    <string name="map_title">Map</string>
+    <string name="map_show_all">Show all photos</string>
+    <string name="map_scanning">Reading photo locations: %1$s of %2$s</string>
+    <string name="map_empty">No photos with a location yet</string>
+    <string name="map_permission_message">To show your photos on the map, allow Gallery to read the location stored in them. It never leaves your phone.</string>
+    <string name="map_permission_allow">Allow</string>
+    <string name="map_permission_settings">Open settings</string>
+    <string name="map_attribution">Map data: Natural Earth (public domain)</string>
+    <string name="place_title">Photos here</string>
     <string name="search_help">Try a file or folder name, a date like "october 2025" or "oct 15", or words like videos, photos and favorites. Combine them: "whatsapp videos 2025".</string>
     <string name="search_no_results">No matching photos or videos</string>
     <string name="search_suggestion_videos">Videos</string>

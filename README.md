@@ -34,6 +34,12 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] Video badge with duration, favorite heart on favorites
 - [x] Live updates: new camera photos, screenshots and downloads appear without restarting
 
+**Map**
+- [x] Map button on the Pictures tab opens an **offline map**: land, borders and cities are drawn from data bundled in the app (Natural Earth, public domain), so the app still has no internet permission
+- [x] Photos with a location are grouped into **bubbles with a cover photo and a count**; pinch, drag and double-tap to zoom, tap a bubble to open its photos (one photo opens the viewer)
+- [x] A background scan reads where each photo was taken (EXIF, needs the "location in photos" permission), is incremental and resumable, and its results never leave the phone
+- [x] `in:south,west,north,east` works in search too, so any area can be searched
+
 **Search**
 - [x] Search button on the Pictures tab opens a search screen with suggestion chips
 - [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable, e.g. `whatsapp videos 2025`
@@ -98,7 +104,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 ### Still to do
 
 **Next up**
-- [ ] **Map view** of geotagged photos
+- [ ] **Map extras**: photo locations for videos, a map with streets (offline vector tiles you import once), fling and smooth zoom animations
 - [ ] **Better stories**: "On this day" memories, a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album
 - [ ] **Editor extras**: draw, text and stickers, straighten, sharpen/vignette, keep camera details (EXIF) and offer to replace the original
 - [ ] **Search by place** (needs reverse geocoding, so it has to be an opt-in network feature)
@@ -316,6 +322,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 30 | Paging fix | Fixed the real cause of wrong photos after a fast scroll: pages loaded backwards after a jump were placed 120 positions off until the next refresh |
 | 31 | Map groundwork | Pure-Kotlin map core: Mercator projection and viewport maths, photo clustering, a compact file format for scanned locations, and an `in:south,west,north,east` search term for "photos taken here" (no screens yet) |
 | 32 | Location scan | Background scan reads where photos were taken (EXIF, via `ACCESS_MEDIA_LOCATION`) into a private, backup-excluded file; `in:` search terms now filter by place |
+| 33 | Map view | Offline map screen (land, borders, cities from bundled Natural Earth data) with photo bubbles, a "Photos here" screen, a scan progress / permission card, and scan diagnostics in Logcat (`LocationScan`, `MapData`) |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
