@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pre-Android 12 auto backup. The Locked folder must never leave the device. -->
+<!-- Pre-Android 12 auto backup. The Locked folder and the record of where photos were taken must never leave the device. -->
 <full-backup-content>
     <exclude domain="file" path="locked/" />
+    <exclude domain="file" path="locations.bin" />
 </full-backup-content>

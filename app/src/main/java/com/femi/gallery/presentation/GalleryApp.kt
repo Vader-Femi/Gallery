@@ -90,7 +90,11 @@ private fun GalleryScaffold() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val chrome = LocalChromeState.current
-    val lockSession = hiltViewModel<AppViewModel>().lockSession
+    val appViewModel = hiltViewModel<AppViewModel>()
+    val lockSession = appViewModel.lockSession
+
+    // New photos get their place read whenever the app comes to the front.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { appViewModel.scanLocations() }
 
     // The Locked folder stays open only while the app is in the foreground and the user is
     // looking at it (its album or a photo viewed from it).

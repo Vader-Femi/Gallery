@@ -9,11 +9,13 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import com.femi.gallery.data.location.LocationIndex
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaOrder
+import com.femi.gallery.domain.model.MediaStamps
 import com.femi.gallery.domain.model.MediaOrdering
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.SpecialAlbums
@@ -32,6 +34,7 @@ import javax.inject.Singleton
 class MediaStoreDataSource @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val io: CoroutineDispatcher,
+    private val locationIndex: LocationIndex,
 ) {
     private val resolver: ContentResolver get() = context.contentResolver
 
@@ -60,7 +63,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.MediaColumns.DATE_TAKEN,
             MediaStore.MediaColumns.DATE_ADDED,
         )
-        resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search), null)?.use { cursor ->
+        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search), null)?.use { cursor ->
             val ids = LongArray(cursor.count)
             val dates = LongArray(cursor.count)
             var i = 0
@@ -71,6 +74,26 @@ class MediaStoreDataSource @Inject constructor(
             }
             MediaOrdering.newestFirst(ids, dates, i)
         } ?: MediaOrder.Empty
+        // Where a photo was taken is not in MediaStore, so an area is applied here, from the scan results.
+        val area = search?.area
+        if (area == null) order else order.retainIds(locationIndex.current().idsIn(area))
+    }
+
+    /** Id and last-modified time of every photo (not videos): what the location scan compares against. */
+    suspend fun loadImageStamps(): MediaStamps = withContext(io) {
+        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATE_MODIFIED)
+        val args = queryArgs(search = SearchCriteria(mediaType = MediaType.Image))
+        resolver.query(collectionUri, projection, args, null)?.use { cursor ->
+            val ids = LongArray(cursor.count)
+            val modified = LongArray(cursor.count)
+            var i = 0
+            while (cursor.moveToNext() && i < ids.size) {
+                ids[i] = cursor.getLong(0)
+                modified[i] = cursor.getLong(1)
+                i++
+            }
+            MediaStamps(ids.copyOf(i), modified.copyOf(i))
+        } ?: MediaStamps.Empty
     }
 
     /** Dates (epoch seconds) of the matching items, newest first. Used to build day sections. */
@@ -209,7 +232,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             MediaStore.MediaColumns.IS_FAVORITE,
         )
-        resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search), null)
+        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search), null)
             ?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                 val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
@@ -222,6 +245,13 @@ class MediaStoreDataSource @Inject constructor(
                     }
                 }
             } ?: emptyList()
+        val area = search?.area
+        if (area == null) {
+            refs
+        } else {
+            val inside = locationIndex.current().idsIn(area)
+            refs.filter { it.id in inside }
+        }
     }
 
     /**

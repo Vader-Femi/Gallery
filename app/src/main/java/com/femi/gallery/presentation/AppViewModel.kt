@@ -2,6 +2,7 @@ package com.femi.gallery.presentation
 
 import androidx.lifecycle.ViewModel
 import com.femi.gallery.core.security.LockSession
+import com.femi.gallery.domain.usecase.StartLocationScanUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -9,4 +10,9 @@ import javax.inject.Inject
 @HiltViewModel
 class AppViewModel @Inject constructor(
     val lockSession: LockSession,
-) : ViewModel()
+    private val startLocationScan: StartLocationScanUseCase,
+) : ViewModel() {
+
+    /** Reads where new photos were taken, in the background; cheap when there is nothing new. */
+    fun scanLocations() = startLocationScan()
+}

@@ -1,5 +1,7 @@
 package com.femi.gallery.domain.geo
 
+import com.femi.gallery.domain.model.MediaOrder
+
 /**
  * The photos that have a known place, as parallel arrays (a library can hold tens of thousands, so
  * this avoids an object per photo). Entry `i` is the photo [ids]`[i]`, taken at
@@ -34,6 +36,29 @@ class LocatedMedia(
 
     companion object {
         val Empty = LocatedMedia(LongArray(0), DoubleArray(0), DoubleArray(0), LongArray(0))
+
+        /** The photos of [order] (newest first) that have a place in [index], with their dates. */
+        fun from(order: MediaOrder, index: PlaceIndex): LocatedMedia {
+            val ids = LongArray(order.size)
+            val latitudes = DoubleArray(order.size)
+            val longitudes = DoubleArray(order.size)
+            val dates = LongArray(order.size)
+            var count = 0
+            for (i in 0 until order.size) {
+                val place = index.placeOf(order.ids[i]) ?: continue
+                ids[count] = order.ids[i]
+                latitudes[count] = place.latitude
+                longitudes[count] = place.longitude
+                dates[count] = order.datesMillis[i] / 1000
+                count++
+            }
+            return LocatedMedia(
+                ids.copyOf(count),
+                latitudes.copyOf(count),
+                longitudes.copyOf(count),
+                dates.copyOf(count),
+            )
+        }
     }
 }
 

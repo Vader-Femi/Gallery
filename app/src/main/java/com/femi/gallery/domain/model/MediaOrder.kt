@@ -7,6 +7,23 @@ class MediaOrder(
 ) {
     val size: Int get() = ids.size
 
+    /** The same order with only the items whose id is in [allowed]. */
+    fun retainIds(allowed: Set<Long>): MediaOrder {
+        var kept = 0
+        for (id in ids) if (id in allowed) kept++
+        val keptIds = LongArray(kept)
+        val keptDates = LongArray(kept)
+        var next = 0
+        for (i in ids.indices) {
+            if (ids[i] in allowed) {
+                keptIds[next] = ids[i]
+                keptDates[next] = datesMillis[i]
+                next++
+            }
+        }
+        return MediaOrder(keptIds, keptDates)
+    }
+
     companion object {
         val Empty = MediaOrder(LongArray(0), LongArray(0))
     }
