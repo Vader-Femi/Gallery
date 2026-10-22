@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -64,11 +65,12 @@ import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.presentation.common.GridThumbnails
 import com.femi.gallery.presentation.common.ViewedMedia
-import com.femi.gallery.presentation.common.mediaSharedBounds
+import com.femi.gallery.presentation.common.gridSharedBounds
 import com.femi.gallery.presentation.viewer.formatDuration
 
 /** Longest wait for the photo the viewer ended on to load before giving up on marking it. */
 private const val ViewedPhotoTimeoutMs = 1_000L
+private const val ViewedScrollDelayMillis = 200L
 
 private const val NoMediaId = -1L
 
@@ -139,6 +141,9 @@ fun TimelineGrid(
     LaunchedEffect(viewed, layout) {
         val target = viewed ?: return@LaunchedEffect
         if (layout.totalCount == 0) return@LaunchedEffect
+        // The viewer is on top of this grid and reports every photo it settles on; wait for it to
+        // rest, so that swiping through photos does not also scroll (and load) the grid each time.
+        delay(ViewedScrollDelayMillis)
 
         fun locate(): Int =
             MediaPositions.find(target.index, target.id, items.itemCount) { items.peekOrNull(it)?.id }
@@ -281,7 +286,7 @@ private fun MediaCell(
     onClick: (Int, MediaItem) -> Unit,
     onLongClick: (MediaItem) -> Unit,
 ) {
-    val sharedModifier = if (shared && item != null) Modifier.mediaSharedBounds(item.id) else Modifier
+    val sharedModifier = if (shared && item != null) Modifier.gridSharedBounds(item.id) else Modifier
     Box(
         modifier = Modifier
             .aspectRatio(1f)

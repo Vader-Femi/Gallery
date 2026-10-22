@@ -1,5 +1,8 @@
 package com.femi.gallery.presentation
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -28,6 +31,8 @@ import androidx.navigation.compose.rememberNavController
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.presentation.common.ChromeState
 import com.femi.gallery.presentation.common.LocalChromeState
+import com.femi.gallery.presentation.common.LocalSharedTransitionScope
+import com.femi.gallery.presentation.common.LocalViewerShowing
 import com.femi.gallery.presentation.navigation.GalleryDestination
 import com.femi.gallery.presentation.navigation.GalleryNavHost
 import com.femi.gallery.presentation.navigation.GalleryRoutes
@@ -36,6 +41,8 @@ import com.femi.gallery.presentation.launch.LaunchRequest
 import com.femi.gallery.presentation.permission.PermissionScreen
 import com.femi.gallery.presentation.picker.PickerScreen
 import com.femi.gallery.presentation.viewer.ExternalViewerScreen
+import com.femi.gallery.presentation.viewer.ViewerHost
+import com.femi.gallery.presentation.viewer.ViewerSession
 
 @Composable
 fun GalleryApp(
@@ -84,12 +91,20 @@ fun GalleryApp(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun GalleryScaffold() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val chrome = LocalChromeState.current
+
+    // The photo viewer has a navigation of its own and floats above the whole screen (see ViewerSession).
+    val viewerNavController = rememberNavController()
+    val viewerEntry by viewerNavController.currentBackStackEntryAsState()
+    val viewerShowing = viewerEntry?.destination?.route == GalleryRoutes.VIEWER
+    val viewerSession = remember(viewerNavController) { ViewerSession(viewerNavController) }
+
     val appViewModel = hiltViewModel<AppViewModel>()
     val lockSession = appViewModel.lockSession
 
@@ -112,40 +127,59 @@ private fun GalleryScaffold() {
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            // The full-screen viewer takes over the whole window.
-            if (isTopLevel && !chrome.bottomBarHidden) NavigationBar {
-                GalleryDestination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                            (isAlbumDetail && destination == GalleryDestination.Albums) ||
-                            (isStoryDetail && destination == GalleryDestination.Stories),
-                        onClick = {
-                            if (isAlbumDetail && destination == GalleryDestination.Albums) {
-                                // Tapping Albums while inside an album goes back to the album list.
-                                navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
-                            } else if (isStoryDetail && destination == GalleryDestination.Stories) {
-                                navController.popBackStack(GalleryDestination.Stories.route, inclusive = false)
-                            } else {
-                                navController.navigate(destination.route) {
-                                    popUpTo(GalleryDestination.Pictures.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+    // One shared-transition layout around the screens and the viewer, so a photo can travel between them.
+    SharedTransitionLayout {
+        CompositionLocalProvider(
+            LocalSharedTransitionScope provides this,
+            LocalViewerShowing provides viewerShowing,
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    bottomBar = {
+                        // The full-screen viewer takes over the whole window.
+                        if (isTopLevel && !chrome.bottomBarHidden) NavigationBar {
+                            GalleryDestination.entries.forEach { destination ->
+                                NavigationBarItem(
+                                    selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                                        (isAlbumDetail && destination == GalleryDestination.Albums) ||
+                                        (isStoryDetail && destination == GalleryDestination.Stories),
+                                    onClick = {
+                                        if (isAlbumDetail && destination == GalleryDestination.Albums) {
+                                            // Tapping Albums while inside an album goes back to the album list.
+                                            navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
+                                        } else if (isStoryDetail && destination == GalleryDestination.Stories) {
+                                            navController.popBackStack(GalleryDestination.Stories.route, inclusive = false)
+                                        } else {
+                                            navController.navigate(destination.route) {
+                                                popUpTo(GalleryDestination.Pictures.route) { saveState = true }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        }
+                                    },
+                                    icon = { Icon(destination.icon, contentDescription = null) },
+                                    label = { Text(stringResource(destination.label)) },
+                                )
                             }
-                        },
-                        icon = { Icon(destination.icon, contentDescription = null) },
-                        label = { Text(stringResource(destination.label)) },
+                        }
+                    },
+                ) { innerPadding ->
+                    GalleryNavHost(
+                        navController = navController,
+                        viewerSession = viewerSession,
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
+
+                ViewerHost(
+                    session = viewerSession,
+                    onEdit = { uri ->
+                        viewerSession.close()
+                        navController.navigate(GalleryRoutes.editor(uri))
+                    },
+                )
             }
-        },
-    ) { innerPadding ->
-        GalleryNavHost(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding),
-        )
+        }
     }
 }

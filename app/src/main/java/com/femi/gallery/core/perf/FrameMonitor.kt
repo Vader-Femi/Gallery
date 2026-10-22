@@ -9,8 +9,15 @@ import android.view.Window
 
 /** The screen the user is on, so that a slow frame can be blamed on it. Set by the navigation. */
 object ScreenTag {
+    /** The screen the navigation is on. */
     @Volatile
-    var name: String = ""
+    var base: String = ""
+
+    /** What is showing over it, such as the photo viewer, if anything. */
+    @Volatile
+    var overlay: String? = null
+
+    val name: String get() = overlay ?: base
 }
 
 /**
