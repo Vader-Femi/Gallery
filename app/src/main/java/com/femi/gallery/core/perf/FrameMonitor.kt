@@ -35,6 +35,7 @@ class FrameMonitor(private val window: Window) {
         phases[FrameStats.COMMANDS] = metrics.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION)
         phases[FrameStats.SWAP] = metrics.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION)
         phases[FrameStats.GPU] = metrics.getMetric(FrameMetrics.GPU_DURATION)
+        phases[FrameStats.DELAY] = metrics.getMetric(FrameMetrics.UNKNOWN_DELAY_DURATION)
         stats.add(
             totalNanos = metrics.getMetric(FrameMetrics.TOTAL_DURATION),
             deadlineNanos = metrics.getMetric(FrameMetrics.DEADLINE),

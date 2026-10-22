@@ -123,4 +123,19 @@ class FrameStatsTest {
         for (i in 0 until 5_000) stats.frame(if (i == 0) 30 else 5, at = i.toLong())
         assertEquals(5_000, stats.flush(6_000)!!.frames)
     }
+
+    @Test
+    fun timeSpentWaitingForTheMainThreadIsNamedLikeAPhase() {
+        val stats = FrameStats(intervalMillis = 1_000)
+        val stalled = LongArray(FrameStats.PHASES.size).also {
+            it[FrameStats.DELAY] = 400 * ms
+            it[FrameStats.ANIMATION] = 50 * ms
+        }
+        stats.frame(8, at = 0)
+        stats.frame(480, at = 100, phases = stalled)
+        val report = stats.frame(8, at = 1_000)!!
+        assertEquals("delay", report.worstPhases.first().first)
+        assertEquals(400f, report.worstPhases.first().second, 0.01f)
+        assertEquals(1, report.frozen)
+    }
 }

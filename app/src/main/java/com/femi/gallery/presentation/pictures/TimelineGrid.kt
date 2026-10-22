@@ -62,6 +62,7 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.TimelineSection
+import com.femi.gallery.presentation.common.GridThumbnails
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.common.mediaSharedBounds
 import com.femi.gallery.presentation.viewer.formatDuration
@@ -302,6 +303,8 @@ private fun MediaCell(
                 model = item.uri,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                // The viewer reuses this exact image as its first frame when the photo is opened.
+                onSuccess = { GridThumbnails.remember(item.id, it.result.memoryCacheKey) },
                 // Selected photos shrink slightly, like Samsung Gallery.
                 modifier = Modifier
                     .fillMaxSize()

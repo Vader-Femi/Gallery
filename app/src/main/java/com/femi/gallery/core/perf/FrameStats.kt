@@ -100,7 +100,7 @@ class FrameStats(private val intervalMillis: Long = REPORT_INTERVAL_MILLIS) {
 
     companion object {
         /** The phases of a frame, in the order the caller passes their durations. */
-        val PHASES = arrayOf("input", "animation", "layout", "draw", "sync", "commands", "swap", "gpu")
+        val PHASES = arrayOf("input", "animation", "layout", "draw", "sync", "commands", "swap", "gpu", "delay")
         const val INPUT = 0
         const val ANIMATION = 1
         const val LAYOUT = 2
@@ -109,6 +109,9 @@ class FrameStats(private val intervalMillis: Long = REPORT_INTERVAL_MILLIS) {
         const val COMMANDS = 5
         const val SWAP = 6
         const val GPU = 7
+
+        /** Time the frame waited because the main thread was busy with something else. */
+        const val DELAY = 8
 
         const val REPORT_INTERVAL_MILLIS = 3_000L
         const val FROZEN_NANOS = 100_000_000L

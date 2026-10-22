@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.LayoutInflater
 import android.util.Log
 import android.view.View
 import androidx.annotation.OptIn
@@ -79,8 +80,10 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.toRef
+import com.femi.gallery.presentation.common.GridThumbnails
 import com.femi.gallery.presentation.common.findActivity
 import com.femi.gallery.presentation.common.mediaSharedBounds
+import com.femi.gallery.presentation.common.rememberTransitionSettled
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
@@ -271,9 +274,7 @@ private fun ViewerPage(
 internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
     val context = LocalContext.current
     // Layer 1: the system thumbnail appears instantly. Layer 2: the sharper image fades in on top.
-    val thumbnail = remember(item.uri) {
-        ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()
-    }
+    val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
     val full = remember(item.uri) {
         ImageRequest.Builder(context).data(item.uri).size(FullRequestSize).crossfade(true).build()
     }
@@ -301,25 +302,28 @@ internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
 @Composable
 internal fun VideoPage(item: MediaItem, isCurrent: Boolean, onChromeChange: (Boolean) -> Unit) {
     val context = LocalContext.current
-    val thumbnail = remember(item.uri) {
-        ImageRequest.Builder(context).data(item.uri).size(ThumbnailRequestSize).build()
-    }
+    val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
     // Pad both so the thumbnail and player share the same exact center and bounds.
     val videoModifier = remember {
         Modifier
             .fillMaxSize()
             .padding(bottom = 72.dp)
     }
-    
-    Box(modifier = Modifier.fillMaxSize()) {
+    // The video grows out of its grid thumbnail like a photo does.
+    val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
+    // Making a player takes a while; do it once the screen has stopped moving, not during the animation.
+    val settled = rememberTransitionSettled()
+
+    Box(modifier = Modifier.fillMaxSize().then(sharedModifier)) {
+        // The poster: the grid's thumbnail now, the video's first frame (drawn over it) once it is ready.
         AsyncImage(
             model = thumbnail,
             contentDescription = null,
             contentScale = ContentScale.Fit,
             modifier = videoModifier,
         )
-        // Only the settled page plays, so swiping past a video releases its player.
-        if (isCurrent) {
+        // Only the settled page has a player, so swiping past a video releases its player.
+        if (isCurrent && settled) {
             VideoPlayer(
                 uri = item.uri,
                 onControllerVisibilityChange = onChromeChange,
@@ -342,8 +346,9 @@ private fun VideoPlayer(
         ExoPlayer.Builder(context).build().apply {
             setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
             setMediaItem(PlayerMediaItem.fromUri(uri))
+            // Paused: it shows the first frame and the user decides when to play.
+            playWhenReady = false
             prepare()
-            playWhenReady = true
         }
     }
     DisposableEffect(player) { onDispose { player.release() } }
@@ -352,10 +357,9 @@ private fun VideoPlayer(
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            PlayerView(ctx).apply {
+            // From XML so that it uses a texture view, see viewer_player_view.xml.
+            (LayoutInflater.from(ctx).inflate(R.layout.viewer_player_view, null, false) as PlayerView).apply {
                 this.player = player
-                // Let the thumbnail show through until the first frame is ready.
-                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                 setControllerVisibilityListener(
                     PlayerView.ControllerVisibilityListener { visibility ->
                         onControllerVisibilityChange(visibility == View.VISIBLE)
@@ -366,6 +370,14 @@ private fun VideoPlayer(
         update = { it.player = player },
     )
 }
+
+/** The image shown at once while the real one loads: what the grid already has in memory, if anything. */
+private fun thumbnailRequest(context: Context, item: MediaItem): ImageRequest =
+    ImageRequest.Builder(context)
+        .data(item.uri)
+        .size(ThumbnailRequestSize)
+        .placeholderMemoryCacheKey(GridThumbnails.keyFor(item.id))
+        .build()
 
 @Composable
 private fun TopBar(item: MediaItem, onBack: () -> Unit) {

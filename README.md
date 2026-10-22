@@ -324,6 +324,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 32 | Location scan | Background scan reads where photos were taken (EXIF, via `ACCESS_MEDIA_LOCATION`) into a private, backup-excluded file; `in:` search terms now filter by place |
 | 33 | Map view | Offline map screen (land, borders, cities from bundled Natural Earth data) with photo bubbles, a "Photos here" screen, a scan progress / permission card, and scan diagnostics in Logcat (`LocationScan`, `MapData`) |
 | 34 | Smoothness (1): measure | Frame monitor logs which screen drops frames and in which phase (`Frames` in Logcat); screen transitions shortened from the 700 ms library default to 120-180 ms; MediaStore change notifications are logged (`MediaChange`) |
+| 35 | Smoothness (2): video | Videos open on their thumbnail instead of a black screen (texture-view player, built after the transition, paused first, shared transition like photos); the grid's thumbnail is reused as the viewer's first frame; frame log gains a `delay` phase |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
