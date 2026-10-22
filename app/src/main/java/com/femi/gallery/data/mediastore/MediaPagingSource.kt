@@ -2,8 +2,10 @@ package com.femi.gallery.data.mediastore
 
 import android.content.Context
 import android.database.ContentObserver
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.femi.gallery.domain.model.MediaItem
@@ -33,7 +35,11 @@ class MediaPagingSource(
     private var cachedOrder: MediaOrder? = null
 
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-        override fun onChange(selfChange: Boolean) = invalidate()
+        // Logged so that bursts of changes (and who causes them) can be seen while looking into smoothness.
+        override fun onChange(selfChange: Boolean, uri: Uri?) {
+            Log.d(CHANGE_TAG, "MediaStore changed ($uri); reloading the list")
+            invalidate()
+        }
     }
 
     init {
@@ -81,3 +87,5 @@ class MediaPagingSource(
     override fun getRefreshKey(state: PagingState<Int, MediaItem>): Int? =
         state.anchorPosition?.let { maxOf(0, it - state.config.initialLoadSize / 2) }
 }
+
+private const val CHANGE_TAG = "MediaChange"

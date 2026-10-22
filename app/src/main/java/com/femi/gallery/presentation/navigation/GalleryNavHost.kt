@@ -2,13 +2,18 @@ package com.femi.gallery.presentation.navigation
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NamedNavArgument
+import androidx.navigation.NavController
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -33,6 +38,7 @@ import com.femi.gallery.presentation.stories.SlideshowViewModel
 import com.femi.gallery.presentation.stories.StoriesScreen
 import com.femi.gallery.presentation.stories.StoryScreen
 import com.femi.gallery.presentation.stories.StoryViewModel
+import com.femi.gallery.core.perf.ScreenTag
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.viewer.ViewerScreen
 import com.femi.gallery.presentation.viewer.ViewerViewModel
@@ -41,18 +47,36 @@ import com.femi.gallery.presentation.viewer.ViewerViewModel
  * All screens of the app. The grid screens and the viewer share a [SharedTransitionLayout], so a
  * tapped thumbnail grows into the viewer and the viewer's photo shrinks back into the grid.
  */
+private const val EnterFadeMillis = 180
+private const val ExitFadeMillis = 120
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun GalleryNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
+    // Tells the frame monitor which screen is showing, so a slow frame can be blamed on it.
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            ScreenTag.name = destination.route.orEmpty().substringBefore('/').substringBefore('?')
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+
     SharedTransitionLayout(modifier = modifier) {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
             NavHost(
                 navController = navController,
                 startDestination = GalleryDestination.Pictures.route,
                 modifier = Modifier.fillMaxSize(),
+                // The library default is a 700 ms fade, which leaves the old screen showing for most of a
+                // second. Shared photos move on their own; the screens only need to get out of the way.
+                enterTransition = { fadeIn(tween(EnterFadeMillis)) },
+                exitTransition = { fadeOut(tween(ExitFadeMillis)) },
+                popEnterTransition = { fadeIn(tween(EnterFadeMillis)) },
+                popExitTransition = { fadeOut(tween(ExitFadeMillis)) },
             ) {
                 sharedComposable(GalleryDestination.Pictures.route) { entry ->
                     PicturesScreen(
