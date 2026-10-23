@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,6 +58,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -175,6 +177,7 @@ private fun ViewerContent(
                     isCurrent = pagerState.settledPage == page,
                     chromeVisible = chromeVisible,
                     onChromeChange = handleChromeChange,
+                    bottomReserve = if (items.itemCount > 1) MediaStripHeight else 0.dp,
                 )
             }
 
@@ -247,7 +250,10 @@ private fun ViewerContent(
                         )
                     }
                     val cachedActions = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions }
-                    ActionBar(actions = cachedActions)
+                    Column {
+                        if (items.itemCount > 1) MediaStrip(items = items, pagerState = pagerState)
+                        ActionBar(actions = cachedActions)
+                    }
                 }
             }
         }
@@ -262,10 +268,12 @@ private fun ViewerPage(
     isCurrent: Boolean,
     chromeVisible: Boolean,
     onChromeChange: (Boolean) -> Unit,
+    /** Room to keep free at the bottom, for the strip. */
+    bottomReserve: Dp,
 ) {
     when {
         item == null -> Box(Modifier.fillMaxSize())
-        item.isVideo -> VideoPage(item, isCurrent, onChromeChange)
+        item.isVideo -> VideoPage(item, isCurrent, onChromeChange, bottomReserve)
         else -> PhotoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) })
     }
 }
@@ -300,14 +308,20 @@ internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
 }
 
 @Composable
-internal fun VideoPage(item: MediaItem, isCurrent: Boolean, onChromeChange: (Boolean) -> Unit) {
+internal fun VideoPage(
+    item: MediaItem,
+    isCurrent: Boolean,
+    onChromeChange: (Boolean) -> Unit,
+    /** Room to keep free at the bottom, above the action bar's own, for the media strip. */
+    bottomReserve: Dp = 0.dp,
+) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
     // Pad both so the thumbnail and player share the same exact center and bounds.
-    val videoModifier = remember {
+    val videoModifier = remember(bottomReserve) {
         Modifier
             .fillMaxSize()
-            .padding(bottom = 72.dp)
+            .padding(bottom = 72.dp + bottomReserve)
     }
     // The video grows out of its grid thumbnail like a photo does.
     val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
@@ -457,7 +471,7 @@ private fun shareMedia(context: Context, item: MediaItem) {
     context.startActivity(Intent.createChooser(send, null))
 }
 
-private fun LazyPagingItems<MediaItem>.peekOrNull(index: Int): MediaItem? =
+internal fun LazyPagingItems<MediaItem>.peekOrNull(index: Int): MediaItem? =
     if (index in 0 until itemCount) peek(index) else null
 
 private fun LazyPagingItems<MediaItem>.getOrNull(index: Int): MediaItem? =
