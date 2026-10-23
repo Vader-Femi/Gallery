@@ -18,9 +18,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.femi.gallery.core.perf.ScreenTag
+import com.femi.gallery.presentation.common.PhotoCloseMillis
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.navigation.EnterFadeMillis
-import com.femi.gallery.presentation.navigation.ExitFadeMillis
 import com.femi.gallery.presentation.navigation.GalleryRoutes
 import com.femi.gallery.presentation.navigation.sharedComposable
 
@@ -99,9 +99,11 @@ fun ViewerHost(
         startDestination = EmptyRoute,
         modifier = modifier.fillMaxSize(),
         enterTransition = { fadeIn(tween(EnterFadeMillis)) },
-        exitTransition = { fadeOut(tween(ExitFadeMillis)) },
+        exitTransition = { fadeOut(tween(PhotoCloseMillis)) },
         popEnterTransition = { fadeIn(tween(EnterFadeMillis)) },
-        popExitTransition = { fadeOut(tween(ExitFadeMillis)) },
+        // Closing: the photo flies back into its grid cell (PhotoTravelMillis) while the black
+        // background and the bars fade out. The viewer is removed when this ends, so it must outlast the flight.
+        popExitTransition = { fadeOut(tween(PhotoCloseMillis)) },
     ) {
         composable(EmptyRoute) { }
         sharedComposable(

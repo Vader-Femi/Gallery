@@ -1,18 +1,36 @@
 package com.femi.gallery.presentation.common
 
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+
+/**
+ * How long a photo takes to travel between its grid cell and the viewer. The screen that is leaving
+ * is removed when its own exit transition ends, and that would cut the flight short, so the viewer's
+ * exit must last at least this long (see [PhotoCloseMillis]).
+ */
+const val PhotoTravelMillis = 300
+
+/** The viewer's exit transition: a little longer than the photo's flight, so it is never cut off. */
+const val PhotoCloseMillis = PhotoTravelMillis + 40
+
+private val PhotoBoundsTransform = BoundsTransform { _, _ ->
+    tween<Rect>(durationMillis = PhotoTravelMillis, easing = FastOutSlowInEasing)
+}
 
 /** The scope that lets a thumbnail in a grid and the photo in the viewer animate as one element. */
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -38,6 +56,7 @@ fun Modifier.mediaSharedBounds(mediaId: Long): Modifier {
         this@mediaSharedBounds.sharedBounds(
             sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
             animatedVisibilityScope = visibilityScope,
+            boundsTransform = PhotoBoundsTransform,
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
         )
     }
@@ -72,6 +91,7 @@ fun Modifier.gridSharedBounds(mediaId: Long): Modifier {
         this@gridSharedBounds.sharedBounds(
             sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
             animatedVisibilityScope = visibilityScope,
+            boundsTransform = PhotoBoundsTransform,
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
         )
     }
