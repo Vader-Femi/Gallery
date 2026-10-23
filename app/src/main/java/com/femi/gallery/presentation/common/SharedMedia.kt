@@ -98,9 +98,11 @@ fun Modifier.gridSharedBounds(mediaId: Long): Modifier {
         }
         return this
     }
-    // Always starts out visible, even when this photo is first composed while the viewer is already
-    // opening: starting hidden would leave nothing to animate from.
-    val state = remember { MutableTransitionState(EnterExitState.Visible) }
+    // Start in PostExit if the viewer is already open so new cells don't play a spurious
+    // transition during scrolling, but start in Visible when closed so opening can animate.
+    val state = remember {
+        MutableTransitionState(if (viewerShowing) EnterExitState.PostExit else EnterExitState.Visible)
+    }
     state.targetState = if (viewerShowing) EnterExitState.PostExit else EnterExitState.Visible
     LaunchedEffect(mediaId, viewerShowing) { Log.d(SharedLogTag, "grid photo $mediaId: viewer showing = $viewerShowing") }
     val transition = rememberTransition(state, label = "grid photo visibility")
