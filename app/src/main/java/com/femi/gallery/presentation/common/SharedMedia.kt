@@ -12,7 +12,9 @@ import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -51,7 +53,17 @@ val LocalAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope?> 
 fun Modifier.mediaSharedBounds(mediaId: Long): Modifier {
     val transitionScope = LocalSharedTransitionScope.current
     val visibilityScope = LocalAnimatedVisibilityScope.current
-    if (transitionScope == null || visibilityScope == null || mediaId <= 0L) return this
+    if (transitionScope == null || visibilityScope == null || mediaId <= 0L) {
+        LaunchedEffect(mediaId) {
+            Log.d(
+                SharedLogTag,
+                "viewer photo $mediaId is NOT shared (transition scope ${transitionScope != null}, " +
+                    "visibility scope ${visibilityScope != null}, valid id ${mediaId > 0L})",
+            )
+        }
+        return this
+    }
+    LaunchedEffect(mediaId) { Log.d(SharedLogTag, "viewer photo $mediaId is shared") }
     return with(transitionScope) {
         this@mediaSharedBounds.sharedBounds(
             sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
@@ -80,11 +92,17 @@ val LocalViewerShowing = compositionLocalOf<Boolean?> { null }
 fun Modifier.gridSharedBounds(mediaId: Long): Modifier {
     val viewerShowing = LocalViewerShowing.current ?: return mediaSharedBounds(mediaId)
     val transitionScope = LocalSharedTransitionScope.current
-    if (transitionScope == null || mediaId <= 0L) return this
+    if (transitionScope == null || mediaId <= 0L) {
+        LaunchedEffect(mediaId) {
+            Log.d(SharedLogTag, "grid photo $mediaId is NOT shared (transition scope ${transitionScope != null}, valid id ${mediaId > 0L})")
+        }
+        return this
+    }
     // Always starts out visible, even when this photo is first composed while the viewer is already
     // opening: starting hidden would leave nothing to animate from.
     val state = remember { MutableTransitionState(EnterExitState.Visible) }
     state.targetState = if (viewerShowing) EnterExitState.PostExit else EnterExitState.Visible
+    LaunchedEffect(mediaId, viewerShowing) { Log.d(SharedLogTag, "grid photo $mediaId: viewer showing = $viewerShowing") }
     val transition = rememberTransition(state, label = "grid photo visibility")
     val visibilityScope = remember(transition) { PhotoVisibilityScope(transition) }
     return with(transitionScope) {
@@ -105,3 +123,5 @@ private class PhotoVisibilityScope(override val transition: Transition<EnterExit
         label: String,
     ): Modifier = this
 }
+
+private const val SharedLogTag = "SharedPhoto"

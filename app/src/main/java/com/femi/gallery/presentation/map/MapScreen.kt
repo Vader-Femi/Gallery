@@ -77,6 +77,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.femi.gallery.R
+import com.femi.gallery.presentation.common.gridSharedBounds
 import com.femi.gallery.domain.geo.GeoBox
 import com.femi.gallery.domain.geo.GeoCluster
 import com.femi.gallery.domain.geo.LabelPlacer
@@ -269,13 +270,19 @@ private fun MapCanvas(
             MapClusterer.cluster(media, viewport.zoom, cellPixels, viewport.visibleBox(w, h, cellPixels))
         }
         val halfBubble = with(density) { BubbleSize.toPx() } / 2
+        // The bubble that was tapped: its photo grows out of it, and flies back into it when closed.
+        var openedBubble by remember { mutableStateOf(-1L) }
         for (cluster in clusters) {
             key(cluster.coverId) {
                 val x = viewport.screenX(cluster.longitude, w).toFloat()
                 val y = viewport.screenY(cluster.latitude, h).toFloat()
                 ClusterBubble(
                     cluster = cluster,
-                    onClick = { onClusterClick(cluster) },
+                    shared = cluster.coverId == openedBubble,
+                    onClick = {
+                        openedBubble = cluster.coverId
+                        onClusterClick(cluster)
+                    },
                     modifier = Modifier.offset { IntOffset((x - halfBubble).roundToInt(), (y - halfBubble).roundToInt()) },
                 )
             }
@@ -284,9 +291,15 @@ private fun MapCanvas(
 }
 
 @Composable
-private fun ClusterBubble(cluster: GeoCluster, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ClusterBubble(
+    cluster: GeoCluster,
+    shared: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val cover = remember(cluster.coverId) { coverUri(cluster.coverId) }
-    Box(modifier.size(BubbleSize).clickable(onClick = onClick)) {
+    val sharedModifier = if (shared) Modifier.gridSharedBounds(cluster.coverId) else Modifier
+    Box(modifier.size(BubbleSize).then(sharedModifier).clickable(onClick = onClick)) {
         AsyncImage(
             model = cover,
             contentDescription = null,

@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation
 
+import android.util.Log
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -133,6 +135,12 @@ private fun GalleryScaffold() {
             LocalSharedTransitionScope provides this,
             LocalViewerShowing provides viewerShowing,
         ) {
+            // Reports (tag SharedPhoto) when a photo is travelling between a grid and the viewer.
+            val transitionScope = this
+            LaunchedEffect(transitionScope) {
+                snapshotFlow { transitionScope.isTransitionActive }
+                    .collect { Log.d("SharedPhoto", "photo transition running = $it") }
+            }
             Box(Modifier.fillMaxSize()) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),

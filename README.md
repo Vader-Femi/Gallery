@@ -327,6 +327,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 35 | Smoothness (2): video | Videos open on their thumbnail instead of a black screen (texture-view player, built after the transition, paused first, shared transition like photos); the grid's thumbnail is reused as the viewer's first frame; frame log gains a `delay` phase |
 | 36 | Viewer as an overlay | The photo viewer now floats above the live grid (its own one-screen navigation) instead of replacing it: groundwork for dragging a photo away with the grid visible behind it. Opening/closing looks the same; Back from the editor now returns to the grid |
 | 37 | Smoother closing | Closing a photo or video no longer cuts the flight back to the grid short: the viewer's exit lasts 340 ms and the photo travels for exactly 300 ms (both ways) |
+| 38 | Map photo + shared-photo log | Tapping a lone photo on the map opens it through the viewer overlay (it navigated to a screen that no longer exists); map bubbles are shared elements; the tag `SharedPhoto` logs why a photo is or is not travelling between grid and viewer |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
