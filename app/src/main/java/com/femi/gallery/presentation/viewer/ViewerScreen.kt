@@ -330,6 +330,10 @@ private fun ViewerContent(
                             ViewerAction(Icons.Outlined.Share, stringResource(R.string.viewer_share)) {
                                 shareMedia(context, current)
                             },
+                            ViewerAction(
+                                icon = if (current.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                            ) { viewModel.actions.toggleFavorite(listOf(ref)) },
                             if (current.isVideo) {
                                 ViewerAction(
                                     icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
@@ -342,10 +346,6 @@ private fun ViewerContent(
                                     onEdit(current.uri)
                                 }
                             },
-                            ViewerAction(
-                                icon = if (current.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                                label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
-                            ) { viewModel.actions.toggleFavorite(listOf(ref)) },
                             ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
                                 viewModel.actions.trash(listOf(ref))
                             },

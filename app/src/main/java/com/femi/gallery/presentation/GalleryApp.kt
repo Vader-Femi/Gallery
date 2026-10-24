@@ -148,10 +148,11 @@ private fun GalleryScaffold() {
                         // The full-screen viewer takes over the whole window.
                         if (isTopLevel && !chrome.bottomBarHidden) NavigationBar {
                             GalleryDestination.entries.forEach { destination ->
+                                val isSelected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                                    (isAlbumDetail && destination == GalleryDestination.Albums) ||
+                                    (isStoryDetail && destination == GalleryDestination.Stories)
                                 NavigationBarItem(
-                                    selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                                        (isAlbumDetail && destination == GalleryDestination.Albums) ||
-                                        (isStoryDetail && destination == GalleryDestination.Stories),
+                                    selected = isSelected,
                                     onClick = {
                                         if (isAlbumDetail && destination == GalleryDestination.Albums) {
                                             // Tapping Albums while inside an album goes back to the album list.
@@ -166,7 +167,12 @@ private fun GalleryScaffold() {
                                             }
                                         }
                                     },
-                                    icon = { Icon(destination.icon, contentDescription = null) },
+                                    icon = {
+                                        Icon(
+                                            imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
+                                            contentDescription = null,
+                                        )
+                                    },
                                     label = { Text(stringResource(destination.label)) },
                                 )
                             }
