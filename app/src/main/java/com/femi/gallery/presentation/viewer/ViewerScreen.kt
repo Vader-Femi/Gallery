@@ -51,15 +51,20 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -105,6 +110,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.media3.common.MediaItem as PlayerMediaItem
+import kotlinx.coroutines.launch
 
 private const val Tag = "Viewer"
 private const val ThumbnailRequestSize = 512
@@ -116,15 +122,17 @@ fun ViewerScreen(
     onEdit: (uri: String) -> Unit,
     /** Reports the photo shown, so the grid behind can scroll to it when the viewer closes. */
     onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit = { _, _ -> },
+    /** How far the photo has been pulled away; shared with the Back gesture, which is handled outside. */
+    drag: ViewerDragState = remember { ViewerDragState() },
     viewModel: ViewerViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, onEdit, onViewedChange, viewModel)
+            ViewerContent(onBack, onEdit, onViewedChange, drag, viewModel)
         }
     } else {
-        ViewerContent(onBack, onEdit, onViewedChange, viewModel)
+        ViewerContent(onBack, onEdit, onViewedChange, drag, viewModel)
     }
 }
 
@@ -133,9 +141,12 @@ private fun ViewerContent(
     onBack: () -> Unit,
     onEdit: (uri: String) -> Unit,
     onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit,
+    drag: ViewerDragState,
     viewModel: ViewerViewModel,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
+    val scope = rememberCoroutineScope()
+    val backgroundColor = MaterialTheme.colorScheme.background
     val details by viewModel.details.collectAsStateWithLifecycle()
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     val context = LocalContext.current
@@ -151,7 +162,8 @@ private fun ViewerContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .onSizeChanged { drag.containerHeight = it.height.toFloat() }
+            .drawBehind { drawRect(backgroundColor, alpha = drag.backgroundAlpha) },
     ) {
         if (items.itemCount > 0) {
             // Open on the photo that was tapped. The tapped position alone can point at a different
@@ -226,28 +238,56 @@ private fun ViewerContent(
                 }
             }
 
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                beyondViewportPageCount = 1,
-                key = { page -> items.peekOrNull(page)?.id ?: (-page - 1L) },
-            ) { page ->
-                val handleChromeChange: (Boolean) -> Unit = remember { { chromeVisible = it } }
-                ViewerPage(
-                    item = items.getOrNull(page),
-                    isCurrent = pagerState.settledPage == page,
-                    chromeVisible = chromeVisible,
-                    onChromeChange = handleChromeChange,
-                    bottomReserve = 0.dp,
-                    activePlayer = if (pagerState.settledPage == page) activePlayer else null,
-                )
+            // Pulling the photo down (or the Back gesture) carries it away over the live grid behind;
+            // letting go past a point closes the viewer, and pulling it up opens the info.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .viewerDrag(
+                        enabled = { !drag.zoomed },
+                        onDrag = drag::dragBy,
+                        onEnd = { velocityY ->
+                            scope.launch {
+                                when (drag.release(velocityY)) {
+                                    ViewerDragMath.Release.Dismiss -> onBack()
+                                    ViewerDragMath.Release.ShowInfo -> {
+                                        current?.let(viewModel::showDetails)
+                                        drag.restore()
+                                    }
+                                    ViewerDragMath.Release.Restore -> drag.restore()
+                                }
+                            }
+                        },
+                        onCancel = { scope.launch { drag.restore() } },
+                    ),
+            ) {
+                Box(Modifier.fillMaxSize().dragTransform(drag)) {
+                    CompositionLocalProvider(LocalViewerDrag provides drag) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            beyondViewportPageCount = 1,
+                            key = { page -> items.peekOrNull(page)?.id ?: (-page - 1L) },
+                        ) { page ->
+                            val handleChromeChange: (Boolean) -> Unit = remember { { chromeVisible = it } }
+                            ViewerPage(
+                                item = items.getOrNull(page),
+                                isCurrent = pagerState.settledPage == page,
+                                chromeVisible = chromeVisible,
+                                onChromeChange = handleChromeChange,
+                                bottomReserve = 0.dp,
+                                activePlayer = if (pagerState.settledPage == page) activePlayer else null,
+                            )
+                        }
+                    }
+                }
             }
 
             AnimatedVisibility(
                 visible = chromeVisible && current != null,
                 enter = fadeIn(),
                 exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopStart),
+                modifier = Modifier.align(Alignment.TopStart).graphicsLayer { alpha = drag.chromeAlpha },
             ) {
                 if (current != null) TopBar(item = current, onBack = onBack)
             }
@@ -256,7 +296,7 @@ private fun ViewerContent(
                 visible = chromeVisible && current != null,
                 enter = fadeIn(),
                 exit = fadeOut(),
-                modifier = Modifier.align(Alignment.BottomCenter),
+                modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = drag.chromeAlpha },
             ) {
                 if (current != null) {
                     val ref = current.toRef()

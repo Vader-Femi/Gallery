@@ -330,6 +330,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 38 | Map photo + shared-photo log | Tapping a lone photo on the map opens it through the viewer overlay (it navigated to a screen that no longer exists); map bubbles are shared elements; the tag `SharedPhoto` logs why a photo is or is not travelling between grid and viewer |
 | 39 | Media strip | A row of thumbnails along the bottom of the viewer, like Samsung Gallery's: the current photo sits in the middle with a white border; tap one to jump to it, or drag the strip to scrub through the photos; swiping the photos moves the strip |
 | 40 | Back closes the viewer | On screens opened by navigating (albums, Recycle bin, stories, search, map...) Back popped the screen under the viewer instead of the viewer; the viewer's Back handler is now registered each time it opens, so it is asked first |
+| 41 | Viewer gestures | Pull a photo down and it follows your finger, shrinking, over the live grid (the background and bars fade); let go past a point (or flick) and it flies into its cell, otherwise it springs back. Pull it up for the info sheet. The Back gesture drives the same motion. Zoomed photos still pan, swiping still changes photo |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

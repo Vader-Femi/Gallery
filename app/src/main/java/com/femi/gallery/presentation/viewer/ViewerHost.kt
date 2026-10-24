@@ -1,6 +1,6 @@
 package com.femi.gallery.presentation.viewer
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,8 +26,14 @@ import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.navigation.EnterFadeMillis
 import com.femi.gallery.presentation.navigation.GalleryRoutes
 import com.femi.gallery.presentation.navigation.sharedComposable
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 private const val EmptyRoute = "viewer-closed"
+
+/** How much of the finger's movement during the Back gesture the photo follows. */
+private const val BackDragFactor = 0.6f
 
 /**
  * Opens the photo viewer over the screen that is showing, and remembers which photo the user is on
@@ -45,6 +51,9 @@ class ViewerSession(internal val navController: NavHostController) {
     var viewed by mutableStateOf<ViewedMedia?>(null)
         private set
 
+    /** How far the photo has been pulled away, by a finger or the Back gesture. */
+    val drag = ViewerDragState()
+
     /** The screen that opened the viewer; only that grid follows along. */
     private var origin: String? = null
 
@@ -53,6 +62,7 @@ class ViewerSession(internal val navController: NavHostController) {
         if (navController.currentDestination?.route == GalleryRoutes.VIEWER) return // a double tap
         this.origin = origin
         viewed = null
+        drag.reset()
         navController.navigate(route)
     }
 
@@ -94,7 +104,30 @@ fun ViewerHost(
     // viewer floating over the one before it. Registering the handler again each time the viewer
     // opens puts it last, so it is asked first.
     key(showing) {
-        BackHandler(enabled = showing) { session.close() }
+        PredictiveBackHandler(enabled = showing) { backEvents ->
+            // The photo follows the finger like it does when it is pulled down, then flies into its cell.
+            var startX = Float.NaN
+            var startY = Float.NaN
+            try {
+                backEvents.collect { event ->
+                    if (startX.isNaN()) {
+                        startX = event.touchX
+                        startY = event.touchY
+                    }
+                    session.drag.followBack(
+                        progress = event.progress,
+                        dx = (event.touchX - startX) * BackDragFactor,
+                        dy = (event.touchY - startY) * BackDragFactor,
+                    )
+                }
+                // Let go: close from where the photo is.
+                session.close()
+            } catch (e: CancellationException) {
+                // Moved back to the edge: the photo springs back.
+                withContext(NonCancellable) { session.drag.restore() }
+                throw e
+            }
+        }
     }
 
     // Tells the frame monitor that the viewer is what is on screen, not the grid under it.
@@ -142,6 +175,7 @@ fun ViewerHost(
         ) {
             ViewerScreen(
                 onBack = session::close,
+                drag = session.drag,
                 onEdit = onEdit,
                 // Tells the grid under the viewer which photo we are on.
                 onViewedChange = session::onViewed,

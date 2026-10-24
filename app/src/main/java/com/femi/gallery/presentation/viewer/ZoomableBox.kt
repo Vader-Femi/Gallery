@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -65,6 +66,18 @@ fun ZoomableBox(
         if (!isCurrent) {
             scale = 1f
             offset = Offset.Zero
+        }
+    }
+
+    // Tells the viewer when the current photo is zoomed in, so that dragging then pans the photo
+    // instead of pulling the viewer away.
+    val viewerDrag = LocalViewerDrag.current
+    LaunchedEffect(viewerDrag, isCurrent) {
+        if (viewerDrag == null || !isCurrent) return@LaunchedEffect
+        try {
+            snapshotFlow { scale > 1.02f }.collect { viewerDrag.zoomed = it }
+        } finally {
+            viewerDrag.zoomed = false
         }
     }
 
