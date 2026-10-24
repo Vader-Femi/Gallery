@@ -20,8 +20,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -35,6 +37,7 @@ import com.femi.gallery.presentation.common.ChromeState
 import com.femi.gallery.presentation.common.LocalChromeState
 import com.femi.gallery.presentation.common.LocalSharedTransitionScope
 import com.femi.gallery.presentation.common.LocalViewerShowing
+import com.femi.gallery.presentation.navigation.FloatingNavigationBar
 import com.femi.gallery.presentation.navigation.GalleryDestination
 import com.femi.gallery.presentation.navigation.GalleryNavHost
 import com.femi.gallery.presentation.navigation.GalleryRoutes
@@ -144,45 +147,39 @@ private fun GalleryScaffold() {
             Box(Modifier.fillMaxSize()) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = {
-                        // The full-screen viewer takes over the whole window.
-                        if (isTopLevel && !chrome.bottomBarHidden) NavigationBar {
-                            GalleryDestination.entries.forEach { destination ->
-                                val isSelected = currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                                    (isAlbumDetail && destination == GalleryDestination.Albums) ||
-                                    (isStoryDetail && destination == GalleryDestination.Stories)
-                                NavigationBarItem(
-                                    selected = isSelected,
-                                    onClick = {
-                                        if (isAlbumDetail && destination == GalleryDestination.Albums) {
-                                            // Tapping Albums while inside an album goes back to the album list.
-                                            navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
-                                        } else if (isStoryDetail && destination == GalleryDestination.Stories) {
-                                            navController.popBackStack(GalleryDestination.Stories.route, inclusive = false)
-                                        } else {
-                                            navController.navigate(destination.route) {
-                                                popUpTo(GalleryDestination.Pictures.route) { saveState = true }
-                                                launchSingleTop = true
-                                                restoreState = true
-                                            }
-                                        }
-                                    },
-                                    icon = {
-                                        Icon(
-                                            imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    label = { Text(stringResource(destination.label)) },
-                                )
-                            }
-                        }
-                    },
                 ) { innerPadding ->
                     GalleryNavHost(
                         navController = navController,
                         viewerSession = viewerSession,
-                        modifier = Modifier.padding(innerPadding),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = innerPadding.calculateTopPadding()),
+                    )
+                }
+
+                if (isTopLevel && !chrome.bottomBarHidden) {
+                    FloatingNavigationBar(
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        destinations = GalleryDestination.entries,
+                        currentDestinationSelected = { destination ->
+                            currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                                (isAlbumDetail && destination == GalleryDestination.Albums) ||
+                                (isStoryDetail && destination == GalleryDestination.Stories)
+                        },
+                        onDestinationClick = { destination ->
+                            if (isAlbumDetail && destination == GalleryDestination.Albums) {
+                                // Tapping Albums while inside an album goes back to the album list.
+                                navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
+                            } else if (isStoryDetail && destination == GalleryDestination.Stories) {
+                                navController.popBackStack(GalleryDestination.Stories.route, inclusive = false)
+                            } else {
+                                navController.navigate(destination.route) {
+                                    popUpTo(GalleryDestination.Pictures.route) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
                     )
                 }
 
