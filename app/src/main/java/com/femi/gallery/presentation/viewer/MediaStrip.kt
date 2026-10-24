@@ -4,20 +4,27 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -36,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -68,6 +76,7 @@ internal fun MediaStrip(
     items: LazyPagingItems<MediaItem>,
     pagerState: PagerState,
     modifier: Modifier = Modifier,
+    onVideoItemTap: ((Int) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = pagerState.currentPage)
@@ -116,16 +125,98 @@ internal fun MediaStrip(
                     item = items[index],
                     selected = pagerState.currentPage == index,
                     onClick = {
-                        scope.launch {
-                            if (MediaStripMath.shouldAnimate(pagerState.currentPage, index)) {
-                                pagerState.animateScrollToPage(index)
-                            } else {
-                                pagerState.scrollToPage(index)
+                        if (pagerState.currentPage == index && items.peekOrNull(index)?.isVideo == true && onVideoItemTap != null) {
+                            onVideoItemTap(index)
+                        } else {
+                            scope.launch {
+                                if (MediaStripMath.shouldAnimate(pagerState.currentPage, index)) {
+                                    pagerState.animateScrollToPage(index)
+                                } else {
+                                    pagerState.scrollToPage(index)
+                                }
                             }
                         }
                     },
                 )
             }
+        }
+    }
+}
+
+@Composable
+internal fun ExpandedVideoSeekBar(
+    item: MediaItem,
+    currentPositionMs: Long,
+    durationMs: Long,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val seekRatio = remember(currentPositionMs, durationMs) {
+        if (durationMs > 0) (currentPositionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(MediaStripHeight)
+            .background(StripScrim)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .pointerInput(durationMs) {
+                    detectTapGestures { offset ->
+                        if (size.width > 0 && durationMs > 0) {
+                            val ratio = (offset.x / size.width).coerceIn(0f, 1f)
+                            onSeek((ratio * durationMs).toLong())
+                        }
+                    }
+                }
+                .pointerInput(durationMs) {
+                    detectDragGestures { change, _ ->
+                        change.consume()
+                        if (size.width > 0 && durationMs > 0) {
+                            val ratio = (change.position.x / size.width).coerceIn(0f, 1f)
+                            onSeek((ratio * durationMs).toLong())
+                        }
+                    }
+                },
+        ) {
+            val width = maxWidth
+            Row(modifier = Modifier.fillMaxSize()) {
+                repeat(7) {
+                    val request = remember(item.uri) {
+                        ImageRequest.Builder(context).data(item.uri).size(ThumbnailPixels).build()
+                    }
+                    AsyncImage(
+                        model = request,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                    )
+                }
+            }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.25f)),
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(4.dp)
+                    .graphicsLayer {
+                        translationX = (width.toPx() * seekRatio) - (2.dp.toPx())
+                    }
+                    .background(Color.White, CircleShape),
+            )
         }
     }
 }

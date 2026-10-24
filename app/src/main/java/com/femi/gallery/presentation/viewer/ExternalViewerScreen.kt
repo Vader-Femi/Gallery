@@ -73,7 +73,7 @@ fun ExternalViewerScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         if (isVideo) {
-            VideoPage(item = item, isCurrent = true, onChromeChange = { chromeVisible = it })
+            VideoPage(item = item, isCurrent = true, onTap = { chromeVisible = !chromeVisible })
         } else {
             PhotoPage(item = item, isCurrent = true, onTap = { chromeVisible = !chromeVisible })
         }

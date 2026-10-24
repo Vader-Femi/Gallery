@@ -6,12 +6,13 @@ import android.content.Intent
 import android.net.Uri
 import android.view.LayoutInflater
 import android.util.Log
-import android.view.View
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,21 +22,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
-import androidx.compose.material.icons.outlined.RestoreFromTrash
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.RestoreFromTrash
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -165,6 +175,59 @@ private fun ViewerContent(
                 onViewedChange(pagerState.settledPage, settledId ?: MediaPositions.NO_ID)
             }
 
+            val current = items.peekOrNull(pagerState.currentPage)
+            val activeVideoUri = if (current?.isVideo == true) current.uri else null
+
+            var activePlayer by remember(activeVideoUri) { mutableStateOf<ExoPlayer?>(null) }
+            var isPlaying by remember(activeVideoUri) { mutableStateOf(false) }
+            var isMuted by remember { mutableStateOf(true) }
+            var currentPositionMs by remember(activeVideoUri) { mutableStateOf(0L) }
+            var durationMs by remember(activeVideoUri) { mutableStateOf(0L) }
+            var isStripExpanded by remember(activeVideoUri) { mutableStateOf(false) }
+
+            DisposableEffect(activeVideoUri) {
+                if (activeVideoUri == null) {
+                    activePlayer = null
+                    onDispose { }
+                } else {
+                    val newPlayer = ExoPlayer.Builder(context).build().apply {
+                        setAudioAttributes(AudioAttributes.DEFAULT, true)
+                        setMediaItem(PlayerMediaItem.fromUri(activeVideoUri))
+                        playWhenReady = true
+                        volume = if (isMuted) 0f else 1f
+                        prepare()
+                    }
+                    activePlayer = newPlayer
+
+                    val listener = object : androidx.media3.common.Player.Listener {
+                        override fun onIsPlayingChanged(playing: Boolean) {
+                            isPlaying = playing
+                        }
+                        override fun onPlaybackStateChanged(state: Int) {
+                            if (state == androidx.media3.common.Player.STATE_READY) {
+                                durationMs = newPlayer.duration.coerceAtLeast(0L)
+                            }
+                        }
+                    }
+                    newPlayer.addListener(listener)
+
+                    onDispose {
+                        newPlayer.removeListener(listener)
+                        newPlayer.release()
+                        activePlayer = null
+                    }
+                }
+            }
+
+            LaunchedEffect(activePlayer, isPlaying) {
+                val p = activePlayer ?: return@LaunchedEffect
+                while (true) {
+                    currentPositionMs = p.currentPosition.coerceAtLeast(0L)
+                    durationMs = p.duration.coerceAtLeast(0L)
+                    kotlinx.coroutines.delay(100)
+                }
+            }
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
@@ -178,10 +241,9 @@ private fun ViewerContent(
                     chromeVisible = chromeVisible,
                     onChromeChange = handleChromeChange,
                     bottomReserve = if (items.itemCount > 1) MediaStripHeight else 0.dp,
+                    activePlayer = if (pagerState.settledPage == page) activePlayer else null,
                 )
             }
-
-            val current = items.peekOrNull(pagerState.currentPage)
 
             AnimatedVisibility(
                 visible = chromeVisible && current != null,
@@ -251,7 +313,50 @@ private fun ViewerContent(
                     }
                     val cachedActions = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions }
                     Column {
-                        if (items.itemCount > 1) MediaStrip(items = items, pagerState = pagerState)
+                        if (current.isVideo && activePlayer != null) {
+                            VideoControlsOverlay(
+                                isPlaying = isPlaying,
+                                currentPositionMs = currentPositionMs,
+                                durationMs = durationMs,
+                                isMuted = isMuted,
+                                onTogglePlayPause = {
+                                    val p = activePlayer ?: return@VideoControlsOverlay
+                                    if (p.playbackState == androidx.media3.common.Player.STATE_ENDED) {
+                                        p.seekTo(0)
+                                        p.play()
+                                    } else if (isPlaying) {
+                                        p.pause()
+                                    } else {
+                                        p.play()
+                                    }
+                                },
+                                onToggleMute = {
+                                    isMuted = !isMuted
+                                    activePlayer?.volume = if (isMuted) 0f else 1f
+                                },
+                                onDetailsClick = {
+                                    viewModel.showDetails(current)
+                                },
+                            )
+                        }
+                        if (items.itemCount > 1) {
+                            if (current.isVideo && isStripExpanded) {
+                                ExpandedVideoSeekBar(
+                                    item = current,
+                                    currentPositionMs = currentPositionMs,
+                                    durationMs = durationMs,
+                                    onSeek = { seekMs -> activePlayer?.seekTo(seekMs) },
+                                )
+                            } else {
+                                MediaStrip(
+                                    items = items,
+                                    pagerState = pagerState,
+                                    onVideoItemTap = {
+                                        isStripExpanded = !isStripExpanded
+                                    },
+                                )
+                            }
+                        }
                         ActionBar(actions = cachedActions)
                     }
                 }
@@ -270,10 +375,11 @@ private fun ViewerPage(
     onChromeChange: (Boolean) -> Unit,
     /** Room to keep free at the bottom, for the strip. */
     bottomReserve: Dp,
+    activePlayer: ExoPlayer? = null,
 ) {
     when {
         item == null -> Box(Modifier.fillMaxSize())
-        item.isVideo -> VideoPage(item, isCurrent, onChromeChange, bottomReserve)
+        item.isVideo -> VideoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) }, bottomReserve = bottomReserve, activePlayer = activePlayer)
         else -> PhotoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) })
     }
 }
@@ -311,9 +417,10 @@ internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
 internal fun VideoPage(
     item: MediaItem,
     isCurrent: Boolean,
-    onChromeChange: (Boolean) -> Unit,
+    onTap: () -> Unit,
     /** Room to keep free at the bottom, above the action bar's own, for the media strip. */
     bottomReserve: Dp = 0.dp,
+    activePlayer: ExoPlayer? = null,
 ) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
@@ -340,8 +447,8 @@ internal fun VideoPage(
         if (isCurrent && settled) {
             VideoPlayer(
                 uri = item.uri,
-                onControllerVisibilityChange = onChromeChange,
-                // Keep the player's own seek bar clear of our bottom action bar.
+                onTap = onTap,
+                activePlayer = activePlayer,
                 modifier = videoModifier,
             )
         }
@@ -352,37 +459,114 @@ internal fun VideoPage(
 @Composable
 private fun VideoPlayer(
     uri: String,
-    onControllerVisibilityChange: (Boolean) -> Unit,
+    onTap: () -> Unit,
+    activePlayer: ExoPlayer? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val player = remember(uri) {
-        ExoPlayer.Builder(context).build().apply {
+    val fallbackPlayer = remember(uri, activePlayer) {
+        if (activePlayer != null) null
+        else ExoPlayer.Builder(context).build().apply {
             setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
             setMediaItem(PlayerMediaItem.fromUri(uri))
-            // Paused: it shows the first frame and the user decides when to play.
-            playWhenReady = false
+            playWhenReady = true
             prepare()
         }
     }
-    DisposableEffect(player) { onDispose { player.release() } }
+    val player = activePlayer ?: fallbackPlayer!!
+
+    DisposableEffect(fallbackPlayer) {
+        onDispose { fallbackPlayer?.release() }
+    }
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { player.pause() }
 
     AndroidView(
-        modifier = modifier,
+        modifier = modifier.pointerInput(onTap) {
+            detectTapGestures { onTap() }
+        },
         factory = { ctx ->
-            // From XML so that it uses a texture view, see viewer_player_view.xml.
             (LayoutInflater.from(ctx).inflate(R.layout.viewer_player_view, null, false) as PlayerView).apply {
+                useController = false
                 this.player = player
-                setControllerVisibilityListener(
-                    PlayerView.ControllerVisibilityListener { visibility ->
-                        onControllerVisibilityChange(visibility == View.VISIBLE)
-                    },
-                )
             }
         },
-        update = { it.player = player },
+        update = {
+            it.useController = false
+            it.player = player
+        },
     )
+}
+
+@Composable
+private fun VideoControlsOverlay(
+    isPlaying: Boolean,
+    currentPositionMs: Long,
+    durationMs: Long,
+    isMuted: Boolean,
+    onTogglePlayPause: () -> Unit,
+    onToggleMute: () -> Unit,
+    onDetailsClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Bottom Left: Details icon
+        IconButton(
+            onClick = onDetailsClick,
+            modifier = Modifier
+                .size(40.dp)
+                .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = stringResource(R.string.viewer_info),
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        // Bottom Center: Capsule with play/pause and time
+        Row(
+            modifier = Modifier
+                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(50))
+                .clickable(onClick = onTogglePlayPause)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                contentDescription = if (isPlaying) "Pause" else "Play",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = "${formatVideoTime(currentPositionMs)} / ${formatVideoTime(durationMs)}",
+                color = Color.White,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+
+        // Bottom Right: Mute toggle
+        IconButton(
+            onClick = onToggleMute,
+            modifier = Modifier
+                .size(40.dp)
+                .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+        ) {
+            Icon(
+                imageVector = if (isMuted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
+                contentDescription = if (isMuted) "Unmute" else "Mute",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
 }
 
 /** The image shown at once while the real one loads: what the grid already has in memory, if anything. */
