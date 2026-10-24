@@ -84,9 +84,6 @@ internal fun MediaStrip(
     var followingPager by remember { mutableStateOf(false) }
 
     val surface = MaterialTheme.colorScheme.surface
-    val stripScrim = remember(surface) {
-        Brush.verticalGradient(listOf(Color.Transparent, surface.copy(alpha = 0.45f)))
-    }
 
     // Finger on the strip: the viewer follows the item in the middle.
     LaunchedEffect(listState, pagerState) {
@@ -110,7 +107,7 @@ internal fun MediaStrip(
         modifier
             .fillMaxWidth()
             .height(MediaStripHeight)
-            .background(stripScrim),
+            .background(surface),
     ) {
         // Room on both sides, so that the first and the last photo can also come to the middle.
         val sidePadding = (maxWidth - ItemWidth) / 2
@@ -161,9 +158,6 @@ internal fun ExpandedVideoSeekBar(
         if (durationMs > 0) (currentPositionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
     }
     val surface = MaterialTheme.colorScheme.surface
-    val stripScrim = remember(surface) {
-        Brush.verticalGradient(listOf(Color.Transparent, surface.copy(alpha = 0.45f)))
-    }
     val borderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     val playheadColor = MaterialTheme.colorScheme.primary
 
@@ -171,7 +165,7 @@ internal fun ExpandedVideoSeekBar(
         modifier = modifier
             .fillMaxWidth()
             .height(MediaStripHeight)
-            .background(stripScrim)
+            .background(surface)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

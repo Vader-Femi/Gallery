@@ -60,6 +60,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -237,7 +238,7 @@ private fun ViewerContent(
                     isCurrent = pagerState.settledPage == page,
                     chromeVisible = chromeVisible,
                     onChromeChange = handleChromeChange,
-                    bottomReserve = if (items.itemCount > 1) MediaStripHeight else 0.dp,
+                    bottomReserve = 0.dp,
                     activePlayer = if (pagerState.settledPage == page) activePlayer else null,
                 )
             }
@@ -373,7 +374,7 @@ private fun ViewerPage(
 ) {
     when {
         item == null -> Box(Modifier.fillMaxSize())
-        item.isVideo -> VideoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) }, bottomReserve = bottomReserve, activePlayer = activePlayer)
+        item.isVideo -> VideoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) }, activePlayer = activePlayer)
         else -> PhotoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) })
     }
 }
@@ -412,39 +413,39 @@ internal fun VideoPage(
     item: MediaItem,
     isCurrent: Boolean,
     onTap: () -> Unit,
-    /** Room to keep free at the bottom, above the action bar's own, for the media strip. */
-    bottomReserve: Dp = 0.dp,
     activePlayer: ExoPlayer? = null,
 ) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
-    // Pad both so the thumbnail and player share the same exact center and bounds.
-    val videoModifier = remember(bottomReserve) {
-        Modifier
-            .fillMaxSize()
-            .padding(bottom = 72.dp + bottomReserve)
-    }
-    // The video grows out of its grid thumbnail like a photo does.
     val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
-    // Making a player takes a while; do it once the screen has stopped moving, not during the animation.
     val settled = rememberTransitionSettled()
 
-    Box(modifier = Modifier.fillMaxSize().then(sharedModifier)) {
-        // The poster: the grid's thumbnail now, the video's first frame (drawn over it) once it is ready.
-        AsyncImage(
-            model = thumbnail,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = videoModifier,
-        )
-        // Only the settled page has a player, so swiping past a video releases its player.
-        if (isCurrent && settled) {
-            VideoPlayer(
-                uri = item.uri,
-                onTap = onTap,
-                activePlayer = activePlayer,
-                modifier = videoModifier,
+    ZoomableBox(
+        isCurrent = isCurrent,
+        onTap = onTap,
+        modifier = sharedModifier,
+    ) { onImageSize ->
+        LaunchedEffect(item.width, item.height) {
+            if (item.width > 0 && item.height > 0) {
+                onImageSize(Size(item.width.toFloat(), item.height.toFloat()))
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model = thumbnail,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+                onSuccess = { onImageSize(it.painter.intrinsicSize) },
             )
+            if (isCurrent && settled) {
+                VideoPlayer(
+                    uri = item.uri,
+                    activePlayer = activePlayer,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
@@ -453,7 +454,6 @@ internal fun VideoPage(
 @Composable
 private fun VideoPlayer(
     uri: String,
-    onTap: () -> Unit,
     activePlayer: ExoPlayer? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -475,9 +475,7 @@ private fun VideoPlayer(
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { player.pause() }
 
     AndroidView(
-        modifier = modifier.pointerInput(onTap) {
-            detectTapGestures { onTap() }
-        },
+        modifier = modifier,
         factory = { ctx ->
             (LayoutInflater.from(ctx).inflate(R.layout.viewer_player_view, null, false) as PlayerView).apply {
                 useController = false
@@ -565,15 +563,12 @@ private fun TopBar(item: MediaItem, onBack: () -> Unit) {
         Instant.ofEpochMilli(item.dateTakenMillis).atZone(ZoneId.systemDefault()).format(formatter)
     }
     val surface = MaterialTheme.colorScheme.surface
-    val topGradient = remember(surface) {
-        Brush.verticalGradient(listOf(surface.copy(alpha = 0.85f), surface.copy(alpha = 0f)))
-    }
     val contentColor = MaterialTheme.colorScheme.onSurface
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(topGradient)
+            .background(surface)
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -598,15 +593,12 @@ private class ViewerAction(
 @Composable
 private fun ActionBar(actions: List<ViewerAction>) {
     val surface = MaterialTheme.colorScheme.surface
-    val bottomGradient = remember(surface) {
-        Brush.verticalGradient(listOf(surface.copy(alpha = 0f), surface.copy(alpha = 0.85f)))
-    }
     val contentColor = MaterialTheme.colorScheme.onSurface
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(bottomGradient)
+            .background(surface)
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
