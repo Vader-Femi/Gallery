@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
@@ -45,7 +47,8 @@ fun HugeTopAppBar(
     ),
 ) {
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
-    val fontSize = lerp(start = 32.sp, stop = 28.sp, fraction = collapsedFraction)
+    var fontSize = lerp(start = 32.sp, stop = 28.sp, fraction = collapsedFraction)
+    if (onBack != null) fontSize = lerp(start = 32.sp, stop = 22.sp, fraction = collapsedFraction)
     val fontWeight = if (collapsedFraction > 0.5f) FontWeight.SemiBold else FontWeight.Bold
 
     LargeTopAppBar(
@@ -56,7 +59,7 @@ fun HugeTopAppBar(
                     fontSize = fontSize,
                     fontWeight = fontWeight,
                 ),
-                maxLines = 1,
+                maxLines = if (onBack != null) 2 else 1,
                 overflow = TextOverflow.Ellipsis,
             )
         },

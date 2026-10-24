@@ -4,6 +4,8 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -38,11 +40,25 @@ import com.femi.gallery.presentation.stories.StoryViewModel
 import com.femi.gallery.core.perf.ScreenTag
 
 /**
- * All screens of the app. The grid screens and the viewer share a [SharedTransitionLayout], so a
+ * All screens of the app. The grid screens and the viewer share a [androidx.compose.animation.SharedTransitionLayout], so a
  * tapped thumbnail grows into the viewer and the viewer's photo shrinks back into the grid.
  */
 internal const val EnterFadeMillis = 180
 internal const val ExitFadeMillis = 120
+internal const val EnterSlideMillis = 300
+internal const val ExitSlideMillis = 300
+
+private val topLevelRoutes = setOf(
+    GalleryDestination.Pictures.route,
+    GalleryDestination.Albums.route,
+    GalleryDestination.Stories.route,
+)
+
+private fun isTopLevelRoute(route: String?): Boolean {
+    if (route == null) return false
+    val base = route.substringBefore('/').substringBefore('?')
+    return topLevelRoutes.contains(base)
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -64,12 +80,52 @@ fun GalleryNavHost(
         navController = navController,
         startDestination = GalleryDestination.Pictures.route,
         modifier = modifier.fillMaxSize(),
-        // The library default is a 700 ms fade, which leaves the old screen showing for most of a
-        // second. Shared photos move on their own; the screens only need to get out of the way.
-        enterTransition = { fadeIn(tween(EnterFadeMillis)) },
-        exitTransition = { fadeOut(tween(ExitFadeMillis)) },
-        popEnterTransition = { fadeIn(tween(EnterFadeMillis)) },
-        popExitTransition = { fadeOut(tween(ExitFadeMillis)) },
+        enterTransition = {
+            val initialRoute = initialState.destination.route
+            val targetRoute = targetState.destination.route
+            if (isTopLevelRoute(initialRoute) && isTopLevelRoute(targetRoute)) {
+                fadeIn(tween(EnterFadeMillis))
+            } else {
+                slideInHorizontally(
+                    animationSpec = tween(EnterSlideMillis),
+                    initialOffsetX = { fullWidth -> fullWidth },
+                ) + fadeIn(tween(EnterFadeMillis))
+            }
+        },
+        exitTransition = {
+            val initialRoute = initialState.destination.route
+            val targetRoute = targetState.destination.route
+            if (isTopLevelRoute(initialRoute) && isTopLevelRoute(targetRoute)) {
+                fadeOut(tween(ExitFadeMillis))
+            } else {
+                slideOutHorizontally(
+                    animationSpec = tween(ExitSlideMillis),
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                ) + fadeOut(tween(ExitFadeMillis))
+            }
+        },
+        popEnterTransition = {
+            val initialRoute = initialState.destination.route
+            if (isTopLevelRoute(initialRoute)) {
+                fadeIn(tween(EnterFadeMillis))
+            } else {
+                slideInHorizontally(
+                    animationSpec = tween(EnterSlideMillis),
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                ) + fadeIn(tween(EnterFadeMillis))
+            }
+        },
+        popExitTransition = {
+            val initialRoute = initialState.destination.route
+            if (isTopLevelRoute(initialRoute)) {
+                fadeOut(tween(ExitFadeMillis))
+            } else {
+                slideOutHorizontally(
+                    animationSpec = tween(ExitSlideMillis),
+                    targetOffsetX = { fullWidth -> fullWidth },
+                ) + fadeOut(tween(ExitFadeMillis))
+            }
+        },
     ) {
         sharedComposable(GalleryDestination.Pictures.route) { entry ->
             PicturesScreen(
