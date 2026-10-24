@@ -2,29 +2,19 @@ package com.femi.gallery.presentation.albums
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,15 +22,16 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.HideBottomBarWhile
+import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.pictures.TimelineGrid
 import com.femi.gallery.presentation.selection.SelectionBars
+import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.libraryMoreActions
 import com.femi.gallery.presentation.selection.lockedActions
 import com.femi.gallery.presentation.selection.recycleBinActions
-import com.femi.gallery.presentation.selection.SelectionHost
 
 @Composable
 fun AlbumScreen(
@@ -61,6 +52,7 @@ fun AlbumScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AlbumContent(
     onBack: () -> Unit,
@@ -76,6 +68,7 @@ private fun AlbumContent(
     val title by viewModel.title.collectAsStateWithLifecycle()
     val selectionState by viewModel.selection.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     LifecycleResumeEffect(viewModel) {
         viewModel.onResumed()
@@ -86,36 +79,35 @@ private fun AlbumContent(
     BackHandler(enabled = selectionState.active) { viewModel.selection.clear() }
     SelectionHost(controller = viewModel.selection, onSuccess = viewModel.selection::clear)
 
+    val albumTitle = when {
+        viewModel.isRecycleBin -> stringResource(R.string.album_trash)
+        viewModel.isFavorites -> stringResource(R.string.album_favorites)
+        viewModel.isLocked -> stringResource(R.string.album_locked)
+        else -> title.ifEmpty { stringResource(R.string.album_unnamed) }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 4.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.viewer_back))
+        Scaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                if (!selectionState.active) {
+                    HugeTopAppBar(
+                        title = albumTitle,
+                        onBack = onBack,
+                        actions = {
+                            if (viewModel.isRecycleBin && items.itemCount > 0) {
+                                TextButton(onClick = viewModel.selection::emptyBin) {
+                                    Text(stringResource(R.string.action_empty_bin))
+                                }
+                            }
+                        },
+                        scrollBehavior = scrollBehavior,
+                    )
                 }
-                Text(
-                    text = when {
-                        viewModel.isRecycleBin -> stringResource(R.string.album_trash)
-                        viewModel.isFavorites -> stringResource(R.string.album_favorites)
-                        viewModel.isLocked -> stringResource(R.string.album_locked)
-                        else -> title.ifEmpty { stringResource(R.string.album_unnamed) }
-                    },
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (viewModel.isRecycleBin && items.itemCount > 0) {
-                    TextButton(onClick = viewModel.selection::emptyBin) {
-                        Text(stringResource(R.string.action_empty_bin))
-                    }
-                }
-            }
+            },
+        ) { innerPadding ->
             TimelineGrid(
                 items = items,
                 sections = sections,
@@ -130,7 +122,9 @@ private fun AlbumContent(
                 onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
                 onZoomIn = viewModel.timeline::zoomIn,
                 onZoomOut = viewModel.timeline::zoomOut,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding()),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
                 viewed = viewed,

@@ -1,32 +1,31 @@
 package com.femi.gallery.presentation.albums
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -39,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
@@ -53,10 +53,12 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.pinchToChangeColumns
 import com.femi.gallery.presentation.selection.NameDialog
 import com.femi.gallery.presentation.selection.SelectionHost
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumsScreen(
     onAlbumClick: (bucketId: Long) -> Unit,
@@ -64,7 +66,7 @@ fun AlbumsScreen(
     viewModel: AlbumsViewModel = hiltViewModel(),
 ) {
     val albums by viewModel.albums.collectAsStateWithLifecycle()
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     LifecycleResumeEffect(viewModel) {
         viewModel.onResumed()
@@ -90,43 +92,49 @@ fun AlbumsScreen(
     var columns by rememberSaveable { mutableIntStateOf(2) }
     val haptic = LocalHapticFeedback.current
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .pinchToChangeColumns(
-                onZoomIn = {
-                    if (columns > 2) {
-                        columns--
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
-                },
-                onZoomOut = {
-                    if (columns < 5) {
-                        columns++
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
-                },
-            ),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = statusBarTop, bottom = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item(key = "title", span = { GridItemSpan(maxLineSpan) }) {
-            Text(
-                text = stringResource(R.string.nav_albums),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(vertical = 16.dp),
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            HugeTopAppBar(
+                title = stringResource(R.string.nav_albums),
+                scrollBehavior = scrollBehavior,
             )
-        }
-        items(albums, key = { it.bucketId }) { album ->
-            val handleClick: () -> Unit = remember(album.bucketId) { { handleAlbumClick(album.bucketId) } }
-            val handleRename: () -> Unit = remember(album.bucketId) { { renaming = album } }
-            AlbumCard(
-                album = album,
-                onClick = handleClick,
-                onRename = handleRename,
-            )
+        },
+    ) { innerPadding ->
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .pinchToChangeColumns(
+                    onZoomIn = {
+                        if (columns > 2) {
+                            columns--
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
+                    },
+                    onZoomOut = {
+                        if (columns < 5) {
+                            columns++
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
+                    },
+                ),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            items(albums, key = { it.bucketId }) { album ->
+                val handleClick: () -> Unit = remember(album.bucketId) { { handleAlbumClick(album.bucketId) } }
+                val handleRename: () -> Unit = remember(album.bucketId) { { renaming = album } }
+                AlbumCard(
+                    album = album,
+                    onClick = handleClick,
+                    onRename = handleRename,
+                )
+            }
         }
     }
 }

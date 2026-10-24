@@ -6,20 +6,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
@@ -44,8 +45,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.Story
+import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.pinchToChangeColumns
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoriesScreen(
     onStoryClick: (fromDay: Long, toDay: Long) -> Unit,
@@ -53,7 +56,7 @@ fun StoriesScreen(
     viewModel: StoriesViewModel = hiltViewModel(),
 ) {
     val stories by viewModel.stories.collectAsStateWithLifecycle()
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     LifecycleResumeEffect(viewModel) {
         viewModel.onResumed()
@@ -63,52 +66,57 @@ fun StoriesScreen(
     var columns by rememberSaveable { mutableIntStateOf(2) }
     val haptic = LocalHapticFeedback.current
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .pinchToChangeColumns(
-                onZoomIn = {
-                    if (columns > 2) {
-                        columns--
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
-                },
-                onZoomOut = {
-                    if (columns < 5) {
-                        columns++
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
-                },
-            ),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = statusBarTop, bottom = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item(key = "title", span = { GridItemSpan(maxLineSpan) }) {
-            Text(
-                text = stringResource(R.string.nav_stories),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(vertical = 16.dp),
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            HugeTopAppBar(
+                title = stringResource(R.string.nav_stories),
+                scrollBehavior = scrollBehavior,
             )
-        }
-
-        val loaded = stories
-        if (loaded != null && loaded.isEmpty()) {
-            item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    text = stringResource(R.string.stories_empty),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp, horizontal = 16.dp),
-                )
+        },
+    ) { innerPadding ->
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .pinchToChangeColumns(
+                    onZoomIn = {
+                        if (columns > 2) {
+                            columns--
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
+                    },
+                    onZoomOut = {
+                        if (columns < 5) {
+                            columns++
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
+                    },
+                ),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            val loaded = stories
+            if (loaded != null && loaded.isEmpty()) {
+                item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        text = stringResource(R.string.stories_empty),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp, horizontal = 16.dp),
+                    )
+                }
             }
-        }
-        items(loaded.orEmpty(), key = { "${it.fromDay}-${it.toDay}" }) { story ->
-            StoryCard(story = story, onClick = { onStoryClick(story.fromDay, story.toDay) })
+            items(loaded.orEmpty(), key = { "${it.fromDay}-${it.toDay}" }) { story ->
+                StoryCard(story = story, onClick = { onStoryClick(story.fromDay, story.toDay) })
+            }
         }
     }
 }
