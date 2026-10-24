@@ -304,24 +304,40 @@ private fun ViewerContent(
                 if (current != null) {
                     val ref = current.toRef()
                     val actions = when {
-                        viewModel.isRecycleBin -> listOf(
+                        viewModel.isRecycleBin -> listOfNotNull(
                             ViewerAction(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore)) {
                                 viewModel.actions.restore(listOf(ref))
                             },
                             ViewerAction(Icons.Outlined.DeleteForever, stringResource(R.string.action_delete_forever)) {
                                 viewModel.actions.deleteForever(listOf(ref))
                             },
+                            if (current.isVideo) {
+                                ViewerAction(
+                                    icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
+                                    label = if (isStripExpanded) "Close seek bar" else "Seek",
+                                ) {
+                                    isStripExpanded = !isStripExpanded
+                                }
+                            } else null,
                             ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
                                 viewModel.showDetails(current)
                             },
                         )
-                        viewModel.isLocked -> listOf(
+                        viewModel.isLocked -> listOfNotNull(
                             ViewerAction(Icons.Outlined.LockOpen, stringResource(R.string.action_unlock)) {
                                 viewModel.actions.unlock(listOf(ref))
                             },
                             ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
                                 viewModel.actions.deleteLocked(listOf(ref))
                             },
+                            if (current.isVideo) {
+                                ViewerAction(
+                                    icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
+                                    label = if (isStripExpanded) "Close seek bar" else "Seek",
+                                ) {
+                                    isStripExpanded = !isStripExpanded
+                                }
+                            } else null,
                             ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
                                 viewModel.showDetails(current)
                             },
