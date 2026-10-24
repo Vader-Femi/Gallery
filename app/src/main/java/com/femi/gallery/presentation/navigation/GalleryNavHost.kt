@@ -4,6 +4,8 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
@@ -86,6 +88,7 @@ fun GalleryNavHost(
             if (isTopLevelRoute(initialRoute) && isTopLevelRoute(targetRoute)) {
                 fadeIn(tween(EnterFadeMillis))
             } else {
+                scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.7f) +
                 slideInHorizontally(
                     animationSpec = tween(EnterSlideMillis),
                     initialOffsetX = { fullWidth -> fullWidth },
@@ -98,6 +101,7 @@ fun GalleryNavHost(
             if (isTopLevelRoute(initialRoute) && isTopLevelRoute(targetRoute)) {
                 fadeOut(tween(ExitFadeMillis))
             } else {
+                scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.7f) +
                 slideOutHorizontally(
                     animationSpec = tween(ExitSlideMillis),
                     targetOffsetX = { fullWidth -> -fullWidth / 3 },
@@ -109,6 +113,7 @@ fun GalleryNavHost(
             if (isTopLevelRoute(initialRoute)) {
                 fadeIn(tween(EnterFadeMillis))
             } else {
+                scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.7f) +
                 slideInHorizontally(
                     animationSpec = tween(EnterSlideMillis),
                     initialOffsetX = { fullWidth -> -fullWidth / 3 },
@@ -120,6 +125,7 @@ fun GalleryNavHost(
             if (isTopLevelRoute(initialRoute)) {
                 fadeOut(tween(ExitFadeMillis))
             } else {
+                scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.7f) +
                 slideOutHorizontally(
                     animationSpec = tween(ExitSlideMillis),
                     targetOffsetX = { fullWidth -> fullWidth },
