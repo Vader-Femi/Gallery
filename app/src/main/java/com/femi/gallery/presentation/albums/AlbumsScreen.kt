@@ -29,14 +29,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +53,7 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.presentation.common.pinchToChangeColumns
 import com.femi.gallery.presentation.selection.NameDialog
 import com.femi.gallery.presentation.selection.SelectionHost
 
@@ -82,10 +87,27 @@ fun AlbumsScreen(
     }
 
     val handleAlbumClick by rememberUpdatedState(onAlbumClick)
+    var columns by rememberSaveable { mutableIntStateOf(2) }
+    val haptic = LocalHapticFeedback.current
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = modifier.fillMaxSize(),
+        columns = GridCells.Fixed(columns),
+        modifier = modifier
+            .fillMaxSize()
+            .pinchToChangeColumns(
+                onZoomIn = {
+                    if (columns > 2) {
+                        columns--
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                },
+                onZoomOut = {
+                    if (columns < 5) {
+                        columns++
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                },
+            ),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = statusBarTop, bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
