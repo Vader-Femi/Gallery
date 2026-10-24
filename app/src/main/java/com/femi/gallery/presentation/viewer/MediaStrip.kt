@@ -1,6 +1,6 @@
 package com.femi.gallery.presentation.viewer
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,7 +41,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -58,10 +57,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /** The height of the strip; pages that draw near the bottom (a video's controls) keep clear of it. */
-internal val MediaStripHeight = 64.dp
+internal val MediaStripHeight = 60.dp
 
-private val ItemWidth = 40.dp
-private val ItemHeight = 52.dp
+private val ItemWidth = 36.dp
+private val ItemHeight = 48.dp
 private val ItemSpacing = 4.dp
 private const val ThumbnailPixels = 160
 
@@ -121,7 +120,7 @@ internal fun MediaStrip(
         ) {
             items(
                 count = items.itemCount,
-                key = { index -> items.peekOrNull(index)?.id ?: (-index - 1L) },
+                key = { index -> items.peekOrNull(index)?.id ?: index },
             ) { index ->
                 StripItem(
                     item = items[index],
@@ -245,7 +244,10 @@ private fun StripItem(item: MediaItem?, selected: Boolean, onClick: () -> Unit) 
     val request = remember(item?.uri) {
         item?.let { ImageRequest.Builder(context).data(it.uri).size(ThumbnailPixels).build() }
     }
-    val scale by animateFloatAsState(targetValue = if (selected) 1.15f else 1f, label = "strip item scale")
+    val scale = remember { Animatable(1f) }
+    LaunchedEffect(selected) {
+        scale.animateTo(if (selected) 1.15f else 1f)
+    }
     val shape = RoundedCornerShape(6.dp)
     val borderColor = MaterialTheme.colorScheme.onSurface
     val bgColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -254,8 +256,8 @@ private fun StripItem(item: MediaItem?, selected: Boolean, onClick: () -> Unit) 
         Modifier
             .size(ItemWidth, ItemHeight)
             .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+                scaleX = scale.value
+                scaleY = scale.value
             }
             .clip(shape)
             .background(bgColor)
