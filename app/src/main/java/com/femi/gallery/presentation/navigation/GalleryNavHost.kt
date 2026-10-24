@@ -62,6 +62,13 @@ private fun isTopLevelRoute(route: String?): Boolean {
     return topLevelRoutes.contains(base)
 }
 
+// Helper to find the index of a top-level route to determine slide direction
+private fun topLevelIndex(route: String?): Int {
+    if (route == null) return -1
+    val base = route.substringBefore('/').substringBefore('?')
+    return topLevelRoutes.indexOf(base)
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun GalleryNavHost(
@@ -85,51 +92,95 @@ fun GalleryNavHost(
         enterTransition = {
             val initialRoute = initialState.destination.route
             val targetRoute = targetState.destination.route
+
             if (isTopLevelRoute(initialRoute) && isTopLevelRoute(targetRoute)) {
-                fadeIn(tween(EnterFadeMillis))
-            } else {
-                scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.7f) +
+                val initialIdx = topLevelIndex(initialRoute)
+                val targetIdx = topLevelIndex(targetRoute)
+                val slideDirection = if (targetIdx > initialIdx) 1 else -1
+
                 slideInHorizontally(
                     animationSpec = tween(EnterSlideMillis),
-                    initialOffsetX = { fullWidth -> fullWidth },
+                    initialOffsetX = { fullWidth -> slideDirection * fullWidth }
                 ) + fadeIn(tween(EnterFadeMillis))
+            } else {
+                scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.7f) +
+                        slideInHorizontally(
+                            animationSpec = tween(EnterSlideMillis),
+                            initialOffsetX = { fullWidth -> fullWidth },
+                        ) + fadeIn(tween(EnterFadeMillis))
             }
         },
         exitTransition = {
             val initialRoute = initialState.destination.route
             val targetRoute = targetState.destination.route
+
             if (isTopLevelRoute(initialRoute) && isTopLevelRoute(targetRoute)) {
-                fadeOut(tween(ExitFadeMillis))
-            } else {
-                scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.7f) +
+                val initialIdx = topLevelIndex(initialRoute)
+                val targetIdx = topLevelIndex(targetRoute)
+                val slideDirection = if (targetIdx > initialIdx) -1 else 1
+
                 slideOutHorizontally(
                     animationSpec = tween(ExitSlideMillis),
-                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                    targetOffsetX = { fullWidth -> slideDirection * (fullWidth / 3) }
                 ) + fadeOut(tween(ExitFadeMillis))
+            } else {
+                scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.7f) +
+                        slideOutHorizontally(
+                            animationSpec = tween(ExitSlideMillis),
+                            targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                        ) + fadeOut(tween(ExitFadeMillis))
             }
         },
         popEnterTransition = {
             val initialRoute = initialState.destination.route
-            if (isTopLevelRoute(initialRoute)) {
-                fadeIn(tween(EnterFadeMillis))
-            } else {
-                scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.7f) +
+            val targetRoute = targetState.destination.route
+
+            if (isTopLevelRoute(initialRoute) && isTopLevelRoute(targetRoute)) {
+                val initialIdx = topLevelIndex(initialRoute)
+                val targetIdx = topLevelIndex(targetRoute)
+                val slideDirection = if (targetIdx > initialIdx) 1 else -1
+
                 slideInHorizontally(
                     animationSpec = tween(EnterSlideMillis),
-                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                    initialOffsetX = { fullWidth -> slideDirection * fullWidth }
                 ) + fadeIn(tween(EnterFadeMillis))
+            } else {
+                val initialRoute = initialState.destination.route
+                if (isTopLevelRoute(initialRoute)) {
+                    fadeIn(tween(EnterFadeMillis))
+                } else {
+                    scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.7f) +
+                            slideInHorizontally(
+                                animationSpec = tween(EnterSlideMillis),
+                                initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                            ) + fadeIn(tween(EnterFadeMillis))
+                }
             }
         },
         popExitTransition = {
             val initialRoute = initialState.destination.route
-            if (isTopLevelRoute(initialRoute)) {
-                fadeOut(tween(ExitFadeMillis))
-            } else {
-                scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.7f) +
+            val targetRoute = targetState.destination.route
+
+            if (isTopLevelRoute(initialRoute) && isTopLevelRoute(targetRoute)) {
+                val initialIdx = topLevelIndex(initialRoute)
+                val targetIdx = topLevelIndex(targetRoute)
+                val slideDirection = if (targetIdx > initialIdx) -1 else 1
+
                 slideOutHorizontally(
                     animationSpec = tween(ExitSlideMillis),
-                    targetOffsetX = { fullWidth -> fullWidth },
+                    targetOffsetX = { fullWidth -> slideDirection * (fullWidth / 3) }
                 ) + fadeOut(tween(ExitFadeMillis))
+            } else {
+                val initialRoute = initialState.destination.route
+                if (isTopLevelRoute(initialRoute)) {
+                    fadeOut(tween(ExitFadeMillis))
+                } else {
+                    scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.7f) +
+                            slideOutHorizontally(
+                                animationSpec = tween(ExitSlideMillis),
+                                targetOffsetX = { fullWidth -> fullWidth },
+                            ) + fadeOut(tween(ExitFadeMillis))
+                }
             }
         },
     ) {
