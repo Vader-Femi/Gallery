@@ -1,7 +1,6 @@
 package com.femi.gallery.presentation.pictures
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,13 +29,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.semantics
@@ -45,8 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -65,6 +62,7 @@ import com.femi.gallery.presentation.common.GridThumbnails
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.common.gridSharedBounds
 import com.femi.gallery.presentation.viewer.formatDuration
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Longest wait for the photo the viewer ended on to load before giving up on marking it. */
 private const val ViewedPhotoTimeoutMs = 1_000L
@@ -75,8 +73,6 @@ private const val NoMediaId = -1L
 private const val ContentTypeHeader = 0
 private const val ContentTypeMedia = 1
 
-/** Pinch distance (as a ratio) needed to move one zoom level. */
-private const val ZoomStep = 1.25f
 
 /**
  * The grouped photo grid with pinch-to-zoom levels (days, months, years) and a fast scroller. Shared by the
@@ -110,7 +106,7 @@ fun TimelineGrid(
 
     // The photo whose thumbnail becomes the shared element: the one just tapped, or after
     // returning from the viewer, the one it ended on (which may be a different photo).
-    var openedId by rememberSaveable { mutableStateOf(NoMediaId) }
+    var openedId by rememberSaveable { mutableLongStateOf(NoMediaId) }
     val sharedId = viewed?.id?.takeIf { it != MediaPositions.NO_ID } ?: openedId
     
     // Check strictly if at the very top of the grid
@@ -141,7 +137,7 @@ fun TimelineGrid(
         if (layout.totalCount == 0) return@LaunchedEffect
         // The viewer is on top of this grid and reports every photo it settles on; wait for it to
         // rest, so that swiping through photos does not also scroll (and load) the grid each time.
-        delay(ViewedScrollDelayMillis)
+        delay(ViewedScrollDelayMillis.milliseconds)
 
         fun locate(): Int =
             MediaPositions.find(target.index, target.id, items.itemCount) { items.peekOrNull(it)?.id }
@@ -159,7 +155,7 @@ fun TimelineGrid(
         val firstGuess = locate()
         reveal(firstGuess)
         // The photo may be far from anything loaded: wait for its position to load, then look again.
-        withTimeoutOrNull(ViewedPhotoTimeoutMs) {
+        withTimeoutOrNull(ViewedPhotoTimeoutMs.milliseconds) {
             snapshotFlow { items.peekOrNull(firstGuess)?.id }.filterNotNull().first()
         }
         val settled = locate()
@@ -273,7 +269,6 @@ private fun DayHeader(text: String) {
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MediaCell(
     item: MediaItem?,
