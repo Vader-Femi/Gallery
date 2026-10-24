@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +45,6 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.RestoreFromTrash
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -109,9 +109,6 @@ private const val Tag = "Viewer"
 private const val ThumbnailRequestSize = 512
 private const val FullRequestSize = 2160
 
-private val TopGradient = Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent))
-private val BottomGradient = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))
-
 @Composable
 fun ViewerScreen(
     onBack: () -> Unit,
@@ -153,7 +150,7 @@ private fun ViewerContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         if (items.itemCount > 0) {
             // Open on the photo that was tapped. The tapped position alone can point at a different
@@ -334,9 +331,6 @@ private fun ViewerContent(
                                     isMuted = !isMuted
                                     activePlayer?.volume = if (isMuted) 0f else 1f
                                 },
-                                onDetailsClick = {
-                                    viewModel.showDetails(current)
-                                },
                             )
                         }
                         if (items.itemCount > 1) {
@@ -505,35 +499,21 @@ private fun VideoControlsOverlay(
     isMuted: Boolean,
     onTogglePlayPause: () -> Unit,
     onToggleMute: () -> Unit,
-    onDetailsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    val containerBg = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Bottom Left: Details icon
-        IconButton(
-            onClick = onDetailsClick,
-            modifier = Modifier
-                .size(40.dp)
-                .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = stringResource(R.string.viewer_info),
-                tint = Color.White,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-
         // Bottom Center: Capsule with play/pause and time
         Row(
             modifier = Modifier
-                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(50))
+                .align(Alignment.Center)
+                .background(containerBg, RoundedCornerShape(50))
                 .clickable(onClick = onTogglePlayPause)
                 .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -542,12 +522,12 @@ private fun VideoControlsOverlay(
             Icon(
                 imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                 contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = Color.White,
+                tint = contentColor,
                 modifier = Modifier.size(20.dp),
             )
             Text(
                 text = "${formatVideoTime(currentPositionMs)} / ${formatVideoTime(durationMs)}",
-                color = Color.White,
+                color = contentColor,
                 style = MaterialTheme.typography.labelMedium,
             )
         }
@@ -556,13 +536,14 @@ private fun VideoControlsOverlay(
         IconButton(
             onClick = onToggleMute,
             modifier = Modifier
+                .align(Alignment.CenterEnd)
                 .size(40.dp)
-                .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                .background(containerBg, CircleShape),
         ) {
             Icon(
                 imageVector = if (isMuted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
                 contentDescription = if (isMuted) "Unmute" else "Mute",
-                tint = Color.White,
+                tint = contentColor,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -583,10 +564,16 @@ private fun TopBar(item: MediaItem, onBack: () -> Unit) {
     val title = remember(item.dateTakenMillis) {
         Instant.ofEpochMilli(item.dateTakenMillis).atZone(ZoneId.systemDefault()).format(formatter)
     }
+    val surface = MaterialTheme.colorScheme.surface
+    val topGradient = remember(surface) {
+        Brush.verticalGradient(listOf(surface.copy(alpha = 0.85f), surface.copy(alpha = 0f)))
+    }
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TopGradient)
+            .background(topGradient)
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -595,10 +582,10 @@ private fun TopBar(item: MediaItem, onBack: () -> Unit) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.viewer_back),
-                tint = Color.White,
+                tint = contentColor,
             )
         }
-        Text(text = title, color = Color.White, style = MaterialTheme.typography.titleMedium)
+        Text(text = title, color = contentColor, style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -610,17 +597,23 @@ private class ViewerAction(
 
 @Composable
 private fun ActionBar(actions: List<ViewerAction>) {
+    val surface = MaterialTheme.colorScheme.surface
+    val bottomGradient = remember(surface) {
+        Brush.verticalGradient(listOf(surface.copy(alpha = 0f), surface.copy(alpha = 0.85f)))
+    }
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BottomGradient)
+            .background(bottomGradient)
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         actions.forEach { action ->
             IconButton(onClick = action.onClick) {
-                Icon(action.icon, action.label, tint = Color.White)
+                Icon(action.icon, action.label, tint = contentColor)
             }
         }
     }
@@ -632,9 +625,12 @@ private fun ImmersiveMode(enabled: Boolean) {
     val view = LocalView.current
     val window = remember(view) { view.context.findActivity()?.window }
     val controller = remember(window, view) { window?.let { WindowCompat.getInsetsController(it, view) } }
-    
-    DisposableEffect(enabled, controller) {
+    val isDark = isSystemInDarkTheme()
+
+    DisposableEffect(enabled, controller, isDark) {
         controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller?.isAppearanceLightStatusBars = !isDark
+        controller?.isAppearanceLightNavigationBars = !isDark
         if (enabled) {
             controller?.hide(WindowInsetsCompat.Type.systemBars())
         } else {

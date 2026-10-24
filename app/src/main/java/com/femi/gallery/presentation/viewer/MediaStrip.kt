@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,11 +64,10 @@ private val ItemWidth = 40.dp
 private val ItemHeight = 52.dp
 private val ItemSpacing = 4.dp
 private const val ThumbnailPixels = 160
-private val StripScrim = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))
 
 /**
  * A row of small thumbnails along the bottom of the viewer, like Samsung Gallery's. The photo being
- * viewed sits in the middle, picked out by a white border. Tap a thumbnail to go to that photo, or
+ * viewed sits in the middle, picked out by a border. Tap a thumbnail to go to that photo, or
  * drag the strip to scrub through the photos: the viewer follows whichever one is in the middle.
  * Swiping the photos themselves moves the strip to match.
  */
@@ -82,6 +82,11 @@ internal fun MediaStrip(
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = pagerState.currentPage)
     // True while the strip is being moved by the code below rather than by a finger.
     var followingPager by remember { mutableStateOf(false) }
+
+    val surface = MaterialTheme.colorScheme.surface
+    val stripScrim = remember(surface) {
+        Brush.verticalGradient(listOf(Color.Transparent, surface.copy(alpha = 0.45f)))
+    }
 
     // Finger on the strip: the viewer follows the item in the middle.
     LaunchedEffect(listState, pagerState) {
@@ -105,7 +110,7 @@ internal fun MediaStrip(
         modifier
             .fillMaxWidth()
             .height(MediaStripHeight)
-            .background(StripScrim),
+            .background(stripScrim),
     ) {
         // Room on both sides, so that the first and the last photo can also come to the middle.
         val sidePadding = (maxWidth - ItemWidth) / 2
@@ -155,12 +160,18 @@ internal fun ExpandedVideoSeekBar(
     val seekRatio = remember(currentPositionMs, durationMs) {
         if (durationMs > 0) (currentPositionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
     }
+    val surface = MaterialTheme.colorScheme.surface
+    val stripScrim = remember(surface) {
+        Brush.verticalGradient(listOf(Color.Transparent, surface.copy(alpha = 0.45f)))
+    }
+    val borderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+    val playheadColor = MaterialTheme.colorScheme.primary
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(MediaStripHeight)
-            .background(StripScrim)
+            .background(stripScrim)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -168,7 +179,7 @@ internal fun ExpandedVideoSeekBar(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .border(1.dp, borderColor, RoundedCornerShape(8.dp))
                 .pointerInput(durationMs) {
                     detectTapGestures { offset ->
                         if (size.width > 0 && durationMs > 0) {
@@ -215,7 +226,7 @@ internal fun ExpandedVideoSeekBar(
                     .graphicsLayer {
                         translationX = (width.toPx() * seekRatio) - (2.dp.toPx())
                     }
-                    .background(Color.White, CircleShape),
+                    .background(playheadColor, CircleShape),
             )
         }
     }
@@ -242,6 +253,9 @@ private fun StripItem(item: MediaItem?, selected: Boolean, onClick: () -> Unit) 
     }
     val scale by animateFloatAsState(targetValue = if (selected) 1.15f else 1f, label = "strip item scale")
     val shape = RoundedCornerShape(6.dp)
+    val borderColor = MaterialTheme.colorScheme.onSurface
+    val bgColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+
     Box(
         Modifier
             .size(ItemWidth, ItemHeight)
@@ -250,8 +264,8 @@ private fun StripItem(item: MediaItem?, selected: Boolean, onClick: () -> Unit) 
                 scaleY = scale
             }
             .clip(shape)
-            .background(Color.White.copy(alpha = 0.12f))
-            .then(if (selected) Modifier.border(2.dp, Color.White, shape) else Modifier)
+            .background(bgColor)
+            .then(if (selected) Modifier.border(2.dp, borderColor, shape) else Modifier)
             .clickable(onClick = onClick),
     ) {
         if (request != null) {
