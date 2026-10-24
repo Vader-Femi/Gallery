@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.viewer
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -8,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -16,6 +18,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.femi.gallery.core.perf.ScreenTag
 import com.femi.gallery.presentation.common.PhotoCloseMillis
@@ -81,6 +84,18 @@ fun ViewerHost(
     modifier: Modifier = Modifier,
 ) {
     val navController = session.navController
+    val viewerEntry by navController.currentBackStackEntryAsState()
+    val showing = viewerEntry?.destination?.route == GalleryRoutes.VIEWER
+
+    // Back must close the viewer before it does anything to the screen under it. Android asks the
+    // handler that was registered last first, and the screens below register theirs after this host
+    // (a scaffold composes its content later than what is next to it): on any screen the user got to
+    // by navigating (an album, the Recycle bin, a story...) Back would pop that screen and leave the
+    // viewer floating over the one before it. Registering the handler again each time the viewer
+    // opens puts it last, so it is asked first.
+    key(showing) {
+        BackHandler(enabled = showing) { session.close() }
+    }
 
     // Tells the frame monitor that the viewer is what is on screen, not the grid under it.
     DisposableEffect(navController) {
