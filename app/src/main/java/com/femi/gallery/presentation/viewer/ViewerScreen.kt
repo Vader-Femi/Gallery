@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
@@ -42,10 +43,12 @@ import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LinearScale
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -328,7 +331,12 @@ private fun ViewerContent(
                                 shareMedia(context, current)
                             },
                             if (current.isVideo) {
-                                null
+                                ViewerAction(
+                                    icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
+                                    label = if (isStripExpanded) "Close seek bar" else "Seek",
+                                ) {
+                                    isStripExpanded = !isStripExpanded
+                                }
                             } else {
                                 ViewerAction(Icons.Outlined.Edit, stringResource(R.string.viewer_edit)) {
                                     onEdit(current.uri)
@@ -349,7 +357,7 @@ private fun ViewerContent(
                             },
                         )
                     }
-                    val cachedActions = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions }
+                    val cachedActions = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite, isStripExpanded) { actions }
                     Column {
                         if (current.isVideo && activePlayer != null) {
                             VideoControlsOverlay(
