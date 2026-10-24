@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -271,7 +272,7 @@ private fun MapCanvas(
         }
         val halfBubble = with(density) { BubbleSize.toPx() } / 2
         // The bubble that was tapped: its photo grows out of it, and flies back into it when closed.
-        var openedBubble by remember { mutableStateOf(-1L) }
+        var openedBubble by remember { mutableLongStateOf(-1L) }
         for (cluster in clusters) {
             key(cluster.coverId) {
                 val x = viewport.screenX(cluster.longitude, w).toFloat()

@@ -58,6 +58,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -149,9 +150,9 @@ private fun ViewerContent(
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
     val scope = rememberCoroutineScope()
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val details by viewModel.details.collectAsStateWithLifecycle()
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
+    val backgroundColor = if (chromeVisible) MaterialTheme.colorScheme.background else Color.Black
+    val details by viewModel.details.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     ImmersiveMode(enabled = !chromeVisible)
@@ -194,8 +195,8 @@ private fun ViewerContent(
             var activePlayer by remember(activeVideoUri) { mutableStateOf<ExoPlayer?>(null) }
             var isPlaying by remember(activeVideoUri) { mutableStateOf(false) }
             var isMuted by remember { mutableStateOf(true) }
-            var currentPositionMs by remember(activeVideoUri) { mutableStateOf(0L) }
-            var durationMs by remember(activeVideoUri) { mutableStateOf(0L) }
+            var currentPositionMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
+            var durationMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
             var isStripExpanded by remember(activeVideoUri) { mutableStateOf(false) }
 
             DisposableEffect(activeVideoUri) {
@@ -517,9 +518,9 @@ internal fun VideoPage(
 @OptIn(UnstableApi::class)
 @Composable
 private fun VideoPlayer(
+    modifier: Modifier = Modifier,
     uri: String,
     activePlayer: ExoPlayer? = null,
-    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val fallbackPlayer = remember(uri, activePlayer) {

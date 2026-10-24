@@ -66,11 +66,11 @@ private val Suggestions = listOf(
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
+    modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onMediaClick: (mediaIndex: Int, mediaId: Long, query: String) -> Unit,
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
-    modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()

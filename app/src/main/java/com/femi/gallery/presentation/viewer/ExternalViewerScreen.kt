@@ -27,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.femi.gallery.R
@@ -73,7 +74,7 @@ fun ExternalViewerScreen(
     val surface = MaterialTheme.colorScheme.surface
     val contentColor = MaterialTheme.colorScheme.onSurface
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier.fillMaxSize().background(if (chromeVisible) MaterialTheme.colorScheme.background else Color.Black)) {
         if (isVideo) {
             VideoPage(item = item, isCurrent = true, onTap = { chromeVisible = !chromeVisible })
         } else {

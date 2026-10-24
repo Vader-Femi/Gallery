@@ -44,11 +44,11 @@ import com.femi.gallery.presentation.selection.SelectionHost
 
 @Composable
 fun AlbumScreen(
+    modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit,
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
-    modifier: Modifier = Modifier,
     viewModel: AlbumViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {

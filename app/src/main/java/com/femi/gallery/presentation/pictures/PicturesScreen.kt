@@ -39,12 +39,12 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
 
 @Composable
 fun PicturesScreen(
+    modifier: Modifier = Modifier,
     onMediaClick: (mediaIndex: Int, mediaId: Long) -> Unit,
     onSearchClick: () -> Unit,
     onMapClick: () -> Unit,
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
-    modifier: Modifier = Modifier,
     viewModel: PicturesViewModel = hiltViewModel(),
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
