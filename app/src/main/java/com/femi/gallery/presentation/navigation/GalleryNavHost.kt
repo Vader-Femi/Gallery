@@ -1,6 +1,7 @@
 package com.femi.gallery.presentation.navigation
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -103,7 +104,7 @@ fun GalleryNavHost(
                     initialOffsetX = { fullWidth -> slideDirection * fullWidth }
                 ) + fadeIn(tween(EnterFadeMillis))
             } else {
-                scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.7f) +
+                scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.8f) +
                         slideInHorizontally(
                             animationSpec = tween(EnterSlideMillis),
                             initialOffsetX = { fullWidth -> fullWidth },
@@ -124,7 +125,7 @@ fun GalleryNavHost(
                     targetOffsetX = { fullWidth -> slideDirection * (fullWidth / 3) }
                 ) + fadeOut(tween(ExitFadeMillis))
             } else {
-                scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.7f) +
+                scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.8f) +
                         slideOutHorizontally(
                             animationSpec = tween(ExitSlideMillis),
                             targetOffsetX = { fullWidth -> -fullWidth / 3 },
@@ -149,7 +150,7 @@ fun GalleryNavHost(
                 if (isTopLevelRoute(initialRoute)) {
                     fadeIn(tween(EnterFadeMillis))
                 } else {
-                    scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.7f) +
+                    scaleIn(animationSpec = tween(EnterSlideMillis), initialScale = 0.8f) +
                             slideInHorizontally(
                                 animationSpec = tween(EnterSlideMillis),
                                 initialOffsetX = { fullWidth -> -fullWidth / 3 },
@@ -175,7 +176,7 @@ fun GalleryNavHost(
                 if (isTopLevelRoute(initialRoute)) {
                     fadeOut(tween(ExitFadeMillis))
                 } else {
-                    scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.7f) +
+                    scaleOut(animationSpec = tween(ExitSlideMillis), targetScale = 0.8f) +
                             slideOutHorizontally(
                                 animationSpec = tween(ExitSlideMillis),
                                 targetOffsetX = { fullWidth -> fullWidth },

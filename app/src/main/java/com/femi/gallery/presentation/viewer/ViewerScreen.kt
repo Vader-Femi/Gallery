@@ -207,7 +207,7 @@ private fun ViewerContent(
                     val newPlayer = ExoPlayer.Builder(context).build().apply {
                         setAudioAttributes(AudioAttributes.DEFAULT, true)
                         setMediaItem(PlayerMediaItem.fromUri(activeVideoUri))
-                        playWhenReady = true
+                        playWhenReady = false
                         volume = if (isMuted) 0f else 1f
                         prepare()
                     }
@@ -396,6 +396,7 @@ private fun ViewerContent(
                                 onToggleMute = {
                                     isMuted = !isMuted
                                     activePlayer?.volume = if (isMuted) 0f else 1f
+                                    if (!isPlaying) activePlayer?.play()
                                 },
                             )
                         }
@@ -528,7 +529,7 @@ private fun VideoPlayer(
         else ExoPlayer.Builder(context).build().apply {
             setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
             setMediaItem(PlayerMediaItem.fromUri(uri))
-            playWhenReady = true
+            playWhenReady = false
             prepare()
         }
     }
