@@ -132,22 +132,21 @@ private fun AlbumContent(
             )
         }
 
-        if (selectionState.active) {
-            SelectionBars(
-                count = selectionState.count,
-                actions = when {
-                    viewModel.isRecycleBin -> recycleBinActions(viewModel.selection)
-                    viewModel.isLocked -> lockedActions(viewModel.selection)
-                    else -> libraryActions(context, selectionState, viewModel.selection)
-                },
-                moreActions = if (viewModel.isRecycleBin || viewModel.isLocked) {
-                    emptyList()
-                } else {
-                    libraryMoreActions(context, viewModel.selection)
-                },
-                onClose = viewModel.selection::clear,
-                onSelectAll = viewModel.selection::selectAll,
-            )
-        }
+        SelectionBars(
+            active = selectionState.active,
+            count = selectionState.count,
+            actions = when {
+                viewModel.isRecycleBin -> recycleBinActions(viewModel.selection)
+                viewModel.isLocked -> lockedActions(viewModel.selection)
+                else -> libraryActions(context, selectionState, viewModel.selection)
+            },
+            moreActions = if (viewModel.isRecycleBin || viewModel.isLocked) {
+                emptyList()
+            } else {
+                libraryMoreActions(context, viewModel.selection)
+            },
+            onClose = viewModel.selection::clear,
+            onSelectAll = viewModel.selection::selectAll,
+        )
     }
 }

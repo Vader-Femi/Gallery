@@ -93,14 +93,13 @@ fun VideosScreen(
             )
         }
 
-        if (selectionState.active) {
-            SelectionBars(
-                count = selectionState.count,
-                actions = libraryActions(context, selectionState, viewModel.selection),
-                moreActions = libraryMoreActions(context, viewModel.selection),
-                onClose = viewModel.selection::clear,
-                onSelectAll = viewModel.selection::selectAll,
-            )
-        }
+        SelectionBars(
+            active = selectionState.active,
+            count = selectionState.count,
+            actions = libraryActions(context, selectionState, viewModel.selection),
+            moreActions = libraryMoreActions(context, viewModel.selection),
+            onClose = viewModel.selection::clear,
+            onSelectAll = viewModel.selection::selectAll,
+        )
     }
 }
