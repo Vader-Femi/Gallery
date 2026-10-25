@@ -34,6 +34,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.femi.gallery.R
+import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.ImmersiveMode
 import kotlinx.coroutines.delay
 
@@ -59,7 +60,13 @@ fun SlideshowScreen(
                 playing = !playing
             },
     ) {
-        if (items.itemCount > 0) {
+        val isLoaded = items.loadState.refresh is androidx.paging.LoadState.NotLoading
+        if (isLoaded && items.itemCount == 0) {
+            EmptyState(
+                text = stringResource(R.string.slideshow_empty),
+                textColor = Color.White.copy(alpha = 0.8f),
+            )
+        } else if (items.itemCount > 0) {
             val pagerState = rememberPagerState { items.itemCount }
 
             HorizontalPager(

@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
+import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HideBottomBarWhile
 import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.ViewedMedia
@@ -108,6 +109,12 @@ private fun AlbumContent(
                 }
             },
         ) { innerPadding ->
+            val emptyText = when {
+                viewModel.isRecycleBin -> stringResource(R.string.recycle_bin_empty)
+                viewModel.isFavorites -> stringResource(R.string.favorites_empty)
+                viewModel.isLocked -> stringResource(R.string.locked_empty)
+                else -> stringResource(R.string.album_empty)
+            }
             TimelineGrid(
                 items = items,
                 sections = sections,
@@ -129,6 +136,7 @@ private fun AlbumContent(
                 selectedIds = selectionState.ids,
                 viewed = viewed,
                 onViewedConsumed = onViewedConsumed,
+                emptyContent = { EmptyState(emptyText) },
             )
         }
 

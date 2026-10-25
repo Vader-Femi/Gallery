@@ -53,6 +53,7 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.pinchToChangeColumns
 import com.femi.gallery.presentation.selection.NameDialog
@@ -103,37 +104,44 @@ fun AlbumsScreen(
             )
         },
     ) { innerPadding ->
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = innerPadding.calculateTopPadding())
-                .pinchToChangeColumns(
-                    onZoomIn = {
-                        if (columns > 2) {
-                            columns--
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        }
-                    },
-                    onZoomOut = {
-                        if (columns < 5) {
-                            columns++
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        }
-                    },
-                ),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            items(albums, key = { it.bucketId }) { album ->
-                val handleClick: () -> Unit = remember(album.bucketId) { { handleAlbumClick(album.bucketId) } }
-                val handleRename: () -> Unit = remember(album.bucketId) { { renaming = album } }
-                AlbumCard(
-                    album = album,
-                    onClick = handleClick,
-                    onRename = handleRename,
-                )
+        if (albums.isEmpty()) {
+            EmptyState(
+                text = stringResource(R.string.albums_empty),
+                modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
+            )
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding())
+                    .pinchToChangeColumns(
+                        onZoomIn = {
+                            if (columns > 2) {
+                                columns--
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                        },
+                        onZoomOut = {
+                            if (columns < 5) {
+                                columns++
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                        },
+                    ),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                items(albums, key = { it.bucketId }) { album ->
+                    val handleClick: () -> Unit = remember(album.bucketId) { { handleAlbumClick(album.bucketId) } }
+                    val handleRename: () -> Unit = remember(album.bucketId) { { renaming = album } }
+                    AlbumCard(
+                        album = album,
+                        onClick = handleClick,
+                        onRename = handleRename,
+                    )
+                }
             }
         }
     }

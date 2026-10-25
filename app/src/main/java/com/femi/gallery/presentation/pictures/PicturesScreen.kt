@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
+import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HideBottomBarWhile
 import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.ViewedMedia
@@ -93,6 +94,7 @@ fun PicturesScreen(
                 selectedIds = selectionState.ids,
                 viewed = viewed,
                 onViewedConsumed = onViewedConsumed,
+                emptyContent = { EmptyState(stringResource(R.string.pictures_empty)) },
             )
         }
 

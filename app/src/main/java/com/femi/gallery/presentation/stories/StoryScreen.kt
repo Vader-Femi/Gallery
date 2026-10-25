@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
+import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HideBottomBarWhile
 import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.ViewedMedia
@@ -100,6 +101,7 @@ fun StoryScreen(
                 selectedIds = selectionState.ids,
                 viewed = viewed,
                 onViewedConsumed = onViewedConsumed,
+                emptyContent = { EmptyState(stringResource(R.string.story_empty)) },
             )
         }
 

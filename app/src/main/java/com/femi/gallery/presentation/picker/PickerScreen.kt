@@ -28,6 +28,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.PickerFilter
 import com.femi.gallery.domain.model.toRef
+import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.pictures.TimelineGrid
 
 /**
@@ -93,6 +94,7 @@ fun PickerScreen(
             modifier = Modifier.weight(1f),
             selectionActive = allowMultiple,
             selectedIds = selectionState.ids,
+            emptyContent = { EmptyState(stringResource(R.string.picker_empty)) },
         )
     }
 }

@@ -96,6 +96,7 @@ fun TimelineGrid(
     /** The photo the viewer ended on after the user came back; the grid scrolls to it. */
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
+    emptyContent: (@Composable () -> Unit)? = null,
 ) {
     val layout = remember(sections) { TimelineLayout(sections) }
     val labeler = rememberDayLabeler()
@@ -196,65 +197,70 @@ fun TimelineGrid(
                 }
             ),
     ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(zoom.columns),
-            state = gridState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = topInset),
-            horizontalArrangement = Arrangement.spacedBy(1.dp),
-            verticalArrangement = Arrangement.spacedBy(1.dp),
-        ) {
-            items(
-                count = layout.totalCount,
-                key = { gridIndex ->
+        val isLoaded = items.loadState.refresh is androidx.paging.LoadState.NotLoading
+        if (isLoaded && items.itemCount == 0 && emptyContent != null) {
+            emptyContent()
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(zoom.columns),
+                state = gridState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = topInset),
+                horizontalArrangement = Arrangement.spacedBy(1.dp),
+                verticalArrangement = Arrangement.spacedBy(1.dp),
+            ) {
+                items(
+                    count = layout.totalCount,
+                    key = { gridIndex ->
+                        if (layout.isHeader(gridIndex)) {
+                            "${zoom.granularity}-${layout.sections[layout.sectionIndexAt(gridIndex)].epochDay}"
+                        } else {
+                            val mediaIndex = layout.mediaIndexAt(gridIndex)
+                            items.peekOrNull(mediaIndex)?.id ?: (-mediaIndex - 1L)
+                        }
+                    },
+                    span = { gridIndex ->
+                        if (layout.isHeader(gridIndex)) GridItemSpan(maxLineSpan) else GridItemSpan(1)
+                    },
+                    contentType = { gridIndex ->
+                        if (layout.isHeader(gridIndex)) ContentTypeHeader else ContentTypeMedia
+                    },
+                ) { gridIndex ->
                     if (layout.isHeader(gridIndex)) {
-                        "${zoom.granularity}-${layout.sections[layout.sectionIndexAt(gridIndex)].epochDay}"
+                        val section = layout.sections[layout.sectionIndexAt(gridIndex)]
+                        DayHeader(text = labeler.headerLabel(section.epochDay, zoom.granularity))
                     } else {
                         val mediaIndex = layout.mediaIndexAt(gridIndex)
-                        items.peekOrNull(mediaIndex)?.id ?: (-mediaIndex - 1L)
+                        val item = items.getOrNull(mediaIndex)
+                        MediaCell(
+                            item = item,
+                            mediaIndex = mediaIndex,
+                            selectionActive = selectionActive,
+                            selected = item != null && item.id in selectedIds,
+                            shared = item != null && item.id == sharedId,
+                            onClick = { index, clicked ->
+                                openedId = clicked.id
+                                onMediaClick(index, clicked)
+                            },
+                            onLongClick = onMediaLongClick,
+                        )
                     }
-                },
-                span = { gridIndex ->
-                    if (layout.isHeader(gridIndex)) GridItemSpan(maxLineSpan) else GridItemSpan(1)
-                },
-                contentType = { gridIndex ->
-                    if (layout.isHeader(gridIndex)) ContentTypeHeader else ContentTypeMedia
-                },
-            ) { gridIndex ->
-                if (layout.isHeader(gridIndex)) {
-                    val section = layout.sections[layout.sectionIndexAt(gridIndex)]
-                    DayHeader(text = labeler.headerLabel(section.epochDay, zoom.granularity))
-                } else {
-                    val mediaIndex = layout.mediaIndexAt(gridIndex)
-                    val item = items.getOrNull(mediaIndex)
-                    MediaCell(
-                        item = item,
-                        mediaIndex = mediaIndex,
-                        selectionActive = selectionActive,
-                        selected = item != null && item.id in selectedIds,
-                        shared = item != null && item.id == sharedId,
-                        onClick = { index, clicked ->
-                            openedId = clicked.id
-                            onMediaClick(index, clicked)
-                        },
-                        onLongClick = onMediaLongClick,
-                    )
                 }
             }
-        }
 
-        FastScroller(
-            gridState = gridState,
-            totalItems = layout.totalCount,
-            topInset = topInset,
-            labelFor = { gridIndex ->
-                if (layout.sections.isEmpty()) {
-                    ""
-                } else {
-                    labeler.scrollLabel(layout.sections[layout.sectionIndexAt(gridIndex)].epochDay, zoom.granularity)
-                }
-            },
-        )
+            FastScroller(
+                gridState = gridState,
+                totalItems = layout.totalCount,
+                topInset = topInset,
+                labelFor = { gridIndex ->
+                    if (layout.sections.isEmpty()) {
+                        ""
+                    } else {
+                        labeler.scrollLabel(layout.sections[layout.sectionIndexAt(gridIndex)].epochDay, zoom.granularity)
+                    }
+                },
+            )
+        }
     }
 }
 
