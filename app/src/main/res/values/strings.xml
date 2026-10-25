@@ -183,4 +183,15 @@
     <string name="permission_body_denied">Access was denied. Open settings and allow photos and videos to continue.</string>
     <string name="permission_grant">Allow access</string>
     <string name="permission_open_settings">Open settings</string>
+
+    <string name="nav_menu">Menu</string>
+    <string name="menu_videos">Videos</string>
+    <string name="menu_favorites">Favourites</string>
+    <string name="menu_map">Map</string>
+    <string name="menu_placeholder">Other</string>
+    <string name="menu_stories">Stories</string>
+    <string name="menu_locked">Locked</string>
+    <string name="menu_recycle_bin">Recycle bin</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_settings_coming_soon">Settings coming soon</string>
 </resources>

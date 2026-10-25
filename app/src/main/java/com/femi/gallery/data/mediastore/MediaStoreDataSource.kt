@@ -192,8 +192,7 @@ class MediaStoreDataSource @Inject constructor(
                 .sortedByDescending { it.relativePath == CAMERA_PATH } // stable: keeps recency order otherwise
         } ?: emptyList()
 
-        // Favorites first and the recycle bin last; both only appear when they have something in them.
-        listOfNotNull(loadCollection(SpecialAlbums.FAVORITES)) + folders + listOfNotNull(loadCollection(SpecialAlbums.TRASH))
+        folders
     }
 
     suspend fun loadAlbumName(bucketId: Long): String = withContext(io) {

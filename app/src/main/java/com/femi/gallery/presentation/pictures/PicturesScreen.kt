@@ -37,7 +37,6 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
 fun PicturesScreen(
     modifier: Modifier = Modifier,
     onMediaClick: (mediaIndex: Int, mediaId: Long) -> Unit,
-    onMapClick: () -> Unit,
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
     viewModel: PicturesViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel(
@@ -72,11 +71,6 @@ fun PicturesScreen(
                 if (!selectionState.active) {
                     HugeTopAppBar(
                         title = stringResource(R.string.nav_pictures),
-                        actions = {
-                            IconButton(onClick = onMapClick) {
-                                Icon(Icons.Outlined.Map, contentDescription = stringResource(R.string.map_open))
-                            }
-                        },
                         scrollBehavior = scrollBehavior,
                     )
                 }

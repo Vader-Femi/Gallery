@@ -41,6 +41,7 @@ import com.femi.gallery.presentation.navigation.FloatingNavigationBar
 import com.femi.gallery.presentation.navigation.GalleryDestination
 import com.femi.gallery.presentation.navigation.GalleryNavHost
 import com.femi.gallery.presentation.navigation.GalleryRoutes
+import com.femi.gallery.presentation.navigation.MenuBottomSheet
 import com.femi.gallery.presentation.permission.MediaPermissionViewModel
 import com.femi.gallery.presentation.launch.LaunchRequest
 import com.femi.gallery.presentation.permission.PermissionScreen
@@ -128,9 +129,12 @@ private fun GalleryScaffold() {
 
     val isAlbumDetail = currentDestination?.route == GalleryRoutes.ALBUM
     val isStoryDetail = currentDestination?.route == GalleryRoutes.STORY
-    val isTopLevel = isAlbumDetail || isStoryDetail || GalleryDestination.entries.any { destination ->
+    val isStoriesRoute = currentDestination?.route == "stories"
+    val isTopLevel = isAlbumDetail || isStoryDetail || isStoriesRoute || GalleryDestination.entries.any { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     }
+
+    var menuSheetOpen by rememberSaveable { mutableStateOf(false) }
 
     // One shared-transition layout around the screens and the viewer, so a photo can travel between them.
     SharedTransitionLayout {
@@ -162,27 +166,54 @@ private fun GalleryScaffold() {
                         modifier = Modifier.align(Alignment.BottomCenter),
                         destinations = GalleryDestination.entries,
                         currentDestinationSelected = { destination ->
-                            currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                                (isAlbumDetail && destination == GalleryDestination.Albums) ||
-                                (isStoryDetail && destination == GalleryDestination.Stories)
+                            if (destination == GalleryDestination.Menu) {
+                                menuSheetOpen
+                            } else {
+                                currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                                    (isAlbumDetail && destination == GalleryDestination.Albums)
+                            }
                         },
                         onDestinationClick = { destination ->
-                            if (isAlbumDetail && destination == GalleryDestination.Albums) {
-                                // Tapping Albums while inside an album goes back to the album list.
-                                navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
-                            } else if (isStoryDetail && destination == GalleryDestination.Stories) {
-                                navController.popBackStack(GalleryDestination.Stories.route, inclusive = false)
+                            if (destination == GalleryDestination.Menu) {
+                                menuSheetOpen = !menuSheetOpen
                             } else {
-                                navController.navigate(destination.route) {
-                                    popUpTo(GalleryDestination.Pictures.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                menuSheetOpen = false
+                                if (isAlbumDetail && destination == GalleryDestination.Albums) {
+                                    // Tapping Albums while inside an album goes back to the album list.
+                                    navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
+                                } else {
+                                    navController.navigate(destination.route) {
+                                        popUpTo(GalleryDestination.Pictures.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             }
                         },
                         onSearchClick = {
+                            menuSheetOpen = false
                             navController.navigate(GalleryRoutes.SEARCH)
                         }
+                    )
+                }
+
+                if (menuSheetOpen) {
+                    MenuBottomSheet(
+                        onDismiss = { menuSheetOpen = false },
+                        onItemClick = { route ->
+                            menuSheetOpen = false
+                            if (route != null) {
+                                if (route == GalleryDestination.Pictures.route || route == GalleryDestination.Albums.route) {
+                                    navController.navigate(route) {
+                                        popUpTo(GalleryDestination.Pictures.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                } else {
+                                    navController.navigate(route)
+                                }
+                            }
+                        },
                     )
                 }
 

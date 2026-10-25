@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.search
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -32,17 +33,20 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
     selectionFactory: MediaSelectionControllerFactory,
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
-    private val _query = MutableStateFlow("")
+    private val initialQuery: String = savedStateHandle.get<String>("query").orEmpty()
+    private val _query = MutableStateFlow(initialQuery)
     val query: StateFlow<String> = _query.asStateFlow()
 
     /** What the typed text means; recomputed shortly after the user stops typing. */
@@ -53,7 +57,7 @@ class SearchViewModel @Inject constructor(
             if (text.isEmpty()) {
                 flowOf(SearchCriteria.None)
             } else {
-                flowOf(text).debounce(TYPING_DEBOUNCE_MS).map { SearchQueryParser.parse(it) }
+                flowOf(text).debounce(TYPING_DEBOUNCE_MS.milliseconds).map { SearchQueryParser.parse(it) }
             }
         }
         .distinctUntilChanged()

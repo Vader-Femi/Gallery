@@ -142,17 +142,7 @@ class MediaRepositoryImpl @Inject constructor(
         }
 
     override fun observeAlbums(): Flow<List<Album>> =
-        combine(changeTriggers().map { dataSource.loadAlbums() }, lockedStore.version) { albums, _ -> albums }
-            .map { albums ->
-                // The Locked folder is always listed last so it can be found even when empty.
-                albums + Album(
-                    bucketId = SpecialAlbums.LOCKED,
-                    name = "",
-                    relativePath = "",
-                    coverUri = "",
-                    itemCount = lockedStore.list().size,
-                )
-            }
+        changeTriggers().map { dataSource.loadAlbums() }
             .distinctUntilChanged()
 
     override fun observeStories(): Flow<List<Story>> =

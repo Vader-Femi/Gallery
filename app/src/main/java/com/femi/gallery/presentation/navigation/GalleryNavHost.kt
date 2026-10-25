@@ -54,7 +54,6 @@ internal const val ExitSlideMillis = 300
 private val topLevelRoutes = setOf(
     GalleryDestination.Pictures.route,
     GalleryDestination.Albums.route,
-    GalleryDestination.Stories.route,
 )
 
 private fun isTopLevelRoute(route: String?): Boolean {
@@ -190,7 +189,6 @@ fun GalleryNavHost(
                 onMediaClick = { mediaIndex, mediaId ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId), origin = entry.id)
                 },
-                onMapClick = { navController.navigate(GalleryRoutes.MAP) },
                 viewed = viewerSession.viewedFor(entry.id),
                 onViewedConsumed = viewerSession::consumeViewed,
             )
@@ -213,8 +211,13 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        sharedComposable(GalleryRoutes.SEARCH) { entry ->
+        sharedComposable(
+            route = GalleryRoutes.SEARCH,
+            arguments = listOf(navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" }),
+        ) { entry ->
+            val initialQuery = entry.arguments?.getString("query").orEmpty()
             SearchScreen(
+                initialQuery = initialQuery,
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaIndex, mediaId, query ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, query = query), origin = entry.id)
@@ -223,7 +226,7 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        composable(GalleryDestination.Stories.route) {
+        composable(GalleryRoutes.STORIES) {
             StoriesScreen(
                 onStoryClick = { fromDay, toDay -> navController.navigate(GalleryRoutes.story(fromDay, toDay)) },
             )
