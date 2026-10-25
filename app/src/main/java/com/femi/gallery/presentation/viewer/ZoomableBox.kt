@@ -27,12 +27,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 private const val MaxScale = 6f
 private const val DoubleTapScale = 2.5f
@@ -52,12 +55,20 @@ fun ZoomableBox(
     isCurrent: Boolean,
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Applied to the picture itself (a box exactly the size of the picture as it is shown), not to this
+     * whole container: this is the shared element that flies between the grid and the viewer, and it
+     * has to be the picture, as in Google Photos, not the screen with the picture somewhere inside.
+     */
+    sharedBounds: Modifier = Modifier,
+    /** What is already known about the picture's size, so it is the right shape from the first frame. */
+    initialImageSize: Size = Size.Zero,
     content: @Composable (onImageSize: (Size) -> Unit) -> Unit,
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
-    var imageSize by remember { mutableStateOf(Size.Zero) }
+    var imageSize by remember { mutableStateOf(initialImageSize) }
     val scope = rememberCoroutineScope()
     // The gesture handlers below are created once, so they must read the latest callback.
     val latestOnTap by rememberUpdatedState(onTap)
@@ -152,7 +163,34 @@ fun ZoomableBox(
                 translationY = offset.y
             },
     ) {
-        content { imageSize = it }
+        // The picture is shown to fit inside this container; this box is exactly where it is.
+        Box(Modifier.fitInside { imageSize }.then(sharedBounds)) {
+            content { imageSize = it }
+        }
+    }
+}
+
+/**
+ * Makes the child exactly as big as [size] would be if it were scaled to fit inside the space, and
+ * puts it in the middle. While the size is not known the child just fills the space.
+ */
+private fun Modifier.fitInside(size: () -> Size): Modifier = layout { measurable, constraints ->
+    val imageSize = size()
+    val maxWidth = constraints.maxWidth
+    val maxHeight = constraints.maxHeight
+    if (imageSize.width <= 0f || imageSize.height <= 0f || maxWidth == Constraints.Infinity || maxHeight == Constraints.Infinity) {
+        val placeable = measurable.measure(Constraints.fixed(maxWidth.coerceAtLeast(0), maxHeight.coerceAtLeast(0)))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    } else {
+        val aspect = imageSize.width / imageSize.height
+        var width = maxWidth
+        var height = (width / aspect).roundToInt()
+        if (height > maxHeight) {
+            height = maxHeight
+            width = (height * aspect).roundToInt()
+        }
+        val placeable = measurable.measure(Constraints.fixed(width, height))
+        layout(maxWidth, maxHeight) { placeable.place((maxWidth - width) / 2, (maxHeight - height) / 2) }
     }
 }
 

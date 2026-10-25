@@ -1,6 +1,8 @@
 package com.femi.gallery.presentation.common
 
 import android.util.LruCache
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isSpecified
 import coil3.memory.MemoryCache
 
 /**
@@ -11,10 +13,18 @@ import coil3.memory.MemoryCache
 object GridThumbnails {
     private const val MAX_ENTRIES = 600
     private val keys = LruCache<Long, MemoryCache.Key>(MAX_ENTRIES)
+    private val sizes = LruCache<Long, Size>(MAX_ENTRIES)
 
-    fun remember(mediaId: Long, key: MemoryCache.Key?) {
+    fun remember(mediaId: Long, key: MemoryCache.Key?, size: Size = Size.Unspecified) {
         if (key != null) keys.put(mediaId, key)
+        if (size.isSpecified && size.width > 0f && size.height > 0f) sizes.put(mediaId, size)
     }
 
     fun keyFor(mediaId: Long): MemoryCache.Key? = keys.get(mediaId)
+
+    /**
+     * The size of the grid's thumbnail, so the viewer knows the photo's shape from its very first
+     * frame (and with the rotation already applied, unlike the width and height in the database).
+     */
+    fun sizeFor(mediaId: Long): Size? = sizes.get(mediaId)
 }

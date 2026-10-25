@@ -302,7 +302,7 @@ private fun MediaCell(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 // The viewer reuses this exact image as its first frame when the photo is opened.
-                onSuccess = { GridThumbnails.remember(item.id, it.result.memoryCacheKey) },
+                onSuccess = { GridThumbnails.remember(item.id, it.result.memoryCacheKey, it.painter.intrinsicSize) },
                 // Selected photos shrink slightly, like Samsung Gallery.
                 modifier = Modifier
                     .fillMaxSize()

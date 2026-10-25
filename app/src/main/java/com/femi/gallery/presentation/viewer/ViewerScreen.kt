@@ -70,6 +70,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -456,9 +457,15 @@ internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
     val handleTap = remember(onTap) { { onTap() } }
     // The current photo grows out of (and shrinks back into) its thumbnail in the grid.
     val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
-    ZoomableBox(isCurrent = isCurrent, onTap = handleTap, modifier = sharedModifier) { onImageSize ->
+    ZoomableBox(
+        isCurrent = isCurrent,
+        onTap = handleTap,
+        sharedBounds = sharedModifier,
+        initialImageSize = GridThumbnails.sizeFor(item.id) ?: Size.Zero,
+    ) { onImageSize ->
         AsyncImage(
             model = thumbnail,
+            onLoading = { state -> state.painter?.intrinsicSize?.takeKnown()?.let(onImageSize) },
             contentDescription = null,
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize(),
@@ -489,7 +496,8 @@ internal fun VideoPage(
     ZoomableBox(
         isCurrent = isCurrent,
         onTap = onTap,
-        modifier = sharedModifier,
+        sharedBounds = sharedModifier,
+        initialImageSize = GridThumbnails.sizeFor(item.id) ?: Size.Zero,
     ) { onImageSize ->
         LaunchedEffect(item.width, item.height) {
             if (item.width > 0 && item.height > 0) {
@@ -500,6 +508,7 @@ internal fun VideoPage(
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
                 model = thumbnail,
+                onLoading = { state -> state.painter?.intrinsicSize?.takeKnown()?.let(onImageSize) },
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
@@ -613,6 +622,9 @@ private fun VideoControlsOverlay(
         }
     }
 }
+
+/** This size if it is a real one: the placeholder of an image that is still loading can be empty. */
+private fun Size.takeKnown(): Size? = takeIf { isSpecified && width > 0f && height > 0f }
 
 /** The image shown at once while the real one loads: what the grid already has in memory, if anything. */
 private fun thumbnailRequest(context: Context, item: MediaItem): ImageRequest =
