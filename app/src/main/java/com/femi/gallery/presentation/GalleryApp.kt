@@ -180,6 +180,9 @@ private fun GalleryScaffold() {
                                 }
                             }
                         },
+                        onSearchClick = {
+                            navController.navigate(GalleryRoutes.SEARCH)
+                        }
                     )
                 }
 

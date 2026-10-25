@@ -190,7 +190,6 @@ fun GalleryNavHost(
                 onMediaClick = { mediaIndex, mediaId ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId), origin = entry.id)
                 },
-                onSearchClick = { navController.navigate(GalleryRoutes.SEARCH) },
                 onMapClick = { navController.navigate(GalleryRoutes.MAP) },
                 viewed = viewerSession.viewedFor(entry.id),
                 onViewedConsumed = viewerSession::consumeViewed,

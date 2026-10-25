@@ -14,10 +14,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -46,15 +50,17 @@ fun FloatingNavigationBar(
     destinations: List<GalleryDestination>,
     currentDestinationSelected: (GalleryDestination) -> Boolean,
     onDestinationClick: (GalleryDestination) -> Unit,
+    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
     alwaysShowLabel: Boolean = true,
 ) {
-    Box(
+    Row(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
-        contentAlignment = Alignment.Center,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             shape = CircleShape,
@@ -78,6 +84,40 @@ fun FloatingNavigationBar(
                     )
                 }
             }
+        }
+
+        // Space between the 3 main options and the search button
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Search floating button with AI logo on top
+        Box(contentAlignment = Alignment.TopEnd) {
+            Surface(
+                onClick = onSearchClick,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+
+            // AI Logo positioned on top of the search button
+            AiBadgeIcon(
+                modifier = Modifier
+                    .offset(x = (-12).dp, y = (13).dp)
+                    .size(14.dp)
+            )
         }
     }
 }
@@ -121,18 +161,21 @@ private fun FloatingNavigationItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            if (isSelected)
-            Icon(
-                imageVector = destination.selectedIcon,
-                contentDescription = stringResource(destination.label),
-            )
+            if (isSelected) {
+                Icon(
+                    imageVector = destination.selectedIcon,
+                    contentDescription = stringResource(destination.label),
+                )
+            }
             AnimatedVisibility(
                 visible = isSelected || alwaysShowLabel,
                 enter = fadeIn() + expandHorizontally(),
                 exit = fadeOut() + shrinkHorizontally(),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                    if (isSelected) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     Text(
                         text = stringResource(destination.label),
                         style = MaterialTheme.typography.labelLarge,

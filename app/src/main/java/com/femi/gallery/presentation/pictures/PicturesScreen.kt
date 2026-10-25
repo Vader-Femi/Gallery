@@ -18,9 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
@@ -37,11 +37,15 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
 fun PicturesScreen(
     modifier: Modifier = Modifier,
     onMediaClick: (mediaIndex: Int, mediaId: Long) -> Unit,
-    onSearchClick: () -> Unit,
     onMapClick: () -> Unit,
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
-    viewModel: PicturesViewModel = hiltViewModel(),
+    viewModel: PicturesViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel(
+        checkNotNull<androidx.lifecycle.ViewModelStoreOwner>(LocalViewModelStoreOwner.current) {
+                "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
+            },
+        null
+    ),
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
     val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
@@ -71,9 +75,6 @@ fun PicturesScreen(
                         actions = {
                             IconButton(onClick = onMapClick) {
                                 Icon(Icons.Outlined.Map, contentDescription = stringResource(R.string.map_open))
-                            }
-                            IconButton(onClick = onSearchClick) {
-                                Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.search_open))
                             }
                         },
                         scrollBehavior = scrollBehavior,
