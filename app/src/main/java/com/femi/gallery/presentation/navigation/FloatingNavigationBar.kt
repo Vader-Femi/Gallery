@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,16 +35,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.femi.gallery.R
 
 /**
- * A floating, capsule-shaped navigation bar mirroring Google Photos' modern bottom bar.
- * Places the text label beside the icon horizontally in a pill layout.
- *
- * @param destinations List of top-level navigation destinations.
- * @param currentDestinationSelected Lambda to determine if a destination is currently active.
- * @param onDestinationClick Callback invoked when a navigation item is selected.
- * @param alwaysShowLabel If true, all items display icon and text side-by-side.
- *                        If false, only the selected item expands to show text beside the icon.
+ * A floating navigation bar with Pictures and Albums in a pill (icon + text)
+ * and Search & Menu as side-by-side circular icon buttons, all in a single horizontal row.
  */
 @Composable
 fun FloatingNavigationBar(
@@ -51,6 +47,8 @@ fun FloatingNavigationBar(
     currentDestinationSelected: (GalleryDestination) -> Boolean,
     onDestinationClick: (GalleryDestination) -> Unit,
     onSearchClick: () -> Unit,
+    onMenuClick: () -> Unit,
+    isMenuSelected: Boolean = false,
     modifier: Modifier = Modifier,
     alwaysShowLabel: Boolean = true,
 ) {
@@ -60,8 +58,9 @@ fun FloatingNavigationBar(
             .navigationBarsPadding()
             .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
         horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Pictures and Albums pill (icon + text)
         Surface(
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -86,38 +85,82 @@ fun FloatingNavigationBar(
             }
         }
 
-        // Space between the 3 main options and the search button
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Search floating button with AI logo on top
-        Box(contentAlignment = Alignment.TopEnd) {
+        // Search and Menu icon-only buttons side by side
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Search button with AI badge
+            Box(contentAlignment = Alignment.TopEnd) {
+                Surface(
+                    onClick = onSearchClick,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.size(56.dp),
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = stringResource(R.string.search_open),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
+                AiBadgeIcon(
+                    modifier = Modifier
+                        .offset(x = (-10).dp, y = (12).dp)
+                        .size(14.dp)
+                )
+            }
+
+            // Menu icon-only button
+            val menuButtonColor by animateColorAsState(
+                targetValue = if (isMenuSelected) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerLow
+                },
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "menuButtonColor",
+            )
+            val menuIconTint by animateColorAsState(
+                targetValue = if (isMenuSelected) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "menuIconTint",
+            )
+
             Surface(
-                onClick = onSearchClick,
+                onClick = onMenuClick,
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = menuButtonColor,
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(56.dp),
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.padding(8.dp)
+                    modifier = Modifier.padding(8.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(26.dp)
+                        imageVector = Icons.Outlined.Menu,
+                        contentDescription = stringResource(R.string.nav_menu),
+                        tint = menuIconTint,
+                        modifier = Modifier.size(26.dp),
                     )
                 }
             }
-
-            // AI Logo positioned on top of the search button
-            AiBadgeIcon(
-                modifier = Modifier
-                    .offset(x = (-12).dp, y = (13).dp)
-                    .size(14.dp)
-            )
         }
     }
 }

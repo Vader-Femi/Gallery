@@ -166,34 +166,30 @@ private fun GalleryScaffold() {
                         modifier = Modifier.align(Alignment.BottomCenter),
                         destinations = GalleryDestination.entries,
                         currentDestinationSelected = { destination ->
-                            if (destination == GalleryDestination.Menu) {
-                                menuSheetOpen
-                            } else {
-                                currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                                    (isAlbumDetail && destination == GalleryDestination.Albums)
-                            }
+                            currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
+                                (isAlbumDetail && destination == GalleryDestination.Albums)
                         },
                         onDestinationClick = { destination ->
-                            if (destination == GalleryDestination.Menu) {
-                                menuSheetOpen = !menuSheetOpen
+                            menuSheetOpen = false
+                            if (isAlbumDetail && destination == GalleryDestination.Albums) {
+                                // Tapping Albums while inside an album goes back to the album list.
+                                navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
                             } else {
-                                menuSheetOpen = false
-                                if (isAlbumDetail && destination == GalleryDestination.Albums) {
-                                    // Tapping Albums while inside an album goes back to the album list.
-                                    navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
-                                } else {
-                                    navController.navigate(destination.route) {
-                                        popUpTo(GalleryDestination.Pictures.route) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+                                navController.navigate(destination.route) {
+                                    popUpTo(GalleryDestination.Pictures.route) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
                             }
                         },
                         onSearchClick = {
                             menuSheetOpen = false
                             navController.navigate(GalleryRoutes.SEARCH)
-                        }
+                        },
+                        onMenuClick = {
+                            menuSheetOpen = !menuSheetOpen
+                        },
+                        isMenuSelected = menuSheetOpen,
                     )
                 }
 
