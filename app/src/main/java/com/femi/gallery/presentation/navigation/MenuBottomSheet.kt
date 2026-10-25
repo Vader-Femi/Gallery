@@ -1,8 +1,6 @@
 package com.femi.gallery.presentation.navigation
 
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,27 +12,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.Widgets
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -43,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.SpecialAlbums
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuBottomSheet(
     onDismiss: () -> Unit,
@@ -50,50 +50,92 @@ fun MenuBottomSheet(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val sheetState = rememberModalBottomSheetState()
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.BottomCenter,
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier,
     ) {
-        Surface(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .clickable(enabled = false) {}, // intercept clicks
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 8.dp,
-            shadowElevation = 16.dp,
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+            // Header with title and expressive accent icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                // First row: 4 circular icon buttons with text below
+                Column {
+                    Text(
+                        text = stringResource(R.string.nav_menu),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Quick access & collections",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(42.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.AutoStories,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
+            }
+
+            // Discover Section (4 Uniform Expressive Cards)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Discover",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    MenuIconButton(
+                    ExpressiveMenuCard(
+                        modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.VideoLibrary,
                         label = stringResource(R.string.menu_videos),
                         onClick = { onItemClick(GalleryRoutes.VIDEOS) },
                     )
-                    MenuIconButton(
+                    ExpressiveMenuCard(
+                        modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.FavoriteBorder,
                         label = stringResource(R.string.menu_favorites),
                         onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.FAVORITES)) },
                     )
-                    MenuIconButton(
+                    ExpressiveMenuCard(
+                        modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.Map,
                         label = stringResource(R.string.menu_map),
                         onClick = { onItemClick(GalleryRoutes.MAP) },
                     )
-                    MenuIconButton(
+                    ExpressiveMenuCard(
+                        modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.Widgets,
                         label = stringResource(R.string.menu_placeholder),
                         onClick = {
@@ -101,22 +143,32 @@ fun MenuBottomSheet(
                         },
                     )
                 }
+            }
 
-                // Next 2 rows: Wide pills (2 per row)
+            // Library & Tools Section (Expressive Pill Buttons)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Library & Tools",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        MenuPillButton(
+                        ExpressivePillButton(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.AutoStories,
                             label = stringResource(R.string.menu_stories),
                             onClick = { onItemClick(GalleryRoutes.STORIES) },
                         )
-                        MenuPillButton(
+                        ExpressivePillButton(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Lock,
                             label = stringResource(R.string.menu_locked),
@@ -127,13 +179,13 @@ fun MenuBottomSheet(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        MenuPillButton(
+                        ExpressivePillButton(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Delete,
                             label = stringResource(R.string.menu_recycle_bin),
                             onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.TRASH)) },
                         )
-                        MenuPillButton(
+                        ExpressivePillButton(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Settings,
                             label = stringResource(R.string.menu_settings),
@@ -144,49 +196,60 @@ fun MenuBottomSheet(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-private fun MenuIconButton(
+private fun ExpressiveMenuCard(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(8.dp),
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 2.dp,
+        modifier = modifier.height(100.dp),
     ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            modifier = Modifier.size(56.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start,
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
-                )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(36.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-        )
     }
 }
 
 @Composable
-private fun MenuPillButton(
+private fun ExpressivePillButton(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
@@ -195,24 +258,35 @@ private fun MenuPillButton(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 2.dp,
         modifier = modifier.height(56.dp),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp),
-            )
-            Spacer(modifier = Modifier.width(12.dp))
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(36.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
