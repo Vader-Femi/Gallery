@@ -128,9 +128,7 @@ private fun GalleryScaffold() {
     LaunchedEffect(inLockedFolder) { if (!inLockedFolder) lockSession.lock() }
 
     val isAlbumDetail = currentDestination?.route == GalleryRoutes.ALBUM
-    val isStoryDetail = currentDestination?.route == GalleryRoutes.STORY
-    val isStoriesRoute = currentDestination?.route == "stories"
-    val isTopLevel = isAlbumDetail || isStoryDetail || isStoriesRoute || GalleryDestination.entries.any { destination ->
+    val isTopLevel = GalleryDestination.entries.any { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     }
 

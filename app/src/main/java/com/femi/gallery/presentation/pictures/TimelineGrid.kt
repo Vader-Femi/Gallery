@@ -205,7 +205,7 @@ fun TimelineGrid(
                 columns = GridCells.Fixed(zoom.columns),
                 state = gridState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = topInset),
+                contentPadding = PaddingValues(top = topInset, bottom = 150.dp),
                 horizontalArrangement = Arrangement.spacedBy(1.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
