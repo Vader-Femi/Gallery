@@ -34,6 +34,7 @@ import com.femi.gallery.presentation.map.MapScreen
 import com.femi.gallery.presentation.place.PlaceScreen
 import com.femi.gallery.presentation.place.PlaceViewModel
 import com.femi.gallery.presentation.search.SearchScreen
+import com.femi.gallery.presentation.videos.VideosScreen
 import com.femi.gallery.presentation.viewer.ViewerSession
 import com.femi.gallery.presentation.stories.SlideshowScreen
 import com.femi.gallery.presentation.stories.SlideshowViewModel
@@ -211,13 +212,18 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        sharedComposable(
-            route = GalleryRoutes.SEARCH,
-            arguments = listOf(navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" }),
-        ) { entry ->
-            val initialQuery = entry.arguments?.getString("query").orEmpty()
+        sharedComposable(GalleryRoutes.SEARCH) { entry ->
             SearchScreen(
-                initialQuery = initialQuery,
+                onBack = { navController.popBackStack() },
+                onMediaClick = { mediaIndex, mediaId, query ->
+                    viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, query = query), origin = entry.id)
+                },
+                viewed = viewerSession.viewedFor(entry.id),
+                onViewedConsumed = viewerSession::consumeViewed,
+            )
+        }
+        sharedComposable(GalleryRoutes.VIDEOS) { entry ->
+            VideosScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaIndex, mediaId, query ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, query = query), origin = entry.id)
@@ -228,6 +234,7 @@ fun GalleryNavHost(
         }
         composable(GalleryRoutes.STORIES) {
             StoriesScreen(
+                onBack = { navController.popBackStack() },
                 onStoryClick = { fromDay, toDay -> navController.navigate(GalleryRoutes.story(fromDay, toDay)) },
             )
         }

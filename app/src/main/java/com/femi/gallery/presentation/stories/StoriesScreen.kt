@@ -51,6 +51,7 @@ import com.femi.gallery.presentation.common.pinchToChangeColumns
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoriesScreen(
+    onBack: () -> Unit = {},
     onStoryClick: (fromDay: Long, toDay: Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: StoriesViewModel = hiltViewModel(),
@@ -73,6 +74,7 @@ fun StoriesScreen(
         topBar = {
             HugeTopAppBar(
                 title = stringResource(R.string.nav_stories),
+                onBack = onBack,
                 scrollBehavior = scrollBehavior,
             )
         },

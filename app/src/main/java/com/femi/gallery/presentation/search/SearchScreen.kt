@@ -1,6 +1,5 @@
 package com.femi.gallery.presentation.search
 
-
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

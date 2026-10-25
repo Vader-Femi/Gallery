@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Settings
@@ -80,10 +81,10 @@ fun MenuBottomSheet(
                     MenuIconButton(
                         icon = Icons.Outlined.VideoLibrary,
                         label = stringResource(R.string.menu_videos),
-                        onClick = { onItemClick(GalleryRoutes.search("videos")) },
+                        onClick = { onItemClick(GalleryRoutes.VIDEOS) },
                     )
                     MenuIconButton(
-                        icon = Icons.Outlined.Favorite,
+                        icon = Icons.Outlined.FavoriteBorder,
                         label = stringResource(R.string.menu_favorites),
                         onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.FAVORITES)) },
                     )

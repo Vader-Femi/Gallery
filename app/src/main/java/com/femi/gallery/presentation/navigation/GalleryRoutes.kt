@@ -15,9 +15,11 @@ object GalleryRoutes {
     const val VIEWED_ID_KEY = "viewedMediaId"
 
     const val ALBUM = "album/{bucketId}"
-    const val SEARCH = "search?query={query}"
+    const val SEARCH = "search"
+    const val SEARCH_QUERY = "search?query={query}"
     const val MAP = "map"
     const val STORIES = "stories"
+    const val VIDEOS = "videos"
     const val PLACE = "place?query={query}"
     const val STORY = "story/{fromDay}/{toDay}"
     const val SLIDESHOW = "slideshow?query={query}"
@@ -26,7 +28,7 @@ object GalleryRoutes {
 
     fun album(bucketId: Long) = "album/$bucketId"
 
-    fun search(query: String) = "search?query=${Uri.encode(query)}"
+    fun search(query: String = ""): String = if (query.isBlank()) SEARCH else "search?query=${Uri.encode(query)}"
 
     /** A story covering the local days [fromDay]..[toDay] (`LocalDate.toEpochDay()`). */
     fun story(fromDay: Long, toDay: Long) = "story/$fromDay/$toDay"
