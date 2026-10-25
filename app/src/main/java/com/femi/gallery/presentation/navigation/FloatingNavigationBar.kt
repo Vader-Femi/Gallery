@@ -8,6 +8,7 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -28,7 +29,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,52 +57,121 @@ fun FloatingNavigationBar(
     modifier: Modifier = Modifier,
     alwaysShowLabel: Boolean = true,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+    var isVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + slideInVertically(
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            initialOffsetY = { it }
+        ),
+        modifier = modifier,
     ) {
-        // Pictures and Albums pill (icon + text)
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 6.dp,
-            shadowElevation = 8.dp,
-            modifier = Modifier.wrapContentWidth(),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                destinations.forEach { destination ->
-                    val isSelected = currentDestinationSelected(destination)
-                    FloatingNavigationItem(
-                        destination = destination,
-                        isSelected = isSelected,
-                        alwaysShowLabel = alwaysShowLabel,
-                        onClick = { onDestinationClick(destination) },
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Search and Menu icon-only buttons side by side
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Search button with AI badge
-            Box(contentAlignment = Alignment.TopEnd) {
+            // Pictures and Albums pill (icon + text)
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier.wrapContentWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    destinations.forEach { destination ->
+                        val isSelected = currentDestinationSelected(destination)
+                        FloatingNavigationItem(
+                            destination = destination,
+                            isSelected = isSelected,
+                            alwaysShowLabel = alwaysShowLabel,
+                            onClick = { onDestinationClick(destination) },
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Search and Menu icon-only buttons side by side
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Search button with AI badge
+                Box(contentAlignment = Alignment.TopEnd) {
+                    Surface(
+                        onClick = onSearchClick,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        tonalElevation = 6.dp,
+                        shadowElevation = 8.dp,
+                        modifier = Modifier.size(56.dp),
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.padding(8.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = stringResource(R.string.search_open),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                    }
+                    AiBadgeIcon(
+                        modifier = Modifier
+                            .offset(x = (-10).dp, y = (12).dp)
+                            .size(14.dp)
+                    )
+                }
+
+                // Menu icon-only button
+                val menuButtonColor by animateColorAsState(
+                    targetValue = if (isMenuSelected) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerLow
+                    },
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "menuButtonColor",
+                )
+                val menuIconTint by animateColorAsState(
+                    targetValue = if (isMenuSelected) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "menuIconTint",
+                )
+
                 Surface(
-                    onClick = onSearchClick,
+                    onClick = onMenuClick,
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = menuButtonColor,
                     tonalElevation = 6.dp,
                     shadowElevation = 8.dp,
                     modifier = Modifier.size(56.dp),
@@ -107,58 +181,12 @@ fun FloatingNavigationBar(
                         modifier = Modifier.padding(8.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = stringResource(R.string.search_open),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            imageVector = Icons.Outlined.Menu,
+                            contentDescription = stringResource(R.string.nav_menu),
+                            tint = menuIconTint,
                             modifier = Modifier.size(26.dp),
                         )
                     }
-                }
-                AiBadgeIcon(
-                    modifier = Modifier
-                        .offset(x = (-10).dp, y = (12).dp)
-                        .size(14.dp)
-                )
-            }
-
-            // Menu icon-only button
-            val menuButtonColor by animateColorAsState(
-                targetValue = if (isMenuSelected) {
-                    MaterialTheme.colorScheme.secondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerLow
-                },
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                label = "menuButtonColor",
-            )
-            val menuIconTint by animateColorAsState(
-                targetValue = if (isMenuSelected) {
-                    MaterialTheme.colorScheme.onSecondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                label = "menuIconTint",
-            )
-
-            Surface(
-                onClick = onMenuClick,
-                shape = CircleShape,
-                color = menuButtonColor,
-                tonalElevation = 6.dp,
-                shadowElevation = 8.dp,
-                modifier = Modifier.size(56.dp),
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.padding(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Menu,
-                        contentDescription = stringResource(R.string.nav_menu),
-                        tint = menuIconTint,
-                        modifier = Modifier.size(26.dp),
-                    )
                 }
             }
         }
@@ -212,8 +240,10 @@ private fun FloatingNavigationItem(
             }
             AnimatedVisibility(
                 visible = isSelected || alwaysShowLabel,
-                enter = fadeIn() + expandHorizontally(),
-                exit = fadeOut() + shrinkHorizontally(),
+                enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                        expandHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+                exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                        shrinkHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (isSelected) {
