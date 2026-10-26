@@ -42,7 +42,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Search**
 - [x] Search button on the Pictures tab opens a search screen with suggestion chips
-- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **colours** (`red`, `blue`, `dark`, `green`, `white`, ...), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable, e.g. `whatsapp videos blue 2025`
+- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **colours** (`red`, `blue`, `dark`, ...), **object and scene labels** (`dog`, `beach`, `food`, `car`, `document`, `screenshot`, `nature`, ...), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable, e.g. `whatsapp food blue 2025`
 - [x] Results use the same timeline, zoom, selection and viewer (swiping stays inside the results)
 
 **Albums**
@@ -334,6 +334,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 42 | Close from the picture | The photo (or video) that flies between the grid and the viewer is now the picture itself, as in Google Photos, not the whole full-screen page with the picture inside it, so closing shrinks from the picture instead of from the bottom of the screen |
 | 43 | Text in photos | Search now finds words written in photos (screenshots, receipts, signs, documents): ML Kit's bundled text recogniser reads every photo in the background (resumable, incremental, on the phone; results in a private file kept out of backups) and each typed word matches a file name, an album or the text in a photo. The app's INTERNET permission stays removed |
 | 44 | Colour search | Search now finds photos by dominant colour ("red", "blue", "dark", ...): a background scan classifies each photo's thumbnail into color tags (resumable, incremental, stored in `colors.bin`, excluded from backups) with a pure-Kotlin colour classifier and unit tests |
+| 45 | Object/scene labels | Search now finds photos by object and scene labels ("dog", "beach", "food", "car", "document", ...): a background scan indexes photo tags (resumable, incremental, stored in `labels.bin`, excluded from backups) with pure-Kotlin scene tagger and unit tests |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

@@ -2,9 +2,12 @@ package com.femi.gallery.di
 
 import com.femi.gallery.data.color.FileColorStore
 import com.femi.gallery.data.edit.BitmapEditor
+import com.femi.gallery.data.label.FileLabelStore
+import com.femi.gallery.data.label.SceneImageLabeller
 import com.femi.gallery.data.location.FileLocationStore
 import com.femi.gallery.data.map.AssetMapDataRepository
 import com.femi.gallery.data.repository.ColorIndexRepositoryImpl
+import com.femi.gallery.data.repository.LabelIndexRepositoryImpl
 import com.femi.gallery.data.repository.LocationRepositoryImpl
 import com.femi.gallery.data.repository.MediaRepositoryImpl
 import com.femi.gallery.data.repository.TextIndexRepositoryImpl
@@ -13,6 +16,9 @@ import com.femi.gallery.data.text.MlKitTextRecognizer
 import com.femi.gallery.domain.repository.ColorIndexRepository
 import com.femi.gallery.domain.repository.ColorStore
 import com.femi.gallery.domain.repository.EditRepository
+import com.femi.gallery.domain.repository.ImageLabeller
+import com.femi.gallery.domain.repository.LabelIndexRepository
+import com.femi.gallery.domain.repository.LabelStore
 import com.femi.gallery.domain.repository.LocationRepository
 import com.femi.gallery.domain.repository.LocationStore
 import com.femi.gallery.domain.repository.MapDataRepository
@@ -58,4 +64,13 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindColorIndexRepository(impl: ColorIndexRepositoryImpl): ColorIndexRepository
+
+    @Binds
+    abstract fun bindLabelStore(impl: FileLabelStore): LabelStore
+
+    @Binds
+    abstract fun bindImageLabeller(impl: SceneImageLabeller): ImageLabeller
+
+    @Binds
+    abstract fun bindLabelIndexRepository(impl: LabelIndexRepositoryImpl): LabelIndexRepository
 }
