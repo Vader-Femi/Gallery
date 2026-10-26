@@ -96,7 +96,6 @@ fun EditorScreen(
         }
     }
 
-    // Only changes to the colors need a new filter; crop drags happen far more often.
     val edit = state.edit
     val previewFilter = remember(edit.brightness, edit.contrast, edit.saturation, edit.warmth, edit.filter) {
         ColorFilter.colorMatrix(ColorMatrix(edit.colorMatrix()))
@@ -182,7 +181,6 @@ private fun Preview(state: EditorUiState, viewModel: EditorViewModel, colorFilte
                 val cropping = state.tool == EditorTool.Crop
                 val bitmap = (if (cropping) state.oriented else state.cropped) ?: return@Box
                 val imageBitmap = remember(bitmap) { bitmap.asImageBitmap() }
-                // The image and the crop overlay share these bounds, which keeps their math aligned.
                 val bounds = Modifier.fillMaxSize().padding(16.dp)
                 Image(
                     bitmap = imageBitmap,
@@ -241,33 +239,46 @@ private fun CropPanel(state: EditorUiState, viewModel: EditorViewModel) {
 @Composable
 private fun AdjustPanel(edit: EditState, viewModel: EditorViewModel) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        AdjustSlider(R.string.adjust_brightness, edit.brightness, viewModel::setBrightness)
-        AdjustSlider(R.string.adjust_contrast, edit.contrast, viewModel::setContrast)
-        AdjustSlider(R.string.adjust_saturation, edit.saturation, viewModel::setSaturation)
-        AdjustSlider(R.string.adjust_warmth, edit.warmth, viewModel::setWarmth)
+        AdjustSlider(R.string.adjust_brightness, edit.brightness, -1f..1f, viewModel::setBrightness)
+        AdjustSlider(R.string.adjust_contrast, edit.contrast, -1f..1f, viewModel::setContrast)
+        AdjustSlider(R.string.adjust_saturation, edit.saturation, -1f..1f, viewModel::setSaturation)
+        AdjustSlider(R.string.adjust_warmth, edit.warmth, -1f..1f, viewModel::setWarmth)
+        AdjustSlider("Straighten", edit.straightenAngle, -45f..45f, viewModel::setStraighten)
+        AdjustSlider("Sharpen", edit.sharpen, 0f..1f, viewModel::setSharpen)
+        AdjustSlider("Vignette", edit.vignette, 0f..1f, viewModel::setVignette)
     }
 }
 
 @Composable
-private fun AdjustSlider(@StringRes label: Int, value: Float, onChange: (Float) -> Unit) {
+private fun AdjustSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = stringResource(label),
+            text = label,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.width(96.dp),
         )
         Slider(
             value = value,
             onValueChange = onChange,
-            valueRange = -1f..1f,
+            valueRange = range,
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = (value * 100).roundToInt().toString(),
+            text = (value * if (range.endInclusive > 2f) 1f else 100f).roundToInt().toString(),
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.width(36.dp),
         )
     }
+}
+
+@Composable
+private fun AdjustSlider(@StringRes label: Int, value: Float, onChange: (Float) -> Unit) {
+    AdjustSlider(stringResource(label), value, -1f..1f, onChange)
+}
+
+@Composable
+private fun AdjustSlider(@StringRes label: Int, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+    AdjustSlider(stringResource(label), value, range, onChange)
 }
 
 @Composable

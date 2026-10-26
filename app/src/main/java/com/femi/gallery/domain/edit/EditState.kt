@@ -25,6 +25,7 @@ enum class EditFilter { None, Vivid, Warm, Cool, Mono, Noir, Sepia, Fade, Dramat
 data class EditState(
     /** Quarter turns clockwise, 0..3. */
     val rotationTurns: Int = 0,
+    val straightenAngle: Float = 0f, // -45..45 degrees
     val flipHorizontal: Boolean = false,
     val flipVertical: Boolean = false,
     val crop: CropRect = CropRect.Full,
@@ -32,6 +33,8 @@ data class EditState(
     val contrast: Float = 0f,
     val saturation: Float = 0f,
     val warmth: Float = 0f,
+    val sharpen: Float = 0f,
+    val vignette: Float = 0f,
     val filter: EditFilter = EditFilter.None,
 ) {
     val isUnchanged: Boolean get() = this == EditState()

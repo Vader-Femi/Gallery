@@ -12,6 +12,8 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.net.Uri
 import android.provider.MediaStore
+import android.util.Log
+import androidx.exifinterface.media.ExifInterface
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.edit.CropRect
 import com.femi.gallery.domain.edit.EditState
@@ -44,11 +46,9 @@ class BitmapEditor @Inject constructor(
         runCatching { save(Uri.parse(uri), state) }.getOrDefault(false)
     }
 
-    /** Decodes with the photo's orientation applied, scaled so the longest side is at most [maxSize]. */
     private fun decode(uri: Uri, maxSize: Int): Bitmap {
         val source = ImageDecoder.createSource(context.contentResolver, uri)
         return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-            // Software bitmaps can be drawn into and transformed; hardware ones cannot.
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             val longest = maxOf(info.size.width, info.size.height)
             if (longest > maxSize) {
@@ -61,11 +61,10 @@ class BitmapEditor @Inject constructor(
         }
     }
 
-    /** Rotation first, then flips, so "flip horizontal" always means left-right on screen. */
     private fun orient(bitmap: Bitmap, state: EditState): Bitmap {
-        if (state.rotationTurns == 0 && !state.flipHorizontal && !state.flipVertical) return bitmap
+        if (state.rotationTurns == 0 && state.straightenAngle == 0f && !state.flipHorizontal && !state.flipVertical) return bitmap
         val matrix = Matrix().apply {
-            postRotate(state.rotationTurns * 90f)
+            postRotate(state.rotationTurns * 90f + state.straightenAngle)
             if (state.flipHorizontal) postScale(-1f, 1f)
             if (state.flipVertical) postScale(1f, -1f)
         }
@@ -105,10 +104,9 @@ class BitmapEditor @Inject constructor(
             }
         } ?: return false
 
-        // Edits are rendered from the photo itself (up to MAX_SAVE_SIZE) rather than the preview.
         val full = decode(uri, MAX_SAVE_SIZE)
         val oriented = orient(full, state)
-        if (oriented !== full) full.recycle() // a 4096 px bitmap is ~50 MB; free copies as soon as possible
+        if (oriented !== full) full.recycle()
         val geometry = crop(oriented, state.crop)
         if (geometry !== oriented) oriented.recycle()
         val result = Bitmap.createBitmap(geometry.width, geometry.height, Bitmap.Config.ARGB_8888)
@@ -136,6 +134,35 @@ class BitmapEditor @Inject constructor(
                 else result.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)
             }
             resolver.update(target, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+
+            // Copy EXIF from original
+            runCatching {
+                resolver.openFileDescriptor(uri, "r")?.use { sourceFd ->
+                    resolver.openFileDescriptor(target, "w")?.use { targetFd ->
+                        val sourceExif = ExifInterface(sourceFd.fileDescriptor)
+                        val targetExif = ExifInterface(targetFd.fileDescriptor)
+                        val tags = listOf(
+                            ExifInterface.TAG_DATETIME,
+                            ExifInterface.TAG_DATETIME_ORIGINAL,
+                            ExifInterface.TAG_GPS_LATITUDE,
+                            ExifInterface.TAG_GPS_LONGITUDE,
+                            ExifInterface.TAG_GPS_LATITUDE_REF,
+                            ExifInterface.TAG_GPS_LONGITUDE_REF,
+                            ExifInterface.TAG_MAKE,
+                            ExifInterface.TAG_MODEL,
+                            ExifInterface.TAG_FOCAL_LENGTH,
+                            ExifInterface.TAG_F_NUMBER,
+                            ExifInterface.TAG_EXPOSURE_TIME,
+                            ExifInterface.TAG_ISO_SPEED_RATINGS,
+                        )
+                        for (tag in tags) {
+                            sourceExif.getAttribute(tag)?.let { targetExif.setAttribute(tag, it) }
+                        }
+                        targetExif.saveAttributes()
+                    }
+                }
+            }
+
             true
         } catch (e: Exception) {
             resolver.delete(target, null, null)
@@ -143,7 +170,6 @@ class BitmapEditor @Inject constructor(
         }
     }
 
-    /** Next to the original when apps may write there, otherwise in Pictures/Edited. */
     private fun destinationFor(originalPath: String): String =
         if (AlbumPaths.isAlbumFolder(originalPath)) AlbumPaths.forMedia(originalPath, isVideo = false) else "Pictures/Edited/"
 
@@ -156,7 +182,6 @@ class BitmapEditor @Inject constructor(
     )
 
     private companion object {
-        /** Longest side of a saved edit; a 50 MP photo would need ~200 MB of memory at full size. */
         const val MAX_SAVE_SIZE = 4096
         const val JPEG_QUALITY = 95
     }

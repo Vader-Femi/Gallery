@@ -73,10 +73,10 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Photo editor**
 - [x] **Edit** button in the viewer opens the editor (photos only)
 - [x] **Crop** with free or fixed shapes (1:1, 4:3, 3:4, 16:9, 9:16, original), rule-of-thirds grid and draggable corners
-- [x] **Rotate** in 90° steps and **flip**
-- [x] **Adjust** brightness, contrast, saturation and warmth with live preview
+- [x] **Rotate** in 90° steps, **straighten** (-45° to 45°) and **flip**
+- [x] **Adjust** brightness, contrast, saturation, warmth, **sharpen** and **vignette** with live preview
 - [x] **Filters**: Vivid, Warm, Cool, Mono, Noir, Sepia, Fade and Dramatic, previewed on your photo
-- [x] **Save copy** next to the original — the original is never touched
+- [x] **Save copy** next to the original with EXIF metadata preserved (date, camera, GPS, etc.) — the original is never touched
 
 **Locked folder**
 - [x] **Move photos and videos into a private Locked folder** that other apps — including other galleries and the system photo picker — cannot see
@@ -339,6 +339,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 46 | Search by place name | Search now finds photos by offline place name ("paris", "london", "lagos", ...): matches each located photo to the nearest of the bundled ~1,250 cities (`places.bin`) via Haversine distance with unit tests |
 | 47 | Semantic free-text search | Search now supports natural language semantic description matching via local image and text embeddings (`clip.bin`, resumable background scan, cosine similarity matching) with unit tests |
 | 48 | "On this day" stories | Stories tab now automatically surfaces past memories taken on today's month and day in previous years, titled "On this day in YYYY", with unit tests |
+| 49 | Editor extras | Photo editor gains straighten (-45° to 45°), sharpen, and vignette adjustments, plus automatic EXIF metadata preservation (date, GPS, camera model, etc.) when saving edited copies |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

@@ -28,7 +28,6 @@ import javax.inject.Inject
 
 enum class EditorTool { Crop, Adjust, Filters }
 
-/** Shapes the crop box can be locked to. */
 enum class CropAspect(@StringRes val label: Int, private val fixedRatio: Float?) {
     Free(R.string.crop_free, null),
     Original(R.string.crop_original, null),
@@ -38,7 +37,6 @@ enum class CropAspect(@StringRes val label: Int, private val fixedRatio: Float?)
     Ratio16x9(R.string.crop_16_9, 16f / 9f),
     Ratio9x16(R.string.crop_9_16, 9f / 16f);
 
-    /** Width / height the crop must have, or null when it can be any shape. */
     fun ratio(imageWidth: Int, imageHeight: Int): Float? = when (this) {
         Free -> null
         Original -> imageWidth.toFloat() / imageHeight
@@ -47,9 +45,7 @@ enum class CropAspect(@StringRes val label: Int, private val fixedRatio: Float?)
 }
 
 data class EditorUiState(
-    /** The photo with rotation and flips applied; the crop tool shows this one. */
     val oriented: Bitmap? = null,
-    /** [oriented] with the crop applied; the other tools show this one. */
     val cropped: Bitmap? = null,
     val edit: EditState = EditState(),
     val tool: EditorTool = EditorTool.Adjust,
@@ -98,10 +94,8 @@ class EditorViewModel @Inject constructor(
     fun selectTool(tool: EditorTool) {
         val leavingCrop = _state.value.tool == EditorTool.Crop && tool != EditorTool.Crop
         _state.update { it.copy(tool = tool) }
-        if (leavingCrop) refreshGeometry() // the other tools preview the cropped photo
+        if (leavingCrop) refreshGeometry()
     }
-
-    // ---- geometry -------------------------------------------------------------------------
 
     fun rotate(clockwise: Boolean) = changeGeometry {
         it.copy(rotationTurns = (it.rotationTurns + if (clockwise) 1 else 3) % 4)
@@ -109,7 +103,11 @@ class EditorViewModel @Inject constructor(
 
     fun flipHorizontal() = changeGeometry { it.copy(flipHorizontal = !it.flipHorizontal) }
 
-    /** Rotating or flipping changes what "the crop" means, so it starts over. */
+    fun setStraighten(angle: Float) {
+        _state.update { it.copy(edit = it.edit.copy(straightenAngle = angle)) }
+        refreshGeometry()
+    }
+
     private fun changeGeometry(change: (EditState) -> EditState) {
         _state.update { it.copy(edit = change(it.edit).copy(crop = CropRect.Full), aspect = CropAspect.Free) }
         refreshGeometry()
@@ -125,8 +123,6 @@ class EditorViewModel @Inject constructor(
             _state.update { it.copy(oriented = oriented, cropped = cropped) }
         }
     }
-
-    // ---- crop -----------------------------------------------------------------------------
 
     fun selectAspect(aspect: CropAspect) {
         val oriented = _state.value.oriented ?: return
@@ -150,16 +146,12 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copy(edit = it.edit.copy(crop = CropMath.move(it.edit.crop, dx, dy))) }
     }
 
-    // ---- adjustments and filters ----------------------------------------------------------
-
     fun setBrightness(value: Float) = updateEdit { it.copy(brightness = value) }
-
     fun setContrast(value: Float) = updateEdit { it.copy(contrast = value) }
-
     fun setSaturation(value: Float) = updateEdit { it.copy(saturation = value) }
-
     fun setWarmth(value: Float) = updateEdit { it.copy(warmth = value) }
-
+    fun setSharpen(value: Float) = updateEdit { it.copy(sharpen = value) }
+    fun setVignette(value: Float) = updateEdit { it.copy(vignette = value) }
     fun setFilter(filter: EditFilter) = updateEdit { it.copy(filter = filter) }
 
     private fun updateEdit(change: (EditState) -> EditState) {
@@ -170,8 +162,6 @@ class EditorViewModel @Inject constructor(
         _state.update { it.copy(edit = EditState(), aspect = CropAspect.Free) }
         refreshGeometry()
     }
-
-    // ---- saving ---------------------------------------------------------------------------
 
     fun save() {
         val current = _state.value
@@ -186,8 +176,6 @@ class EditorViewModel @Inject constructor(
 
     companion object {
         const val URI_ARG = "uri"
-
-        /** Longest side of the on-screen preview; the saved photo is rendered from the original. */
         private const val PREVIEW_SIZE = 2048
     }
 }
