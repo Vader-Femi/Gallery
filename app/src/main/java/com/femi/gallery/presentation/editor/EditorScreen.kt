@@ -30,7 +30,7 @@ import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -116,7 +116,7 @@ fun EditorScreen(
                     Box(
                         modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
                         contentAlignment = Alignment.Center,
-                    ) { CircularProgressIndicator() }
+                    ) { CircularWavyProgressIndicator() }
                 }
             }
 
@@ -173,7 +173,7 @@ private fun EditorTopBar(
 private fun Preview(state: EditorUiState, viewModel: EditorViewModel, colorFilter: ColorFilter) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when {
-            state.loading -> CircularProgressIndicator()
+            state.loading -> CircularWavyProgressIndicator()
             state.loadFailed -> Text(stringResource(R.string.editor_load_failed))
             else -> {
                 val cropping = state.tool == EditorTool.Crop

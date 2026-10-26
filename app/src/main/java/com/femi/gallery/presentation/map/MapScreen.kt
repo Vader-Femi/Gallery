@@ -35,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -351,7 +352,7 @@ private fun MapStatus(scan: LocationScanState, showEmpty: Boolean, onPermissionR
                 ),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            LinearProgressIndicator(
+            LinearWavyProgressIndicator(
                 progress = { if (scan.total == 0) 0f else scan.scanned.toFloat() / scan.total },
                 modifier = Modifier.fillMaxWidth(),
             )

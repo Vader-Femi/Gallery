@@ -17,9 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
@@ -225,6 +226,7 @@ private fun SearchHelp(onSuggestion: (String) -> Unit) {
  * While the text in the photos is still being read, say so: a search only finds words in the photos
  * that have been read, so fewer results than expected are not a mistake. Nothing is shown otherwise.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun TextScanNotice(state: TextScanState) {
     when (state.status) {
@@ -235,7 +237,7 @@ private fun TextScanNotice(state: TextScanState) {
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            LinearProgressIndicator(
+            LinearWavyProgressIndicator(
                 progress = { if (state.total == 0) 0f else state.scanned.toFloat() / state.total },
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             )
