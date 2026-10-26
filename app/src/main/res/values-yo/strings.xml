@@ -1,0 +1,211 @@
+<resources>
+    <string name="app_name">Gallery</string>
+
+    <string name="nav_pictures">Àwọn Fọ́tò</string>
+    <string name="nav_albums">Àwọn Àlọ́bọ̀mù</string>
+    <string name="nav_stories">Àwọn Ìtàn</string>
+
+    <string name="timeline_today">Lónìí</string>
+    <string name="timeline_yesterday">Àná</string>
+
+    <string name="search_hint">Wá àwọn fọ́tò àti fídíò</string>
+    <string name="search_clear">Pa àwọn àwárí rẹ́</string>
+    <string name="search_open">Wá</string>
+    <string name="map_open">Máàpù</string>
+    <string name="map_title">Máàpù</string>
+    <string name="map_show_all">Fi gbogbo fọ́tò hàn</string>
+    <string name="map_scanning">Ń ka àwọn ibi tí a ti ya fọ́tò: %1$s nínú %2$s</string>
+    <string name="map_empty">Kò sí fọ́tò tó ní ibi tí a ti ya báyìí</string>
+    <string name="map_permission_message">Láti fi àwọn fọ́tò rẹ hàn lórí máàpù, jẹ́ kí Gallery ka ibi tí a ti ya wọn. Kò ní kúrò lórí fóònù rẹ láé.</string>
+    <string name="map_permission_allow">Gbà á láyè</string>
+    <string name="map_permission_settings">Ṣí ètò fóònù</string>
+    <string name="map_attribution">Ìsọfúnni máàpù: Natural Earth (ti gbogbo eniyan)</string>
+    <string name="place_title">Àwọn fọ́tò níbí</string>
+    <string name="search_help">Gbìyànjú orúkọ fáìlì tàbí fọ́lídà, ọjọ́ bí \"october 2025\" tàbí \"oct 15\", tàbí àwọn ọ̀rọ̀ bí fídíò, fọ́tò àti àwọn tí o fẹ́ jùlọ. Da wọn pọ̀: \"whatsapp videos 2025\". Àwọn ọ̀rọ̀ tí a kọ sínú fọ́tò, bí àmì tàbí rísítì, ni a tún ń wárí wọn.</string>
+    <string name="search_no_results">Kò sí fọ́tò tàbí fídíò tó báamu</string>
+    <string name="search_reading_text">Ń ka ọ̀rọ̀ tó wà nínú fọ́tò rẹ: %1$s nínú %2$s</string>
+    <string name="search_text_unavailable">Kíkà ọ̀rọ̀ tó wà nínú fọ́tò kò ṣiṣẹ́ lórí fóònù yìí</string>
+    <string name="search_suggestion_videos">Fídíò</string>
+    <string name="search_suggestion_favorites">Àwọn tí o fẹ́ jùlọ</string>
+    <string name="search_suggestion_screenshots">Àwọn fọ́tò ojú-ìwé</string>
+    <string name="search_suggestion_yesterday">Àná</string>
+
+    <string name="selection_count">%d</string>
+    <string name="selection_none">Yan àwọn ohun kan</string>
+    <string name="selection_select_all">Yan gbogbo rẹ̀</string>
+    <string name="selection_cancel">Fagile yíyan</string>
+    <string name="action_share">Pín</string>
+    <string name="action_favorite">Fẹ́ jùlọ</string>
+    <string name="action_unfavorite">Yọ kúrò nínú àwọn tó o fẹ́</string>
+    <string name="action_delete">Pa rẹ́</string>
+    <plurals name="toast_trashed">
+        <item quantity="one">Ti gbe ohun %d lọ sí inú àpótí ìdọ̀tí</item>
+        <item quantity="other">Ti gbe àwọn ohun %d lọ sí inú àpótí ìdọ̀tí</item>
+    </plurals>
+    <string name="action_restore">Mú padà</string>
+    <string name="action_delete_forever">Pa rẹ́ títí lailai</string>
+    <string name="action_empty_bin">Sofo</string>
+    <plurals name="toast_restored">
+        <item quantity="one">Mú ohun %d padà</item>
+        <item quantity="other">Mú àwọn ohun %d padà</item>
+    </plurals>
+    <plurals name="toast_deleted_forever">
+        <item quantity="one">Pa ohun %d rẹ́ títí lailai</item>
+        <item quantity="other">Pa àwọn ohun %d rẹ́ títí lailai</item>
+    </plurals>
+    <string name="album_favorites">Àwọn tí o fẹ́ jùlọ</string>
+    <string name="album_trash">Àpótí ìdọ̀tí</string>
+    <string name="toast_favorited">A fi kún àwọn tó o fẹ́</string>
+    <string name="toast_unfavorited">A yọ kúrò nínú àwọn tó o fẹ́</string>
+
+    <string name="action_more">Àwọn míràn</string>
+    <string name="action_move_to_album">Gbe lọ sí àlọ́bọ̀mù</string>
+    <string name="action_copy_to_album"> Dá ẹ̀dà kọ̀ọ̀kan sí àlọ́bọ̀mù</string>
+    <string name="action_rename_album">Tún orúkọ àlọ́bọ̀mù sọ</string>
+    <string name="picker_move_title">Gbe lọ sí àlọ́bọ̀mù</string>
+    <string name="picker_copy_title">Dá ẹ̀dà kọ̀ọ̀kan sí àlọ́bọ̀mù</string>
+    <string name="picker_new_album">Àlọ́bọ̀mù tuntun</string>
+    <string name="picker_create">Dá sílẹ̀</string>
+    <string name="picker_cancel">Fagile</string>
+    <string name="picker_album_name">Orúkọ àlọ́bọ̀mù</string>
+    <string name="rename_album_title">Tún orúkọ àlọ́bọ̀mù sọ</string>
+    <string name="rename_album_confirm">Tún orúkọ sọ</string>
+    <plurals name="toast_moved">
+        <item quantity="one">Ti gbe ohun %d lọ</item>
+        <item quantity="other">Ti gbe àwọn ohun %d lọ</item>
+    </plurals>
+    <plurals name="toast_copied">
+        <item quantity="one">Ti dá ẹ̀dà ohun %d</item>
+        <item quantity="other">Ti dá ẹ̀dà àwọn ohun %d</item>
+    </plurals>
+    <string name="toast_album_renamed">A ti tún orúkọ àlọ́bọ̀mù sọ</string>
+    <string name="album_locked">Fọ́lídà tó ti ní tìpa</string>
+    <string name="action_lock">Tìpa</string>
+    <string name="action_unlock">Ṣí</string>
+    <string name="locked_prompt_title">Fọ́lídà tó ti ní tìpa</string>
+    <string name="locked_prompt_subtitle">Jẹ́ kí a mọ̀ pé ìwọ ni láti rí àwọn fọ́tò ìkọ̀kọ̀ rẹ</string>
+    <string name="locked_title">Fọ́lídà tó ti ní tìpa</string>
+    <string name="locked_body">A pa àwọn fọ́tò àti fídíò ìkọ̀kọ̀ rẹ mọ́ kúrò lójú àwọn ápù yòókù. Ṣí i pẹ̀lú ìka ọwọ́ rẹ, ojú rẹ, tàbí àṣírí ìbòjú fóònù.</string>
+    <string name="locked_unlock">Ṣí</string>
+    <string name="locked_no_screen_lock_title">Ṣètò àṣírí ìbòjú kọ́kọ́</string>
+    <string name="locked_no_screen_lock_body">Ìka ọwọ́, ojú, tàbí àṣírí ìbòjú fóònù rẹ ló ń dáàbò bo fọ́lídà tí ó ní tìpa. Ṣètò ọ̀kan nínú ètò fóònù rẹ láti lò ó.</string>
+    <string name="locked_needs_screen_lock">Ṣètò àṣírí ìbòjú nínú ètò fóònù rẹ láti lò fọ́lídà tí ó ní tìpa</string>
+    <plurals name="toast_locked">
+        <item quantity="one">Ti gbe ohun %d lọ sí fọ́lídà tí ó ní tìpa</item>
+        <item quantity="other">Ti gbe àwọn ohun %d lọ sí fọ́lídà tí ó ní tìpa</item>
+    </plurals>
+    <plurals name="toast_unlocked">
+        <item quantity="one">Ti mú ohun %d padà sí gálárì rẹ</item>
+        <item quantity="other">Ti mú àwọn ohun %d padà sí gálárì rẹ</item>
+    </plurals>
+    <plurals name="toast_deleted_locked">
+        <item quantity="one">Pa ohun %d rẹ́</item>
+        <item quantity="other">Pa àwọn ohun %d rẹ́</item>
+    </plurals>
+    <string name="toast_failed">Nǹkan kan ṣe aṣìṣe</string>
+    <string name="album_unnamed">Àwọn yòókù</string>
+    <plurals name="album_item_count">
+        <item quantity="one">ohun %d</item>
+        <item quantity="other">ohun %d</item>
+    </plurals>
+
+    <string name="viewer_back">Padà</string>
+    <string name="viewer_share">Pín</string>
+    <string name="viewer_info">Àlàyé</string>
+    <string name="viewer_edit">Ṣàtúnṣe</string>
+
+    <string name="external_open_gallery">Ṣí Gallery</string>
+    <string name="picker_title_any">Yan fọ́tò tàbí fídíò kan</string>
+    <string name="picker_title_photo">Yan fọ́tò kan</string>
+    <string name="picker_title_video">Yan fídíò kan</string>
+    <string name="picker_done">Ó ti parí</string>
+    <string name="picker_cancel_selection">Fagile</string>
+
+    <string name="stories_empty">Kò sí ìtàn kankan báyìí. Ìtàn máa ń yọ jẹ́ kí o bá ya omlé fọ́tò 12 lọ́jọ́ kan, tàbí fún ọjọ́ mélòó kan ní tẹ̀lé e.</string>
+    <plurals name="story_item_count">
+        <item quantity="one">fọ́tò tàbí fídíò %d</item>
+        <item quantity="other">fọ́tò àti fídíò %d</item>
+    </plurals>
+    <string name="story_slideshow">Kpọ̀ àwọn fọ́tò báyìí</string>
+    <string name="slideshow_close">Pa ìfihàn fọ́tò rẹ́</string>
+
+    <string name="editor_close">Pa olùṣàtúnṣe</string>
+    <string name="editor_reset">Tún bẹ̀rẹ̀</string>
+    <string name="editor_save">Pamọ́ ẹ̀dà rẹ̀</string>
+    <string name="editor_load_failed">kò lè ṣí fọ́tò yìí</string>
+    <string name="editor_tool_crop">Gige</string>
+    <string name="editor_tool_adjust">Ṣàtúnṣe</string>
+    <string name="editor_tool_filters">Àwọn àlẹ̀</string>
+    <string name="editor_rotate_left">Yí sí apá òsì</string>
+    <string name="editor_rotate_right">Yí sí apá ọ̀tún</string>
+    <string name="editor_flip">Yi padà</string>
+    <string name="editor_discard_title">Jù àwọn àtúnṣe rẹ́?</string>
+    <string name="editor_discard_body">A ò tíì pamọ́ àwọn àtúnṣe rẹ.</string>
+    <string name="editor_discard_confirm">Jù rẹ́</string>
+    <string name="editor_keep_editing">Tẹ̀ síwájú nínú ṣàtúnṣe</string>
+    <string name="toast_edit_saved">Ti pamọ́ ẹ̀dà kan</string>
+    <string name="toast_edit_failed">Kò lè pamọ́ fọ́tò tí a ṣàtúnṣe sí</string>
+
+    <string name="crop_free">Lọ́fẹ̀ẹ́</string>
+    <string name="crop_original">Atijọ</string>
+    <string name="crop_square">1:1</string>
+    <string name="crop_4_3">4:3</string>
+    <string name="crop_3_4">3:4</string>
+    <string name="crop_16_9">16:9</string>
+    <string name="crop_9_16">9:16</string>
+
+    <string name="adjust_brightness">Ìtanmọ́</string>
+    <string name="adjust_contrast">Ìyàtọ̀</string>
+    <string name="adjust_saturation">Àgbára àwọ̀</string>
+    <string name="adjust_warmth">Ìgbóná</string>
+
+    <string name="filter_none">Atijọ</string>
+    <string name="filter_vivid">Tó nmọ́</string>
+    <string name="filter_warm">Tó gbóná</string>
+    <string name="filter_cool">Tó tù</string>
+    <string name="filter_mono">Mono</string>
+    <string name="filter_noir">Noir</string>
+    <string name="filter_sepia">Sepia</string>
+    <string name="filter_fade">Tó rọ̀</string>
+    <string name="filter_dramatic">Tó lẹ́wà gan-an</string>
+
+    <string name="details_title">Àlàyé</string>
+    <string name="details_file">Fáìlì</string>
+    <string name="details_taken">Ọjọ́</string>
+    <string name="details_folder">Fọ́lídà</string>
+    <string name="details_resolution">Àwòrán</string>
+    <string name="details_size">Ìwọ̀n</string>
+    <string name="details_duration">Àkókò</string>
+    <string name="details_camera">Kámẹ́rà</string>
+    <string name="details_settings">Ètò</string>
+    <string name="details_location">Ibi</string>
+
+    <string name="permission_title">Gbà láyè láti wọ àwọn fọ́tò àti fídíò rẹ</string>
+    <string name="permission_body">Gallery nílò àṣẹ láti ka àwọn fọ́tò àti fídíò lórí ẹ̀rọ rẹ kí ó lè fi hàn wọ́n. Kò sí ohun tó ń kúrò lórí fóònù rẹ.</string>
+    <string name="permission_body_denied">Wọ́n kọ̀ láti fún ọ ní àṣẹ. Ṣí ètò fóònù kí o sì jẹ́ kí àwọn fọ́tò àti fídíò ṣiṣẹ́.</string>
+    <string name="permission_grant">Gbà láyè</string>
+    <string name="permission_open_settings">Ṣí ètò fóònù</string>
+
+    <string name="nav_menu">Àtòjọ</string>
+    <string name="menu_videos">Fídíò</string>
+    <string name="menu_favorites">Àwọn tí o fẹ́ jùlọ</string>
+    <string name="menu_map">Máàpù</string>
+    <string name="menu_placeholder">Àwọn yòókù</string>
+    <string name="menu_stories">Àwọn Ìtàn</string>
+    <string name="menu_locked">Tìpa</string>
+    <string name="menu_recycle_bin">Àpótí ìdọ̀tí</string>
+    <string name="menu_settings">Ètò</string>
+    <string name="menu_settings_coming_soon">Ètò yóò dé láìpẹ́</string>
+
+    <string name="albums_empty">Kò sí àlọ́bọ̀mù kankan báyìí</string>
+    <string name="album_empty">Àlọ́bọ̀mù yìí ṣófo</string>
+    <string name="favorites_empty">Kò sí fọ́tò tí o fẹ́ jùlọ báyìí</string>
+    <string name="recycle_bin_empty">Àpótí ìdọ̀tí ṣófo</string>
+    <string name="locked_empty">Fọ́lídà tí ó ní tìpa ṣófo</string>
+    <string name="pictures_empty">Kò sí fọ́tò tàbí fídíò báyìí</string>
+    <string name="videos_empty">Kò sí fídíò báyìí</string>
+    <string name="place_empty">Kò sí fọ́tò níbí báyìí</string>
+    <string name="story_empty">Kò sí fọ́tò nínú ìtàn yìí</string>
+    <string name="picker_empty">Kò sí ohun tí o lè yan</string>
+    <string name="slideshow_empty">Kò sí fọ́tò láti fi hàn</string>
+</resources>

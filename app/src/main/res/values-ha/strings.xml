@@ -1,0 +1,211 @@
+<resources>
+    <string name="app_name">Hotuna</string>
+
+    <string name="nav_pictures">Hotuna</string>
+    <string name="nav_albums">Kundin hotuna</string>
+    <string name="nav_stories">Labaru</string>
+
+    <string name="timeline_today">Yau</string>
+    <string name="timeline_yesterday">Jiya</string>
+
+    <string name="search_hint">Bincika hotuna da bidiyo</string>
+    <string name="search_clear">Goge bincike</string>
+    <string name="search_open">Bincika</string>
+    <string name="map_open">Taswira</string>
+    <string name="map_title">Taswira</string>
+    <string name="map_show_all">Nuna duk hotunan</string>
+    <string name="map_scanning">Ana karanta wuraren hotuna: %1$s na %2$s</string>
+    <string name="map_empty">Babu hotunan da ke da wuri a yanzu</string>
+    <string name="map_permission_message">Don nuna hotunanka a kan taswira, bari Gallery ta karanta wuraren da aka adana a ciki. Ba sa barin wayarka.</string>
+    <string name="map_permission_allow">Bada izini</string>
+    <string name="map_permission_settings">Buɗe saituna</string>
+    <string name="map_attribution">Bayanan taswira: Natural Earth (mallakar jama'a)</string>
+    <string name="place_title">Hotunan nan</string>
+    <string name="search_help">Gwada sunan fayil ko babban fayil, kwanan wata kamar \"Oktoba 2025\" ko \"Okt 15\", ko kalmomi kamar bidiyo, hotuna da abubuwan da aka fi so. Haɗa su: \"whatsapp videos 2025\". Hakanan ana samun kalmomin da aka rubuta a cikin hoto, kamar alama ko rasiti.</string>
+    <string name="search_no_results">Babu hotuna ko bidiyo da suka dace</string>
+    <string name="search_reading_text">Ana karanta rubutun dake cikin hotunanka: %1$s na %2$s</string>
+    <string name="search_text_unavailable">Karanta rubutu a cikin hotuna baya aiki a wannan wayar</string>
+    <string name="search_suggestion_videos">Bidiyo</string>
+    <string name="search_suggestion_favorites">Abubuwan da aka fi so</string>
+    <string name="search_suggestion_screenshots">Hotunan allo</string>
+    <string name="search_suggestion_yesterday">Jiya</string>
+
+    <string name="selection_count">%d</string>
+    <string name="selection_none">Zaɓi abubuwa</string>
+    <string name="selection_select_all">Zaɓi duka</string>
+    <string name="selection_cancel">Soke zaɓi</string>
+    <string name="action_share">Raba</string>
+    <string name="action_favorite">Fi so</string>
+    <string name="action_unfavorite">Cire daga abin so</string>
+    <string name="action_delete">Goge</string>
+    <plurals name="toast_trashed">
+        <item quantity="one">An matsar da abu %d zuwa kwandon shara</item>
+        <item quantity="other">An matsar da abubuwa %d zuwa kwandon shara</item>
+    </plurals>
+    <string name="action_restore">Maido</string>
+    <string name="action_delete_forever">Goge har abada</string>
+    <string name="action_empty_bin">Kõban</string>
+    <plurals name="toast_restored">
+        <item quantity="one">An maido da abu %d</item>
+        <item quantity="other">An maido da abubuwa %d</item>
+    </plurals>
+    <plurals name="toast_deleted_forever">
+        <item quantity="one">An goge abu %d har abada</item>
+        <item quantity="other">An goge abubuwa %d har abada</item>
+    </plurals>
+    <string name="album_favorites">Abubuwan da aka fi so</string>
+    <string name="album_trash">Kwandon shara</string>
+    <string name="toast_favorited">An ƙara zuwa abubuwan da aka fi so</string>
+    <string name="toast_unfavorited">An cire daga abubuwan da aka fi so</string>
+
+    <string name="action_more">Ƙari</string>
+    <string name="action_move_to_album">Matsar zuwa kundin hotuna</string>
+    <string name="action_copy_to_album">Kwafi zuwa kundin hotuna</string>
+    <string name="action_rename_album">Sake suna kundin hotuna</string>
+    <string name="picker_move_title">Matsar zuwa kundin hotuna</string>
+    <string name="picker_copy_title">Kwafi zuwa kundin hotuna</string>
+    <string name="picker_new_album">Sabon kundin hotuna</string>
+    <string name="picker_create">Ƙirƙira</string>
+    <string name="picker_cancel">Soke</string>
+    <string name="picker_album_name">Sunan kundin hotuna</string>
+    <string name="rename_album_title">Sake suna kundin hotuna</string>
+    <string name="rename_album_confirm">Sake suna</string>
+    <plurals name="toast_moved">
+        <item quantity="one">An matsar da abu %d</item>
+        <item quantity="other">An matsar da abubuwa %d</item>
+    </plurals>
+    <plurals name="toast_copied">
+        <item quantity="one">An kwafi abu %d</item>
+        <item quantity="other">An kwafi abubuwa %d</item>
+    </plurals>
+    <string name="toast_album_renamed">An sake sunan kundin hotuna</string>
+    <string name="album_locked">Kundin da aka kulle</string>
+    <string name="action_lock">Kulle</string>
+    <string name="action_unlock">Buɗe</string>
+    <string name="locked_prompt_title">Kundin da aka kulle</string>
+    <string name="locked_prompt_subtitle">Tabbatar cewa kai ne don ganin sirrin hotunanka</string>
+    <string name="locked_title">Kundin da aka kulle</string>
+    <string name="locked_body">An ɓoye sirrin hotunanka da bidiyoyinka daga wasu aikace-aikace. Buɗe da yatsanka, fuskarka, ko makullin allo.</string>
+    <string name="locked_unlock">Buɗe</string>
+    <string name="locked_no_screen_lock_title">Saita makullin allo tukuna</string>
+    <string name="locked_no_screen_lock_body">Makullin allo ko na yatsa na wayarka ne ke kare kundin. Saita shi a cikin saitunan wayarka.</string>
+    <string name="locked_needs_screen_lock">Saita makullin allo a cikin saitunan wayarka don amfani da kundin da aka kulle</string>
+    <plurals name="toast_locked">
+        <item quantity="one">An matsar da abu %d zuwa kundin da aka kulle</item>
+        <item quantity="other">An matsar da abubuwa %d zuwa kundin da aka kulle</item>
+    </plurals>
+    <plurals name="toast_unlocked">
+        <item quantity="one">An maido da abu %d zuwa hotunanka</item>
+        <item quantity="other">An maido da abubuwa %d zuwa hotunanka</item>
+    </plurals>
+    <plurals name="toast_deleted_locked">
+        <item quantity="one">An goge abu %d</item>
+        <item quantity="other">An goge abubuwa %d</item>
+    </plurals>
+    <string name="toast_failed">Wani abu ya lalace</string>
+    <string name="album_unnamed">Wani</string>
+    <plurals name="album_item_count">
+        <item quantity="one">abu %d</item>
+        <item quantity="other">abubuwa %d</item>
+    </plurals>
+
+    <string name="viewer_back">Baya</string>
+    <string name="viewer_share">Raba</string>
+    <string name="viewer_info">Bayani</string>
+    <string name="viewer_edit">Gyara</string>
+
+    <string name="external_open_gallery">Buɗe Hotuna</string>
+    <string name="picker_title_any">Zaɓi hoto ko bidiyo</string>
+    <string name="picker_title_photo">Zaɓi hoto</string>
+    <string name="picker_title_video">Zaɓi bidiyo</string>
+    <string name="picker_done">An gama</string>
+    <string name="picker_cancel_selection">Soke</string>
+
+    <string name="stories_empty">Babu labaru tukuna. Labari yana fitowa ne idan ka dauki akalla hotuna 12 a rana daya, ko cikin ‘yan kwanaki a jere.</string>
+    <plurals name="story_item_count">
+        <item quantity="one">hoto ko bidiyo %d</item>
+        <item quantity="other">hotuna da bidiyoyi %d</item>
+    </plurals>
+    <string name="story_slideshow">Kunna nunin hotuna</string>
+    <string name="slideshow_close">Rufe nunin hotuna</string>
+
+    <string name="editor_close">Rufe mai gyara</string>
+    <string name="editor_reset">Sake saitawa</string>
+    <string name="editor_save">Ajiye kwafi</string>
+    <string name="editor_load_failed">An kasa buɗe wannan hoton</string>
+    <string name="editor_tool_crop">Yanke</string>
+    <string name="editor_tool_adjust">Daidaita</string>
+    <string name="editor_tool_filters">Matattara</string>
+    <string name="editor_rotate_left">Juya hagu</string>
+    <string name="editor_rotate_right">Juya dama</string>
+    <string name="editor_flip">Juya</string>
+    <string name="editor_discard_title">A watsar da canje-canjen?</string>
+    <string name="editor_discard_body">Ba a adana gyare-gyarenka ba.</string>
+    <string name="editor_discard_confirm">Watsar</string>
+    <string name="editor_keep_editing">Ci gaba da gyarawa</string>
+    <string name="toast_edit_saved">An adana kwafi</string>
+    <string name="toast_edit_failed">An kasa adana hoton da aka gyara</string>
+
+    <string name="crop_free">Kyauta</string>
+    <string name="crop_original">Na asali</string>
+    <string name="crop_square">1:1</string>
+    <string name="crop_4_3">4:3</string>
+    <string name="crop_3_4">3:4</string>
+    <string name="crop_16_9">16:9</string>
+    <string name="crop_9_16">9:16</string>
+
+    <string name="adjust_brightness">Haske</string>
+    <string name="adjust_contrast">Banbanci</string>
+    <string name="adjust_saturation">Cikewa</string>
+    <string name="adjust_warmth">Ɗumi</string>
+
+    <string name="filter_none">Na asali</string>
+    <string name="filter_vivid">Mai haske sosai</string>
+    <string name="filter_warm">Mai ɗumi</string>
+    <string name="filter_cool">Mai sanyi</string>
+    <string name="filter_mono">Mono</string>
+    <string name="filter_noir">Noir</string>
+    <string name="filter_sepia">Sepia</string>
+    <string name="filter_fade">Bace</string>
+    <string name="filter_dramatic">Mai ban mamaki</string>
+
+    <string name="details_title">Bayani</string>
+    <string name="details_file">Fayil</string>
+    <string name="details_taken">Kwanan wata</string>
+    <string name="details_folder">Babban fayil</string>
+    <string name="details_resolution">Ingancin hoto</string>
+    <string name="details_size">Girma</string>
+    <string name="details_duration">Tsawon lokaci</string>
+    <string name="details_camera">Kyamara</string>
+    <string name="details_settings">Saituna</string>
+    <string name="details_location">Wuri</string>
+
+    <string name="permission_title">Bada izinin shiga hotunanka da bidiyoyinka</string>
+    <string name="permission_body">Gallery na buƙatar izinin karanta hotuna da bidiyo a kan na'urarka domin ta nuna su. Babu abin da ke barin wayarka.</string>
+    <string name="permission_body_denied">An ki amincewa da izinin. Buɗe saituna kuma ka ba da izinin hotuna da bidiyo don ci gaba.</string>
+    <string name="permission_grant">Bada izini</string>
+    <string name="permission_open_settings">Buɗe saituna</string>
+
+    <string name="nav_menu">Menu</string>
+    <string name="menu_videos">Bidiyo</string>
+    <string name="menu_favorites">Abubuwan da aka fi so</string>
+    <string name="menu_map">Taswira</string>
+    <string name="menu_placeholder">Wani</string>
+    <string name="menu_stories">Labaru</string>
+    <string name="menu_locked">An kulle</string>
+    <string name="menu_recycle_bin">Kwandon shara</string>
+    <string name="menu_settings">Saituna</string>
+    <string name="menu_settings_coming_soon">Saitunan suna zuwa nan ba da jimawa ba</string>
+
+    <string name="albums_empty">Babu kundin hotuna tukuna</string>
+    <string name="album_empty">Wannan kundin hotunan babu komai a ciki</string>
+    <string name="favorites_empty">Babu hotunan da aka fi so tukuna</string>
+    <string name="recycle_bin_empty">Kwandon shara ba komai</string>
+    <string name="locked_empty">Kundin da aka kulle ba komai</string>
+    <string name="pictures_empty">Babu hotuna ko bidiyo tukuna</string>
+    <string name="videos_empty">Babu bidiyo tukuna</string>
+    <string name="place_empty">Babu hotuna a nan tukuna</string>
+    <string name="story_empty">Babu hotuna a cikin wannan labarin</string>
+    <string name="picker_empty">Babu abubuwan da za a zaɓa</string>
+    <string name="slideshow_empty">Babu hotunan da za a kunna</string>
+</resources>

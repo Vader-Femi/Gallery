@@ -1,0 +1,211 @@
+<resources>
+    <string name="app_name">Gallery</string>
+
+    <string name="nav_pictures">Foto</string>
+    <string name="nav_albums">Album</string>
+    <string name="nav_stories">Akụkọ</string>
+
+    <string name="timeline_today">Taa</string>
+    <string name="timeline_yesterday">N'ụnyaahụ</string>
+
+    <string name="search_hint">Chọọ foto na vidiyo</string>
+    <string name="search_clear">Hichapụ ọchịchọ</string>
+    <string name="search_open">Chọọ</string>
+    <string name="map_open">Maapụ</string>
+    <string name="map_title">Maapụ</string>
+    <string name="map_show_all">Gosi foto niile</string>
+    <string name="map_scanning">Na-agụ ebe foto dị: %1$s n'ime %2$s</string>
+    <string name="map_empty">Enweghị foto nwere ebe ha nọ ka</string>
+    <string name="map_permission_message">Iji gosi foto gị na maapụ, kwe ka Gallery gụọ ebe e chekwara ha. Ọ naghị ahapụ ekwentị gị.</string>
+    <string name="map_permission_allow">Kwe ka ọ rụọ</string>
+    <string name="map_permission_settings">Mepee ntọala</string>
+    <string name="map_attribution">Data maapụ: Natural Earth (nke ọha na eze)</string>
+    <string name="place_title">Foto ndị nọ ebe a</string>
+    <string name="search_help">Nwalee aha faịlụ ma ọ bụ folda, ụbọchị dị ka \"october 2025\" ma ọ bụ \"oct 15\", ma ọ bụ okwu dị ka vidiyo, foto na ọkacha mmasị. Jikọta ha: \"whatsapp videos 2025\". A na-achọtakwa okwu ndị e dere n'foto, dị ka akara ma ọ bụ nnata.</string>
+    <string name="search_no_results">Enweghị foto ma ọ bụ vidiyo dabara adaba</string>
+    <string name="search_reading_text">Na-agụ ederede dị n\'foto gị: %1$s n\'ime %2$s</string>
+    <string name="search_text_unavailable">Ịgụ ederede n\'foto anaghị arụ ọrụ n\'ekwentị a</string>
+    <string name="search_suggestion_videos">Vidiyo</string>
+    <string name="search_suggestion_favorites">Ọkacha mmasị</string>
+    <string name="search_suggestion_screenshots">Ngosipụta ihuenyo</string>
+    <string name="search_suggestion_yesterday">N'ụnyaahụ</string>
+
+    <string name="selection_count">%d</string>
+    <string name="selection_none">Họrọ ihe</string>
+    <string name="selection_select_all">Họrọ ha niile</string>
+    <string name="selection_cancel">Kagbuo nhọrọ</string>
+    <string name="action_share">Kesaa</string>
+    <string name="action_favorite">Nwee mmasị</string>
+    <string name="action_unfavorite">Wepụ na mmasị</string>
+    <string name="action_delete">Hichapụ</string>
+    <plurals name="toast_trashed">
+        <item quantity="one">Akpọgara ihe %d na mkpofu</item>
+        <item quantity="other">Akpọgara ihe %d na mkpofu</item>
+    </plurals>
+    <string name="action_restore">Weghachite</string>
+    <string name="action_delete_forever">Hichapụ kpamkpam</string>
+    <string name="action_empty_bin">Tọgbọ chakoo</string>
+    <plurals name="toast_restored">
+        <item quantity="one">Weghachitere ihe %d</item>
+        <item quantity="other">Weghachitere ihe %d</item>
+    </plurals>
+    <plurals name="toast_deleted_forever">
+        <item quantity="one">Ihichapụrụ ihe %d kpamkpam</item>
+        <item quantity="other">Ihichapụrụ ihe %d kpamkpam</item>
+    </plurals>
+    <string name="album_favorites">Ọkacha mmasị</string>
+    <string name="album_trash">Igbe mkpofu</string>
+    <string name="toast_favorited">Agbakwunyere na ọkacha mmasị</string>
+    <string name="toast_unfavorited">Wepụrụ na ọkacha mmasị</string>
+
+    <string name="action_more">Ndị ọzọ</string>
+    <string name="action_move_to_album">Kwagaria n\'album</string>
+    <string name="action_copy_to_album">Detuo gaa n\'album</string>
+    <string name="action_rename_album">Gbanwee aha album</string>
+    <string name="picker_move_title">Kwagaria n\'album</string>
+    <string name="picker_copy_title">Detuo gaa n\'album</string>
+    <string name="picker_new_album">Album ọhụrụ</string>
+    <string name="picker_create">Mepụta</string>
+    <string name="picker_cancel">Kagbuo</string>
+    <string name="picker_album_name">Aha album</string>
+    <string name="rename_album_title">Gbanwee aha album</string>
+    <string name="rename_album_confirm">Gbanwee aha</string>
+    <plurals name="toast_moved">
+        <item quantity="one">Kwagaria ihe %d</item>
+        <item quantity="other">Kwagaria ihe %d</item>
+    </plurals>
+    <plurals name="toast_copied">
+        <item quantity="one">Detuo ihe %d</item>
+        <item quantity="other">Detuo ihe %d</item>
+    </plurals>
+    <string name="toast_album_renamed">Agbanweela aha album</string>
+    <string name="album_locked">Folda e kpochiri</string>
+    <string name="action_lock">Kpọchie</string>
+    <string name="action_unlock">Meghee</string>
+    <string name="locked_prompt_title">Folda e kpochiri</string>
+    <string name="locked_prompt_subtitle">Gosi na ️bụ gị iji hụ foto nzuzo gị</string>
+    <string name="locked_title">Folda e kpochiri</string>
+    <string name="locked_body">E zoro foto na vidiyo nzuzo gị pụọ n'apps ndị ọzọ. Jiri mkpịsị aka gị, ihu gị, ma ọ bụ mkpọchi ihuenyo meghee ya.</string>
+    <string name="locked_unlock">Meghee</string>
+    <string name="locked_no_screen_lock_title">Biko buru ụzọ tinye mkpọchi ihuenyo</string>
+    <string name="locked_no_screen_lock_body">Mkpịsị aka gị, ihu gị ma ọ bụ mkpọchi ihuenyo na-echebe folda e kpochiri. Tọọ otu na ntọala ekwentị gị iji jiri ya.</string>
+    <string name="locked_needs_screen_lock">Tọọ mkpọchi ihuenyo na ntọala ekwentị gị iji jiri folda e kpochiri</string>
+    <plurals name="toast_locked">
+        <item quantity="one">Kwagaria ihe %d na folda e kpochiri</item>
+        <item quantity="other">Kwagaria ihe %d na folda e kpochiri</item>
+    </plurals>
+    <plurals name="toast_unlocked">
+        <item quantity="one">Weghachitere ihe %d na gallery gị</item>
+        <item quantity="other">Weghachitere ihe %d na gallery gị</item>
+    </plurals>
+    <plurals name="toast_deleted_locked">
+        <item quantity="one">Ehichapụrụ ihe %d</item>
+        <item quantity="other">Ehichapụrụ ihe %d</item>
+    </plurals>
+    <string name="toast_failed">O nwere ihe jọgburu onwe ya mere</string>
+    <string name="album_unnamed">Ndị ọzọ</string>
+    <plurals name="album_item_count">
+        <item quantity="one">ihe %d</item>
+        <item quantity="other">ihe %d</item>
+    </plurals>
+
+    <string name="viewer_back">Azụ</string>
+    <string name="viewer_share">Kesaa</string>
+    <string name="viewer_info">Nkọwa</string>
+    <string name="viewer_edit">Dezie</string>
+
+    <string name="external_open_gallery">Mepee Gallery</string>
+    <string name="picker_title_any">Họrọ foto ma ọ bụ vidiyo</string>
+    <string name="picker_title_photo">Họrọ foto</string>
+    <string name="picker_title_video">Họrọ vidiyo</string>
+    <string name="picker_done">Emechaa</string>
+    <string name="picker_cancel_selection">Kagbuo</string>
+
+    <string name="stories_empty">Enweghị akụkọ ọ bụla ka. Akụkọ na-apụta mgbe i sere opekata mpe foto iri na abụọ n'otu ụbọchị, ma ọ bụ n'ime ụbọchị ole na ole n'usoro.</string>
+    <plurals name="story_item_count">
+        <item quantity="one">foto ma ọ bụ vidiyo %d</item>
+        <item quantity="other">foto na vidiyo %d</item>
+    </plurals>
+    <string name="story_slideshow">Kpọọ slideshow</string>
+    <string name="slideshow_close">Mechie slideshow</string>
+
+    <string name="editor_close">Mechie onye nchịkọta</string>
+    <string name="editor_reset">Tọgharịa</string>
+    <string name="editor_save">Chekwaa otu oyiri</string>
+    <string name="editor_load_failed">Enweghị ike imepe foto a</string>
+    <string name="editor_tool_crop">Kpụchaa</string>
+    <string name="editor_tool_adjust">Hazie</string>
+    <string name="editor_tool_filters">Ihe nzacha</string>
+    <string name="editor_rotate_left">Tụgharịa n\'aka ekpe</string>
+    <string name="editor_rotate_right">Tụgharịa n\'aka nri</string>
+    <string name="editor_flip">Tụgharịa</string>
+    <string name="editor_discard_title">Tụfuo mgbanwe?</string>
+    <string name="editor_discard_body">Echekwabeghị mgbanwe gị.</string>
+    <string name="editor_discard_confirm">Tụfuo</string>
+    <string name="editor_keep_editing">Gaa n\'ihu na-edezi</string>
+    <string name="toast_edit_saved">Echekwara otu oyiri</string>
+    <string name="toast_edit_failed">Enweghị ike ichekwa foto e deziri</string>
+
+    <string name="crop_free">N'efu</string>
+    <string name="crop_original">Nke izizi</string>
+    <string name="crop_square">1:1</string>
+    <string name="crop_4_3">4:3</string>
+    <string name="crop_3_4">3:4</string>
+    <string name="crop_16_9">16:9</string>
+    <string name="crop_9_16">9:16</string>
+
+    <string name="adjust_brightness">Ọkụ</string>
+    <string name="adjust_contrast">Ọdịiche</string>
+    <string name="adjust_saturation">Nchapụta agba</string>
+    <string name="adjust_warmth">Nkwụ ọkụ</string>
+
+    <string name="filter_none">Nke izizi</string>
+    <string name="filter_vivid">Nke doro anya</string>
+    <string name="filter_warm">Nke na-ekpo ọkụ</string>
+    <string name="filter_cool">Nke jụrụ oyi</string>
+    <string name="filter_mono">Mono</string>
+    <string name="filter_noir">Noir</string>
+    <string name="filter_sepia">Sepia</string>
+    <string name="filter_fade">Nke na-ada mba</string>
+    <string name="filter_dramatic">Nke pụrụ iche</string>
+
+    <string name="details_title">Nkọwa</string>
+    <string name="details_file">Faịlụ</string>
+    <string name="details_taken">Ụbọchị</string>
+    <string name="details_folder">Folda</string>
+    <string name="details_resolution">Mkpebi</string>
+    <string name="details_size">Nha</string>
+    <string name="details_duration">Oge</string>
+    <string name="details_camera">Igwefoto</string>
+    <string name="details_settings">Ntọala</string>
+    <string name="details_location">Ebe</string>
+
+    <string name="permission_title">Kwe ka ịnweta foto na vidiyo gị</string>
+    <string name="permission_body">Gallery chọrọ ikike ịgụ foto na vidiyo dị na ngwaọrụ gị ka o wee nwee ike igosi ha. Ọ dị ಏನು ahapụghị ekwentị gị.</string>
+    <string name="permission_body_denied">Ajụrụ ohere ahụ. Mepee ntọala ma kwe ka foto na vidiyo gaa n'ihu.</string>
+    <string name="permission_grant">Kwe ka o nwee ohere</string>
+    <string name="permission_open_settings">Mepee ntọala</string>
+
+    <string name="nav_menu">Nchịkọta</string>
+    <string name="menu_videos">Vidiyo</string>
+    <string name="menu_favorites">Ọkacha mmasị</string>
+    <string name="menu_map">Maapụ</string>
+    <string name="menu_placeholder">Ndị ọzọ</string>
+    <string name="menu_stories">Akụkọ</string>
+    <string name="menu_locked">E kpochiri</string>
+    <string name="menu_recycle_bin">Igbe mkpofu</string>
+    <string name="menu_settings">Ntọala</string>
+    <string name="menu_settings_coming_soon">Ntọala na-abịa n'oge adịghị anya</string>
+
+    <string name="albums_empty">Enweghị album ọ bụla ka</string>
+    <string name="album_empty">Album a tọgbọ chakoo</string>
+    <string name="favorites_empty">Enweghị foto ọkacha mmasị ka</string>
+    <string name="recycle_bin_empty">Igbe mkpofu tọgbọ chakoo</string>
+    <string name="locked_empty">Folda e kpochiri tọgbọ chakoo</string>
+    <string name="pictures_empty">Enweghị foto ma ọ bụ vidiyo ka</string>
+    <string name="videos_empty">Enweghị vidiyo ka</string>
+    <string name="place_empty">Enweghị foto ebe a ka</string>
+    <string name="story_empty">Enweghị foto n\'akụkọ a</string>
+    <string name="picker_empty">Enweghị ihe ị ga-ahọrọ</string>
+    <string name="slideshow_empty">Enweghị foto ịkpọ</string>
+</resources>
