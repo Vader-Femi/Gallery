@@ -1,0 +1,136 @@
+From 960c1b8a6b7e1af89a4c69e2d217bccf7c934aea Mon Sep 17 00:00:00 2001
+From: Femi <oluwafemi.za@gmail.com>
+Date: Mon, 26 Oct 2026 13:24:55 +0100
+Subject: [PATCH] [PATCH] Patch 48: On this day stories with unit tests
+
+---
+ README.md                                     |  4 ++-
+ .../gallery/domain/model/StoryDetector.kt     | 29 +++++++++++++++----
+ .../presentation/stories/StoryTitles.kt       |  5 +++-
+ .../presentation/stories/StoryTitlesTest.kt   |  5 ++++
+ 4 files changed, 35 insertions(+), 8 deletions(-)
+
+diff --git a/README.md b/README.md
+index 215bd97..61d51f8 100644
+--- a/README.md
++++ b/README.md
+@@ -55,6 +55,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
+ 
+ **Stories**
+ - [x] **Stories tab** finds events automatically: a busy day (5+ photos) or a run of busy days in a row (up to 10), with at least 12 photos in total
++- [x] **"On this day" memories**: automatically surfaces photos taken on today's month and day in previous years, titled "On this day in YYYY"
+ - [x] Cards with a cover from the middle of the event, a date title (`Sat, Oct 3`, `Oct 30 – Nov 2`, `Dec 30, 2025 – Jan 2, 2026`) and the number of photos and videos
+ - [x] A story opens as a normal timeline (zoom, fast scroller, selection, viewer), covering exactly the days of the story
+ - [x] **Slideshow** of a story's photos: tap to pause, swipe to skip, X to close
+@@ -105,7 +106,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
+ 
+ **Next up**
+ - [ ] **Map extras**: photo locations for videos, a map with streets (offline vector tiles you import once), fling and smooth zoom animations
+-- [ ] **Better stories**: "On this day" memories, a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album
++- [ ] **Better stories**: a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album
+ - [ ] **Editor extras**: draw, text and stickers, straighten, sharpen/vignette, keep camera details (EXIF) and offer to replace the original
+ - [ ] **Search by place** (needs reverse geocoding, so it has to be an opt-in network feature)
+ 
+@@ -337,6 +338,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
+ | 45 | Object/scene labels | Search now finds photos by object and scene labels ("dog", "beach", "food", "car", "document", ...): a background scan indexes photo tags (resumable, incremental, stored in `labels.bin`, excluded from backups) with pure-Kotlin scene tagger and unit tests |
+ | 46 | Search by place name | Search now finds photos by offline place name ("paris", "london", "lagos", ...): matches each located photo to the nearest of the bundled ~1,250 cities (`places.bin`) via Haversine distance with unit tests |
+ | 47 | Semantic free-text search | Search now supports natural language semantic description matching via local image and text embeddings (`clip.bin`, resumable background scan, cosine similarity matching) with unit tests |
++| 48 | "On this day" stories | Stories tab now automatically surfaces past memories taken on today's month and day in previous years, titled "On this day in YYYY", with unit tests |
+ 
+ Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
+ 
+diff --git a/app/src/main/java/com/femi/gallery/domain/model/StoryDetector.kt b/app/src/main/java/com/femi/gallery/domain/model/StoryDetector.kt
+index cad5781..30063cf 100644
+--- a/app/src/main/java/com/femi/gallery/domain/model/StoryDetector.kt
++++ b/app/src/main/java/com/femi/gallery/domain/model/StoryDetector.kt
+@@ -1,5 +1,7 @@
+ package com.femi.gallery.domain.model
+ 
++import java.time.LocalDate
++
+ /** A story before its cover is loaded; [coverIndex] points into the newest-first media order. */
+ data class StoryCandidate(
+     val fromDay: Long,
+@@ -11,19 +13,34 @@ data class StoryCandidate(
+ /**
+  * Finds stories in the day sections of the library (newest first).
+  *
+- * A day counts as "active" with at least [MIN_PHOTOS_PER_DAY] photos. Consecutive active days
+- * form a run (a trip, a long weekend), cut at [MAX_STORY_DAYS] days so a month of daily photos
+- * does not become one endless story. A run is a story when it has [MIN_STORY_PHOTOS] photos or
+- * more. Stories line up exactly with whole days, so a story's photos are simply everything
+- * taken between its first and last day.
++ * Includes "On this day" memories from past years, and trip/event stories (busy runs of days).
+  */
+ object StoryDetector {
+     const val MIN_PHOTOS_PER_DAY = 5
+     const val MIN_STORY_PHOTOS = 12
+     const val MAX_STORY_DAYS = 10
+ 
+-    fun detect(days: List<TimelineSection>): List<StoryCandidate> {
++    fun detect(days: List<TimelineSection>, today: LocalDate = LocalDate.now()): List<StoryCandidate> {
+         val stories = ArrayList<StoryCandidate>()
++
++        // 1. "On this day" memories in past years (min 3 photos)
++        val todayMonth = today.monthValue
++        val todayDay = today.dayOfMonth
++        for (day in days) {
++            val date = LocalDate.ofEpochDay(day.epochDay)
++            if (date.monthValue == todayMonth && date.dayOfMonth == todayDay && date.year < today.year && day.count >= 3) {
++                stories.add(
++                    StoryCandidate(
++                        fromDay = day.epochDay,
++                        toDay = day.epochDay,
++                        count = day.count,
++                        coverIndex = day.startIndex,
++                    ),
++                )
++            }
++        }
++
++        // 2. Regular trip/event stories
+         var run = ArrayList<TimelineSection>()
+ 
+         fun finishRun() {
+diff --git a/app/src/main/java/com/femi/gallery/presentation/stories/StoryTitles.kt b/app/src/main/java/com/femi/gallery/presentation/stories/StoryTitles.kt
+index 6fd9304..04dbc04 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/stories/StoryTitles.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/stories/StoryTitles.kt
+@@ -9,7 +9,7 @@ object StoryTitles {
+ 
+     /**
+      * `Sat, Oct 3` for one day, `Oct 3 – 5` or `Oct 30 – Nov 2` for several; the year is added
+-     * when it isn't the current one.
++     * when it isn't the current one. "On this day in YYYY" for past anniversaries.
+      */
+     fun range(
+         fromDay: Long,
+@@ -24,6 +24,9 @@ object StoryTitles {
+         val dayOnly = DateTimeFormatter.ofPattern("d", locale)
+         val withYear = DateTimeFormatter.ofPattern("MMM d, yyyy", locale)
+ 
++        val isPastOnThisDay = from == to && from.month == today.month && from.dayOfMonth == today.dayOfMonth && from.year < today.year
++        if (isPastOnThisDay) return "On this day in ${from.year}"
++
+         return when {
+             from == to && from.year == today.year -> from.format(weekdayAndDay)
+             from == to -> from.format(withYear)
+diff --git a/app/src/test/java/com/femi/gallery/presentation/stories/StoryTitlesTest.kt b/app/src/test/java/com/femi/gallery/presentation/stories/StoryTitlesTest.kt
+index 90d5a54..e016386 100644
+--- a/app/src/test/java/com/femi/gallery/presentation/stories/StoryTitlesTest.kt
++++ b/app/src/test/java/com/femi/gallery/presentation/stories/StoryTitlesTest.kt
+@@ -18,6 +18,11 @@ class StoryTitlesTest {
+         assertEquals("Sat, Oct 3", title(day(2026, 10, 3), day(2026, 10, 3)))
+     }
+ 
++    @Test
++    fun onThisDayPastYear() {
++        assertEquals("On this day in 2024", title(day(2024, 10, 18), day(2024, 10, 18)))
++    }
++
+     @Test
+     fun singleDayInAnotherYearShowsTheYear() {
+         assertEquals("Dec 31, 2025", title(day(2025, 12, 31), day(2025, 12, 31)))
+-- 
+2.54.0 (Apple Git-157)
+

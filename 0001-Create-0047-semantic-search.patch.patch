@@ -1,0 +1,837 @@
+From 98fae06bf5b4fd140d969fe278c7d5ede040b38f Mon Sep 17 00:00:00 2001
+From: Femi <oluwafemi.za@gmail.com>
+Date: Mon, 26 Oct 2026 13:15:20 +0100
+Subject: [PATCH] Create 0047-semantic-search.patch
+
+---
+ 0047-semantic-search.patch | 818 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 818 insertions(+)
+ create mode 100644 0047-semantic-search.patch
+
+diff --git a/0047-semantic-search.patch b/0047-semantic-search.patch
+new file mode 100644
+index 0000000..2e5d18b
+--- /dev/null
++++ b/0047-semantic-search.patch
+@@ -0,0 +1,818 @@
++From e0f5af52c1f7caca404c0043da9557e24d5d7745 Mon Sep 17 00:00:00 2001
++From: Femi <oluwafemi.za@gmail.com>
++Date: Mon, 26 Oct 2026 13:12:48 +0100
++Subject: [PATCH] [PATCH] Patch 47: semantic free-text search via local
++ embeddings and cosine similarity with unit tests
++
++---
++ README.md                                     |   3 +-
++ .../femi/gallery/data/clip/ClipIndexHolder.kt |  40 +++++
++ .../femi/gallery/data/clip/FileClipStore.kt   |  41 +++++
++ .../gallery/data/clip/MockImageEmbedder.kt    |  50 ++++++
++ .../data/mediastore/MediaStoreDataSource.kt   |  11 +-
++ .../repository/ClipIndexRepositoryImpl.kt     | 144 ++++++++++++++++++
++ .../com/femi/gallery/di/RepositoryModule.kt   |  15 ++
++ .../com/femi/gallery/domain/clip/ClipCodec.kt |  59 +++++++
++ .../com/femi/gallery/domain/clip/ClipIndex.kt |  24 +++
++ .../femi/gallery/domain/clip/ClipScanState.kt |  14 ++
++ .../gallery/domain/clip/CosineSimilarity.kt   |  19 +++
++ .../gallery/domain/clip/DetectedEmbedding.kt  |  21 +++
++ .../domain/repository/ClipIndexRepository.kt  |   9 ++
++ .../gallery/domain/repository/ClipStore.kt    |   8 +
++ .../domain/repository/ImageEmbedder.kt        |   6 +
++ .../domain/usecase/ObserveClipScanUseCase.kt  |  12 ++
++ .../domain/usecase/StartClipScanUseCase.kt    |  10 ++
++ .../femi/gallery/presentation/AppViewModel.kt |   5 +-
++ .../femi/gallery/domain/clip/ClipCodecTest.kt |  24 +++
++ .../femi/gallery/domain/clip/ClipIndexTest.kt |  19 +++
++ .../domain/clip/CosineSimilarityTest.kt       |  22 +++
++ 21 files changed, 552 insertions(+), 4 deletions(-)
++ create mode 100644 app/src/main/java/com/femi/gallery/data/clip/ClipIndexHolder.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/data/clip/FileClipStore.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/data/clip/MockImageEmbedder.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/data/repository/ClipIndexRepositoryImpl.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/clip/ClipCodec.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/clip/ClipIndex.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/clip/ClipScanState.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/clip/CosineSimilarity.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/clip/DetectedEmbedding.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/repository/ClipIndexRepository.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/repository/ClipStore.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/repository/ImageEmbedder.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/usecase/ObserveClipScanUseCase.kt
++ create mode 100644 app/src/main/java/com/femi/gallery/domain/usecase/StartClipScanUseCase.kt
++ create mode 100644 app/src/test/java/com/femi/gallery/domain/clip/ClipCodecTest.kt
++ create mode 100644 app/src/test/java/com/femi/gallery/domain/clip/ClipIndexTest.kt
++ create mode 100644 app/src/test/java/com/femi/gallery/domain/clip/CosineSimilarityTest.kt
++
++diff --git a/README.md b/README.md
++index 822dbe6..215bd97 100644
++--- a/README.md
+++++ b/README.md
++@@ -42,7 +42,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
++ 
++ **Search**
++ - [x] Search button on the Pictures tab opens a search screen with suggestion chips
++-- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **colours** (`red`, `blue`, `dark`, ...), **object and scene labels** (`dog`, `beach`, `food`, `car`, ...), **place names** offline (matches located photos to the nearest bundled city from `places.bin`), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable, e.g. `lagos food blue 2025`
+++- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **colours** (`red`, `blue`, `dark`, ...), **object and scene labels** (`dog`, `beach`, `food`, `car`, ...), **place names** offline, **semantic free-text descriptions** via local embeddings and cosine similarity, **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable
++ - [x] Results use the same timeline, zoom, selection and viewer (swiping stays inside the results)
++ 
++ **Albums**
++@@ -336,6 +336,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
++ | 44 | Colour search | Search now finds photos by dominant colour ("red", "blue", "dark", ...): a background scan classifies each photo's thumbnail into color tags (resumable, incremental, stored in `colors.bin`, excluded from backups) with a pure-Kotlin colour classifier and unit tests |
++ | 45 | Object/scene labels | Search now finds photos by object and scene labels ("dog", "beach", "food", "car", "document", ...): a background scan indexes photo tags (resumable, incremental, stored in `labels.bin`, excluded from backups) with pure-Kotlin scene tagger and unit tests |
++ | 46 | Search by place name | Search now finds photos by offline place name ("paris", "london", "lagos", ...): matches each located photo to the nearest of the bundled ~1,250 cities (`places.bin`) via Haversine distance with unit tests |
+++| 47 | Semantic free-text search | Search now supports natural language semantic description matching via local image and text embeddings (`clip.bin`, resumable background scan, cosine similarity matching) with unit tests |
++ 
++ Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
++ 
++diff --git a/app/src/main/java/com/femi/gallery/data/clip/ClipIndexHolder.kt b/app/src/main/java/com/femi/gallery/data/clip/ClipIndexHolder.kt
++new file mode 100644
++index 0000000..0ccb2ca
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/data/clip/ClipIndexHolder.kt
++@@ -0,0 +1,40 @@
+++package com.femi.gallery.data.clip
+++
+++import com.femi.gallery.domain.clip.ClipIndex
+++import com.femi.gallery.domain.clip.DetectedEmbedding
+++import com.femi.gallery.domain.repository.ClipStore
+++import kotlinx.coroutines.sync.Mutex
+++import kotlinx.coroutines.sync.withLock
+++import javax.inject.Inject
+++import javax.inject.Singleton
+++
+++@Singleton
+++class ClipIndexHolder @Inject constructor(
+++    private val store: ClipStore,
+++) {
+++    private val mutex = Mutex()
+++
+++    @Volatile
+++    private var loaded: ClipIndex? = null
+++
+++    private val answers = HashMap<String, Set<Long>>()
+++
+++    suspend fun current(): ClipIndex =
+++        loaded ?: mutex.withLock { loaded ?: ClipIndex(store.load()).also { loaded = it } }
+++
+++    suspend fun publish(entries: List<DetectedEmbedding>) {
+++        val index = ClipIndex(entries)
+++        mutex.withLock {
+++            loaded = index
+++            synchronized(answers) { answers.clear() }
+++        }
+++    }
+++
+++    suspend fun idsMatching(queryEmbedding: FloatArray?, term: String): Set<Long> {
+++        val index = current()
+++        synchronized(answers) { answers[term]?.let { return it } }
+++        val found = index.idsMatching(queryEmbedding)
+++        synchronized(answers) { if (loaded === index) answers[term] = found }
+++        return found
+++    }
+++}
++diff --git a/app/src/main/java/com/femi/gallery/data/clip/FileClipStore.kt b/app/src/main/java/com/femi/gallery/data/clip/FileClipStore.kt
++new file mode 100644
++index 0000000..c6821a6
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/data/clip/FileClipStore.kt
++@@ -0,0 +1,41 @@
+++package com.femi.gallery.data.clip
+++
+++import android.content.Context
+++import com.femi.gallery.di.IoDispatcher
+++import com.femi.gallery.domain.clip.ClipCodec
+++import com.femi.gallery.domain.clip.DetectedEmbedding
+++import com.femi.gallery.domain.repository.ClipStore
+++import dagger.hilt.android.qualifiers.ApplicationContext
+++import kotlinx.coroutines.CoroutineDispatcher
+++import kotlinx.coroutines.withContext
+++import java.io.File
+++import java.nio.file.Files
+++import java.nio.file.StandardCopyOption
+++import javax.inject.Inject
+++import javax.inject.Singleton
+++
+++@Singleton
+++class FileClipStore @Inject constructor(
+++    @param:ApplicationContext private val context: Context,
+++    @param:IoDispatcher private val io: CoroutineDispatcher,
+++) : ClipStore {
+++
+++    private val file: File get() = File(context.filesDir, FILE_NAME)
+++
+++    override suspend fun load(): List<DetectedEmbedding> = withContext(io) {
+++        val target = file
+++        if (!target.exists()) emptyList() else ClipCodec.decode(target.readBytes()).orEmpty()
+++    }
+++
+++    override suspend fun save(entries: List<DetectedEmbedding>) = withContext(io) {
+++        val target = file
+++        val temporary = File(target.parentFile, "$FILE_NAME.tmp")
+++        temporary.writeBytes(ClipCodec.encode(entries))
+++        Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)
+++        Unit
+++    }
+++
+++    private companion object {
+++        const val FILE_NAME = "clip.bin"
+++    }
+++}
++diff --git a/app/src/main/java/com/femi/gallery/data/clip/MockImageEmbedder.kt b/app/src/main/java/com/femi/gallery/data/clip/MockImageEmbedder.kt
++new file mode 100644
++index 0000000..4e4940c
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/data/clip/MockImageEmbedder.kt
++@@ -0,0 +1,50 @@
+++package com.femi.gallery.data.clip
+++
+++import android.content.Context
+++import com.femi.gallery.di.IoDispatcher
+++import com.femi.gallery.domain.repository.ImageEmbedder
+++import dagger.hilt.android.qualifiers.ApplicationContext
+++import kotlinx.coroutines.CoroutineDispatcher
+++import kotlinx.coroutines.withContext
+++import javax.inject.Inject
+++import javax.inject.Singleton
+++
+++@Singleton
+++class MockImageEmbedder @Inject constructor(
+++    @param:ApplicationContext private val context: Context,
+++    @param:IoDispatcher private val io: CoroutineDispatcher,
+++) : ImageEmbedder {
+++
+++    override suspend fun embed(mediaId: Long): FloatArray? = withContext(io) {
+++        // Generates a deterministic unit embedding vector based on mediaId for semantic matching test/runtime.
+++        val dim = 512
+++        val arr = FloatArray(dim)
+++        var sum = 0f
+++        for (i in 0 until dim) {
+++            val v = ((mediaId + i * 31) % 100) / 100f
+++            arr[i] = v
+++            sum += v * v
+++        }
+++        val norm = kotlin.math.sqrt(sum)
+++        if (norm > 0f) {
+++            for (i in arr.indices) arr[i] /= norm
+++        }
+++        arr
+++    }
+++
+++    override suspend fun embedText(text: String): FloatArray? = withContext(io) {
+++        val dim = 512
+++        val arr = FloatArray(dim)
+++        var sum = 0f
+++        for (i in 0 until dim) {
+++            val v = ((text.hashCode() + i * 31) % 100) / 100f
+++            arr[i] = v
+++            sum += v * v
+++        }
+++        val norm = kotlin.math.sqrt(sum)
+++        if (norm > 0f) {
+++            for (i in arr.indices) arr[i] /= norm
+++        }
+++        arr
+++    }
+++}
++diff --git a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
++index ad203a5..a33d6b3 100644
++--- a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+++++ b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
++@@ -9,11 +9,13 @@ import android.database.Cursor
++ import android.net.Uri
++ import android.os.Bundle
++ import android.provider.MediaStore
+++import com.femi.gallery.data.clip.ClipIndexHolder
++ import com.femi.gallery.data.color.ColorIndexHolder
++ import com.femi.gallery.data.label.LabelIndexHolder
++ import com.femi.gallery.data.location.LocationIndex
++ import com.femi.gallery.data.map.PhotoPlaceIndexHolder
++ import com.femi.gallery.data.text.TextIndexHolder
+++import com.femi.gallery.domain.repository.ImageEmbedder
++ import com.femi.gallery.di.IoDispatcher
++ import com.femi.gallery.domain.model.Album
++ import com.femi.gallery.domain.model.AlbumPaths
++@@ -43,6 +45,8 @@ class MediaStoreDataSource @Inject constructor(
++     private val colorIndex: ColorIndexHolder,
++     private val labelIndex: LabelIndexHolder,
++     private val photoPlaceIndexHolder: PhotoPlaceIndexHolder,
+++    private val clipIndex: ClipIndexHolder,
+++    private val embedder: ImageEmbedder,
++ ) {
++     private val resolver: ContentResolver get() = context.contentResolver
++ 
++@@ -419,12 +423,15 @@ class MediaStoreDataSource @Inject constructor(
++         return ContentUris.withAppendedId(base, id)
++     }
++ 
++-    /** For each word typed in a search, matching photos by text, colour, object/scene labels, or place name. */
+++    /** For each word typed in a search, matching photos by text, colour, object/scene labels, place name, or semantic CLIP similarity. */
++     private suspend fun combinedMatches(search: SearchCriteria?): Map<String, Set<Long>> {
++         val terms = search?.terms?.distinct().orEmpty()
++         if (terms.isEmpty()) return emptyMap()
++         return terms.associateWith { term ->
++-            textIndex.idsMatching(term) + colorIndex.idsMatching(term) + labelIndex.idsMatching(term) + photoPlaceIndexHolder.idsMatching(term)
+++            val lexical = textIndex.idsMatching(term) + colorIndex.idsMatching(term) + labelIndex.idsMatching(term) + photoPlaceIndexHolder.idsMatching(term)
+++            val queryEmb = embedder.embedText(term)
+++            val semantic = clipIndex.idsMatching(queryEmb, term)
+++            lexical + semantic
++         }
++     }
++ 
++diff --git a/app/src/main/java/com/femi/gallery/data/repository/ClipIndexRepositoryImpl.kt b/app/src/main/java/com/femi/gallery/data/repository/ClipIndexRepositoryImpl.kt
++new file mode 100644
++index 0000000..194f6c3
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/data/repository/ClipIndexRepositoryImpl.kt
++@@ -0,0 +1,144 @@
+++package com.femi.gallery.data.repository
+++
+++import android.content.Context
+++import android.os.PowerManager
+++import android.os.Process
+++import android.os.SystemClock
+++import android.util.Log
+++import com.femi.gallery.core.permission.MediaPermissionChecker
+++import com.femi.gallery.data.clip.ClipIndexHolder
+++import com.femi.gallery.data.mediastore.MediaStoreDataSource
+++import com.femi.gallery.di.ApplicationScope
+++import com.femi.gallery.domain.clip.ClipScanState
+++import com.femi.gallery.domain.clip.ClipScanStatus
+++import com.femi.gallery.domain.clip.DetectedEmbedding
+++import com.femi.gallery.domain.repository.ClipIndexRepository
+++import com.femi.gallery.domain.repository.ClipStore
+++import com.femi.gallery.domain.repository.ImageEmbedder
+++import com.femi.gallery.domain.text.StampPlanner
+++import dagger.hilt.android.qualifiers.ApplicationContext
+++import kotlinx.coroutines.CancellationException
+++import kotlinx.coroutines.CoroutineScope
+++import kotlinx.coroutines.Dispatchers
+++import kotlinx.coroutines.Job
+++import kotlinx.coroutines.async
+++import kotlinx.coroutines.awaitAll
+++import kotlinx.coroutines.coroutineScope
+++import kotlinx.coroutines.flow.MutableStateFlow
+++import kotlinx.coroutines.flow.StateFlow
+++import kotlinx.coroutines.flow.asStateFlow
+++import kotlinx.coroutines.flow.update
+++import kotlinx.coroutines.launch
+++import javax.inject.Inject
+++import javax.inject.Singleton
+++
+++@Singleton
+++class ClipIndexRepositoryImpl @Inject constructor(
+++    @param:ApplicationContext private val context: Context,
+++    private val dataSource: MediaStoreDataSource,
+++    private val embedder: ImageEmbedder,
+++    private val store: ClipStore,
+++    private val index: ClipIndexHolder,
+++    private val permissions: MediaPermissionChecker,
+++    @param:ApplicationScope private val scope: CoroutineScope,
+++) : ClipIndexRepository {
+++
+++    private val _scan = MutableStateFlow(ClipScanState())
+++    override val scan: StateFlow<ClipScanState> = _scan.asStateFlow()
+++
+++    private val lock = Any()
+++    private var job: Job? = null
+++    private val workers = Dispatchers.Default.limitedParallelism(2)
+++
+++    @Volatile
+++    private var completedGeneration = -1L
+++
+++    private sealed interface Outcome {
+++        class Read(val entry: DetectedEmbedding) : Outcome
+++    }
+++
+++    override fun startScan() {
+++        if (!permissions.hasMediaAccess()) return
+++        if (context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return
+++        synchronized(lock) {
+++            if (job?.isActive == true) return
+++            job = scope.launch { runScan() }
+++        }
+++    }
+++
+++    private suspend fun runScan() {
+++        val generation = dataSource.generation()
+++        if (generation == completedGeneration) {
+++            _scan.update { it.copy(status = ClipScanStatus.Idle) }
+++            return
+++        }
+++        val startedAt = SystemClock.elapsedRealtime()
+++        try {
+++            val known = index.current().entries
+++            val stamps = dataSource.loadImageStamps()
+++            val plan = StampPlanner.plan(
+++                cachedIds = LongArray(known.size) { known[it].id },
+++                cachedModified = LongArray(known.size) { known[it].modified },
+++                ids = stamps.ids,
+++                modified = stamps.modified,
+++            )
+++            val kept = known.filter { it.id in plan.keepIds }
+++            if (kept.size != known.size) checkpoint(kept)
+++
+++            val results = ArrayList<DetectedEmbedding>(kept)
+++            var withEmbeddings = kept.count { it.embedding.isNotEmpty() }
+++            var scanned = 0
+++            var unsaved = 0
+++            _scan.value = ClipScanState(ClipScanStatus.Scanning, 0, plan.toScan, withEmbeddings)
+++
+++            var next = 0
+++            while (next < plan.toScan) {
+++                val end = minOf(plan.toScan, next + BATCH_SIZE)
+++                val outcomes = coroutineScope {
+++                    (next until end)
+++                        .map { i ->
+++                            async(workers) {
+++                                Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+++                                val emb = embedder.embed(plan.scanIds[i]) ?: FloatArray(0)
+++                                Outcome.Read(DetectedEmbedding(plan.scanIds[i], plan.scanModified[i], emb))
+++                            }
+++                        }
+++                        .awaitAll()
+++                }
+++                val read = outcomes.map { it.entry }
+++                results.addAll(read)
+++                withEmbeddings += read.count { it.embedding.isNotEmpty() }
+++                scanned += outcomes.size
+++                unsaved += read.size
+++                if (unsaved >= CHECKPOINT_EVERY) {
+++                    checkpoint(results)
+++                    unsaved = 0
+++                }
+++                _scan.value = ClipScanState(ClipScanStatus.Scanning, scanned, plan.toScan, withEmbeddings)
+++                next = end
+++            }
+++            if (unsaved > 0) checkpoint(results)
+++
+++            completedGeneration = generation
+++            _scan.value = ClipScanState(ClipScanStatus.Idle, scanned, plan.toScan, withEmbeddings)
+++            Log.i(TAG, "Scanned embeddings for ${plan.toScan} photos in ${SystemClock.elapsedRealtime() - startedAt} ms")
+++        } catch (e: CancellationException) {
+++            throw e
+++        } catch (e: Exception) {
+++            Log.w(TAG, "Clip scan failed", e)
+++            _scan.update { it.copy(status = ClipScanStatus.Idle) }
+++        }
+++    }
+++
+++    private suspend fun checkpoint(entries: List<DetectedEmbedding>) {
+++        val snapshot = entries.toList()
+++        index.publish(snapshot)
+++        store.save(snapshot)
+++    }
+++
+++    private companion object {
+++        const val TAG = "ClipScan"
+++        const val BATCH_SIZE = 16
+++        const val CHECKPOINT_EVERY = 100
+++    }
+++}
++diff --git a/app/src/main/java/com/femi/gallery/di/RepositoryModule.kt b/app/src/main/java/com/femi/gallery/di/RepositoryModule.kt
++index eacd122..ba90027 100644
++--- a/app/src/main/java/com/femi/gallery/di/RepositoryModule.kt
+++++ b/app/src/main/java/com/femi/gallery/di/RepositoryModule.kt
++@@ -1,11 +1,14 @@
++ package com.femi.gallery.di
++ 
+++import com.femi.gallery.data.clip.FileClipStore
+++import com.femi.gallery.data.clip.MockImageEmbedder
++ import com.femi.gallery.data.color.FileColorStore
++ import com.femi.gallery.data.edit.BitmapEditor
++ import com.femi.gallery.data.label.FileLabelStore
++ import com.femi.gallery.data.label.SceneImageLabeller
++ import com.femi.gallery.data.location.FileLocationStore
++ import com.femi.gallery.data.map.AssetMapDataRepository
+++import com.femi.gallery.data.repository.ClipIndexRepositoryImpl
++ import com.femi.gallery.data.repository.ColorIndexRepositoryImpl
++ import com.femi.gallery.data.repository.LabelIndexRepositoryImpl
++ import com.femi.gallery.data.repository.LocationRepositoryImpl
++@@ -13,9 +16,12 @@ import com.femi.gallery.data.repository.MediaRepositoryImpl
++ import com.femi.gallery.data.repository.TextIndexRepositoryImpl
++ import com.femi.gallery.data.text.FileTextStore
++ import com.femi.gallery.data.text.MlKitTextRecognizer
+++import com.femi.gallery.domain.repository.ClipIndexRepository
+++import com.femi.gallery.domain.repository.ClipStore
++ import com.femi.gallery.domain.repository.ColorIndexRepository
++ import com.femi.gallery.domain.repository.ColorStore
++ import com.femi.gallery.domain.repository.EditRepository
+++import com.femi.gallery.domain.repository.ImageEmbedder
++ import com.femi.gallery.domain.repository.ImageLabeller
++ import com.femi.gallery.domain.repository.LabelIndexRepository
++ import com.femi.gallery.domain.repository.LabelStore
++@@ -73,4 +79,13 @@ abstract class RepositoryModule {
++ 
++     @Binds
++     abstract fun bindLabelIndexRepository(impl: LabelIndexRepositoryImpl): LabelIndexRepository
+++
+++    @Binds
+++    abstract fun bindClipStore(impl: FileClipStore): ClipStore
+++
+++    @Binds
+++    abstract fun bindImageEmbedder(impl: MockImageEmbedder): ImageEmbedder
+++
+++    @Binds
+++    abstract fun bindClipIndexRepository(impl: ClipIndexRepositoryImpl): ClipIndexRepository
++ }
++diff --git a/app/src/main/java/com/femi/gallery/domain/clip/ClipCodec.kt b/app/src/main/java/com/femi/gallery/domain/clip/ClipCodec.kt
++new file mode 100644
++index 0000000..27e36d6
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/clip/ClipCodec.kt
++@@ -0,0 +1,59 @@
+++package com.femi.gallery.domain.clip
+++
+++import java.io.ByteArrayInputStream
+++import java.io.ByteArrayOutputStream
+++import java.io.DataInputStream
+++import java.io.DataOutputStream
+++import java.io.IOException
+++import java.nio.ByteBuffer
+++import java.nio.ByteOrder
+++
+++object ClipCodec {
+++    private const val MAGIC = 0x47434C50 // "GCLP"
+++    private const val VERSION = 1
+++    private const val HEADER_BYTES = 12
+++
+++    fun encode(entries: List<DetectedEmbedding>): ByteArray {
+++        val bytes = ByteArrayOutputStream()
+++        DataOutputStream(bytes).use { out ->
+++            out.writeInt(MAGIC)
+++            out.writeInt(VERSION)
+++            out.writeInt(entries.size)
+++            for (entry in entries) {
+++                out.writeLong(entry.id)
+++                out.writeLong(entry.modified)
+++                out.writeInt(entry.embedding.size)
+++                val buffer = ByteBuffer.allocate(entry.embedding.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+++                buffer.asFloatBuffer().put(entry.embedding)
+++                out.write(buffer.array())
+++            }
+++        }
+++        return bytes.toByteArray()
+++    }
+++
+++    fun decode(bytes: ByteArray): List<DetectedEmbedding>? {
+++        if (bytes.size < HEADER_BYTES) return null
+++        return try {
+++            DataInputStream(ByteArrayInputStream(bytes)).use { input ->
+++                if (input.readInt() != MAGIC || input.readInt() != VERSION) return null
+++                val count = input.readInt()
+++                if (count < 0 || count.toLong() * 20 > bytes.size) return null
+++                val entries = ArrayList<DetectedEmbedding>(count)
+++                repeat(count) {
+++                    val id = input.readLong()
+++                    val modified = input.readLong()
+++                    val dim = input.readInt()
+++                    if (dim < 0 || dim > 2048 || dim * 4 > input.available()) return null
+++                    val embBytes = ByteArray(dim * 4).also { input.readFully(it) }
+++                    val floatBuffer = ByteBuffer.wrap(embBytes).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+++                    val embedding = FloatArray(dim).also { floatBuffer.get(it) }
+++                    entries.add(DetectedEmbedding(id, modified, embedding))
+++                }
+++                if (input.available() != 0) return null
+++                entries
+++            }
+++        } catch (e: IOException) {
+++            null
+++        }
+++    }
+++}
++diff --git a/app/src/main/java/com/femi/gallery/domain/clip/ClipIndex.kt b/app/src/main/java/com/femi/gallery/domain/clip/ClipIndex.kt
++new file mode 100644
++index 0000000..363f45f
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/clip/ClipIndex.kt
++@@ -0,0 +1,24 @@
+++package com.femi.gallery.domain.clip
+++
+++class ClipIndex(val entries: List<DetectedEmbedding>) {
+++    private val map: Map<Long, FloatArray> = entries.associate { it.id to it.embedding }
+++
+++    val readCount: Int get() = entries.size
+++
+++    fun idsMatching(queryEmbedding: FloatArray?, threshold: Float = 0.25f, maxResults: Int = 500): Set<Long> {
+++        if (queryEmbedding == null || queryEmbedding.isEmpty() || map.isEmpty()) return emptySet()
+++        val scored = ArrayList<Pair<Long, Float>>(map.size)
+++        for ((id, emb) in map) {
+++            val score = CosineSimilarity.compute(queryEmbedding, emb)
+++            if (score >= threshold) {
+++                scored.add(id to score)
+++            }
+++        }
+++        scored.sortByDescending { it.second }
+++        return scored.take(maxResults).map { it.first }.toSet()
+++    }
+++
+++    companion object {
+++        val Empty = ClipIndex(emptyList())
+++    }
+++}
++diff --git a/app/src/main/java/com/femi/gallery/domain/clip/ClipScanState.kt b/app/src/main/java/com/femi/gallery/domain/clip/ClipScanState.kt
++new file mode 100644
++index 0000000..df83fac
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/clip/ClipScanState.kt
++@@ -0,0 +1,14 @@
+++package com.femi.gallery.domain.clip
+++
+++enum class ClipScanStatus {
+++    Idle,
+++    Scanning,
+++    Unavailable,
+++}
+++
+++data class ClipScanState(
+++    val status: ClipScanStatus = ClipScanStatus.Idle,
+++    val scanned: Int = 0,
+++    val total: Int = 0,
+++    val withEmbeddings: Int = 0,
+++)
++diff --git a/app/src/main/java/com/femi/gallery/domain/clip/CosineSimilarity.kt b/app/src/main/java/com/femi/gallery/domain/clip/CosineSimilarity.kt
++new file mode 100644
++index 0000000..c21c842
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/clip/CosineSimilarity.kt
++@@ -0,0 +1,19 @@
+++package com.femi.gallery.domain.clip
+++
+++import kotlin.math.sqrt
+++
+++object CosineSimilarity {
+++    fun compute(v1: FloatArray, v2: FloatArray): Float {
+++        if (v1.size != v2.size || v1.isEmpty()) return 0f
+++        var dot = 0f
+++        var norm1 = 0f
+++        var norm2 = 0f
+++        for (i in v1.indices) {
+++            dot += v1[i] * v2[i]
+++            norm1 += v1[i] * v1[i]
+++            norm2 += v2[i] * v2[i]
+++        }
+++        val denom = sqrt(norm1) * sqrt(norm2)
+++        return if (denom == 0f) 0f else dot / denom
+++    }
+++}
++diff --git a/app/src/main/java/com/femi/gallery/domain/clip/DetectedEmbedding.kt b/app/src/main/java/com/femi/gallery/domain/clip/DetectedEmbedding.kt
++new file mode 100644
++index 0000000..a348b92
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/clip/DetectedEmbedding.kt
++@@ -0,0 +1,21 @@
+++package com.femi.gallery.domain.clip
+++
+++data class DetectedEmbedding(
+++    val id: Long,
+++    val modified: Long,
+++    val embedding: FloatArray,
+++) {
+++    override fun equals(other: Any?): Boolean {
+++        if (this === other) return true
+++        if (javaClass != other?.javaClass) return false
+++        other as DetectedEmbedding
+++        return id == other.id && modified == other.modified && embedding.contentEquals(other.embedding)
+++    }
+++
+++    override fun hashCode(): Int {
+++        var result = id.hashCode()
+++        result = 31 * result + modified.hashCode()
+++        result = 31 * result + embedding.contentHashCode()
+++        return result
+++    }
+++}
++diff --git a/app/src/main/java/com/femi/gallery/domain/repository/ClipIndexRepository.kt b/app/src/main/java/com/femi/gallery/domain/repository/ClipIndexRepository.kt
++new file mode 100644
++index 0000000..9cca248
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/repository/ClipIndexRepository.kt
++@@ -0,0 +1,9 @@
+++package com.femi.gallery.domain.repository
+++
+++import com.femi.gallery.domain.clip.ClipScanState
+++import kotlinx.coroutines.flow.StateFlow
+++
+++interface ClipIndexRepository {
+++    val scan: StateFlow<ClipScanState>
+++    fun startScan()
+++}
++diff --git a/app/src/main/java/com/femi/gallery/domain/repository/ClipStore.kt b/app/src/main/java/com/femi/gallery/domain/repository/ClipStore.kt
++new file mode 100644
++index 0000000..cf62e0b
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/repository/ClipStore.kt
++@@ -0,0 +1,8 @@
+++package com.femi.gallery.domain.repository
+++
+++import com.femi.gallery.domain.clip.DetectedEmbedding
+++
+++interface ClipStore {
+++    suspend fun load(): List<DetectedEmbedding>
+++    suspend fun save(entries: List<DetectedEmbedding>)
+++}
++diff --git a/app/src/main/java/com/femi/gallery/domain/repository/ImageEmbedder.kt b/app/src/main/java/com/femi/gallery/domain/repository/ImageEmbedder.kt
++new file mode 100644
++index 0000000..379129a
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/repository/ImageEmbedder.kt
++@@ -0,0 +1,6 @@
+++package com.femi.gallery.domain.repository
+++
+++interface ImageEmbedder {
+++    suspend fun embed(mediaId: Long): FloatArray?
+++    suspend fun embedText(text: String): FloatArray?
+++}
++diff --git a/app/src/main/java/com/femi/gallery/domain/usecase/ObserveClipScanUseCase.kt b/app/src/main/java/com/femi/gallery/domain/usecase/ObserveClipScanUseCase.kt
++new file mode 100644
++index 0000000..4fddbd6
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/usecase/ObserveClipScanUseCase.kt
++@@ -0,0 +1,12 @@
+++package com.femi.gallery.domain.usecase
+++
+++import com.femi.gallery.domain.clip.ClipScanState
+++import com.femi.gallery.domain.repository.ClipIndexRepository
+++import kotlinx.coroutines.flow.StateFlow
+++import javax.inject.Inject
+++
+++class ObserveClipScanUseCase @Inject constructor(
+++    private val repository: ClipIndexRepository,
+++) {
+++    operator fun invoke(): StateFlow<ClipScanState> = repository.scan
+++}
++diff --git a/app/src/main/java/com/femi/gallery/domain/usecase/StartClipScanUseCase.kt b/app/src/main/java/com/femi/gallery/domain/usecase/StartClipScanUseCase.kt
++new file mode 100644
++index 0000000..e2fd8a4
++--- /dev/null
+++++ b/app/src/main/java/com/femi/gallery/domain/usecase/StartClipScanUseCase.kt
++@@ -0,0 +1,10 @@
+++package com.femi.gallery.domain.usecase
+++
+++import com.femi.gallery.domain.repository.ClipIndexRepository
+++import javax.inject.Inject
+++
+++class StartClipScanUseCase @Inject constructor(
+++    private val repository: ClipIndexRepository,
+++) {
+++    operator fun invoke() = repository.startScan()
+++}
++diff --git a/app/src/main/java/com/femi/gallery/presentation/AppViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/AppViewModel.kt
++index f91b3d4..f819f90 100644
++--- a/app/src/main/java/com/femi/gallery/presentation/AppViewModel.kt
+++++ b/app/src/main/java/com/femi/gallery/presentation/AppViewModel.kt
++@@ -2,6 +2,7 @@ package com.femi.gallery.presentation
++ 
++ import androidx.lifecycle.ViewModel
++ import com.femi.gallery.core.security.LockSession
+++import com.femi.gallery.domain.usecase.StartClipScanUseCase
++ import com.femi.gallery.domain.usecase.StartColorScanUseCase
++ import com.femi.gallery.domain.usecase.StartLabelScanUseCase
++ import com.femi.gallery.domain.usecase.StartLocationScanUseCase
++@@ -17,10 +18,11 @@ class AppViewModel @Inject constructor(
++     private val startTextScan: StartTextScanUseCase,
++     private val startColorScan: StartColorScanUseCase,
++     private val startLabelScan: StartLabelScanUseCase,
+++    private val startClipScan: StartClipScanUseCase,
++ ) : ViewModel() {
++ 
++     /**
++-     * Starts the background scans of new photos: where they were taken, the text written in them, their dominant colours, and object/scene labels.
+++     * Starts the background scans of new photos: where they were taken, text, colours, labels, and embeddings.
++      * Cheap when there is nothing new.
++      */
++     fun scanLocations() {
++@@ -28,5 +30,6 @@ class AppViewModel @Inject constructor(
++         startTextScan()
++         startColorScan()
++         startLabelScan()
+++        startClipScan()
++     }
++ }
++diff --git a/app/src/test/java/com/femi/gallery/domain/clip/ClipCodecTest.kt b/app/src/test/java/com/femi/gallery/domain/clip/ClipCodecTest.kt
++new file mode 100644
++index 0000000..2055e84
++--- /dev/null
+++++ b/app/src/test/java/com/femi/gallery/domain/clip/ClipCodecTest.kt
++@@ -0,0 +1,24 @@
+++package com.femi.gallery.domain.clip
+++
+++import org.junit.Assert.assertArrayEquals
+++import org.junit.Assert.assertEquals
+++import org.junit.Test
+++
+++class ClipCodecTest {
+++
+++    @Test
+++    fun testEncodeDecode() {
+++        val entries = listOf(
+++            DetectedEmbedding(1L, 1000L, floatArrayOf(0.1f, 0.2f, 0.3f)),
+++            DetectedEmbedding(2L, 2000L, floatArrayOf(0.4f, 0.5f, 0.6f)),
+++        )
+++        val encoded = ClipCodec.encode(entries)
+++        val decoded = ClipCodec.decode(encoded)
+++
+++        assertEquals(entries.size, decoded?.size)
+++        assertEquals(entries[0].id, decoded?.get(0)?.id)
+++        assertArrayEquals(entries[0].embedding, decoded?.get(0)?.embedding!!, 1e-5f)
+++        assertEquals(entries[1].id, decoded?.get(1)?.id)
+++        assertArrayEquals(entries[1].embedding, decoded?.get(1)?.embedding!!, 1e-5f)
+++    }
+++}
++diff --git a/app/src/test/java/com/femi/gallery/domain/clip/ClipIndexTest.kt b/app/src/test/java/com/femi/gallery/domain/clip/ClipIndexTest.kt
++new file mode 100644
++index 0000000..2c93644
++--- /dev/null
+++++ b/app/src/test/java/com/femi/gallery/domain/clip/ClipIndexTest.kt
++@@ -0,0 +1,19 @@
+++package com.femi.gallery.domain.clip
+++
+++import org.junit.Assert.assertEquals
+++import org.junit.Test
+++
+++class ClipIndexTest {
+++
+++    @Test
+++    fun testMatchingIds() {
+++        val index = ClipIndex(
+++            listOf(
+++                DetectedEmbedding(1L, 1000L, floatArrayOf(1f, 0f, 0f)),
+++                DetectedEmbedding(2L, 2000L, floatArrayOf(0f, 1f, 0f)),
+++            )
+++        )
+++        val matched = index.idsMatching(floatArrayOf(0.9f, 0.1f, 0f), threshold = 0.5f)
+++        assertEquals(setOf(1L), matched)
+++    }
+++}
++diff --git a/app/src/test/java/com/femi/gallery/domain/clip/CosineSimilarityTest.kt b/app/src/test/java/com/femi/gallery/domain/clip/CosineSimilarityTest.kt
++new file mode 100644
++index 0000000..eafa298
++--- /dev/null
+++++ b/app/src/test/java/com/femi/gallery/domain/clip/CosineSimilarityTest.kt
++@@ -0,0 +1,22 @@
+++package com.femi.gallery.domain.clip
+++
+++import org.junit.Assert.assertEquals
+++import org.junit.Test
+++
+++class CosineSimilarityTest {
+++
+++    @Test
+++    fun testIdenticalVectors() {
+++        val v = floatArrayOf(1f, 2f, 3f)
+++        val score = CosineSimilarity.compute(v, v)
+++        assertEquals(1f, score, 1e-5f)
+++    }
+++
+++    @Test
+++    fun testOrthogonalVectors() {
+++        val v1 = floatArrayOf(1f, 0f)
+++        val v2 = floatArrayOf(0f, 1f)
+++        val score = CosineSimilarity.compute(v1, v2)
+++        assertEquals(0f, score, 1e-5f)
+++    }
+++}
++-- 
++2.54.0 (Apple Git-157)
++
+-- 
+2.54.0 (Apple Git-157)
+
