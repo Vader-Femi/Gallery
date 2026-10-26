@@ -21,12 +21,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.RotateLeft
+import androidx.compose.material.icons.automirrored.outlined.RotateRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Flip
 import androidx.compose.material.icons.outlined.PhotoFilter
-import androidx.compose.material.icons.outlined.RotateLeft
-import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -224,10 +224,10 @@ private fun CropPanel(state: EditorUiState, viewModel: EditorViewModel) {
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             IconButton(onClick = { viewModel.rotate(clockwise = false) }) {
-                Icon(Icons.Outlined.RotateLeft, contentDescription = stringResource(R.string.editor_rotate_left))
+                Icon(Icons.AutoMirrored.Outlined.RotateLeft, contentDescription = stringResource(R.string.editor_rotate_left))
             }
             IconButton(onClick = { viewModel.rotate(clockwise = true) }) {
-                Icon(Icons.Outlined.RotateRight, contentDescription = stringResource(R.string.editor_rotate_right))
+                Icon(Icons.AutoMirrored.Outlined.RotateRight, contentDescription = stringResource(R.string.editor_rotate_right))
             }
             IconButton(onClick = viewModel::flipHorizontal) {
                 Icon(Icons.Outlined.Flip, contentDescription = stringResource(R.string.editor_flip))
