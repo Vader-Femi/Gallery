@@ -19,6 +19,11 @@ class StoryTitlesTest {
     }
 
     @Test
+    fun onThisDayPastYear() {
+        assertEquals("On this day in 2024", title(day(2024, 10, 18), day(2024, 10, 18)))
+    }
+
+    @Test
     fun singleDayInAnotherYearShowsTheYear() {
         assertEquals("Dec 31, 2025", title(day(2025, 12, 31), day(2025, 12, 31)))
     }

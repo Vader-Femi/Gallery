@@ -55,6 +55,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Stories**
 - [x] **Stories tab** finds events automatically: a busy day (5+ photos) or a run of busy days in a row (up to 10), with at least 12 photos in total
+- [x] **"On this day" memories**: automatically surfaces photos taken on today's month and day in previous years, titled "On this day in YYYY"
 - [x] Cards with a cover from the middle of the event, a date title (`Sat, Oct 3`, `Oct 30 – Nov 2`, `Dec 30, 2025 – Jan 2, 2026`) and the number of photos and videos
 - [x] A story opens as a normal timeline (zoom, fast scroller, selection, viewer), covering exactly the days of the story
 - [x] **Slideshow** of a story's photos: tap to pause, swipe to skip, X to close
@@ -105,7 +106,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [ ] **Map extras**: photo locations for videos, a map with streets (offline vector tiles you import once), fling and smooth zoom animations
-- [ ] **Better stories**: "On this day" memories, a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album
+- [ ] **Better stories**: a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album
 - [ ] **Editor extras**: draw, text and stickers, straighten, sharpen/vignette, keep camera details (EXIF) and offer to replace the original
 - [ ] **Search by place** (needs reverse geocoding, so it has to be an opt-in network feature)
 
@@ -337,6 +338,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 45 | Object/scene labels | Search now finds photos by object and scene labels ("dog", "beach", "food", "car", "document", ...): a background scan indexes photo tags (resumable, incremental, stored in `labels.bin`, excluded from backups) with pure-Kotlin scene tagger and unit tests |
 | 46 | Search by place name | Search now finds photos by offline place name ("paris", "london", "lagos", ...): matches each located photo to the nearest of the bundled ~1,250 cities (`places.bin`) via Haversine distance with unit tests |
 | 47 | Semantic free-text search | Search now supports natural language semantic description matching via local image and text embeddings (`clip.bin`, resumable background scan, cosine similarity matching) with unit tests |
+| 48 | "On this day" stories | Stories tab now automatically surfaces past memories taken on today's month and day in previous years, titled "On this day in YYYY", with unit tests |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

@@ -1,5 +1,7 @@
 package com.femi.gallery.domain.model
 
+import java.time.LocalDate
+
 /** A story before its cover is loaded; [coverIndex] points into the newest-first media order. */
 data class StoryCandidate(
     val fromDay: Long,
@@ -11,19 +13,34 @@ data class StoryCandidate(
 /**
  * Finds stories in the day sections of the library (newest first).
  *
- * A day counts as "active" with at least [MIN_PHOTOS_PER_DAY] photos. Consecutive active days
- * form a run (a trip, a long weekend), cut at [MAX_STORY_DAYS] days so a month of daily photos
- * does not become one endless story. A run is a story when it has [MIN_STORY_PHOTOS] photos or
- * more. Stories line up exactly with whole days, so a story's photos are simply everything
- * taken between its first and last day.
+ * Includes "On this day" memories from past years, and trip/event stories (busy runs of days).
  */
 object StoryDetector {
     const val MIN_PHOTOS_PER_DAY = 5
     const val MIN_STORY_PHOTOS = 12
     const val MAX_STORY_DAYS = 10
 
-    fun detect(days: List<TimelineSection>): List<StoryCandidate> {
+    fun detect(days: List<TimelineSection>, today: LocalDate = LocalDate.now()): List<StoryCandidate> {
         val stories = ArrayList<StoryCandidate>()
+
+        // 1. "On this day" memories in past years (min 3 photos)
+        val todayMonth = today.monthValue
+        val todayDay = today.dayOfMonth
+        for (day in days) {
+            val date = LocalDate.ofEpochDay(day.epochDay)
+            if (date.monthValue == todayMonth && date.dayOfMonth == todayDay && date.year < today.year && day.count >= 3) {
+                stories.add(
+                    StoryCandidate(
+                        fromDay = day.epochDay,
+                        toDay = day.epochDay,
+                        count = day.count,
+                        coverIndex = day.startIndex,
+                    ),
+                )
+            }
+        }
+
+        // 2. Regular trip/event stories
         var run = ArrayList<TimelineSection>()
 
         fun finishRun() {
