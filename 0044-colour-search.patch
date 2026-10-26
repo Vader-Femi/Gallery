@@ -1,0 +1,873 @@
+From 56bca6b878e7f8ed80c998bbe2a08a05573cb285 Mon Sep 17 00:00:00 2001
+From: Femi <oluwafemi.za@gmail.com>
+Date: Mon, 26 Oct 2026 12:42:46 +0100
+Subject: [PATCH] [PATCH] Patch 44: colour search (red, blue, dark, ...) with
+ pure-Kotlin classifier and background scan
+
+---
+ README.md                                     |   3 +-
+ .../gallery/data/color/ColorIndexHolder.kt    |  40 +++++
+ .../femi/gallery/data/color/ColorScanner.kt   |  41 +++++
+ .../femi/gallery/data/color/FileColorStore.kt |  41 +++++
+ .../data/mediastore/MediaStoreDataSource.kt   |  19 ++-
+ .../repository/ColorIndexRepositoryImpl.kt    | 144 ++++++++++++++++++
+ .../com/femi/gallery/di/RepositoryModule.kt   |  10 ++
+ .../gallery/domain/color/ColorClassifier.kt   | 105 +++++++++++++
+ .../femi/gallery/domain/color/ColorCodec.kt   |  59 +++++++
+ .../femi/gallery/domain/color/ColorIndex.kt   |  32 ++++
+ .../gallery/domain/color/ColorScanState.kt    |  14 ++
+ .../gallery/domain/color/DetectedColor.kt     |   7 +
+ .../domain/repository/ColorIndexRepository.kt |   9 ++
+ .../gallery/domain/repository/ColorStore.kt   |   8 +
+ .../domain/usecase/ObserveColorScanUseCase.kt |  12 ++
+ .../domain/usecase/StartColorScanUseCase.kt   |  10 ++
+ .../femi/gallery/presentation/AppViewModel.kt |   5 +-
+ .../domain/color/ColorClassifierTest.kt       |  43 ++++++
+ .../gallery/domain/color/ColorCodecTest.kt    |  23 +++
+ 19 files changed, 617 insertions(+), 8 deletions(-)
+ create mode 100644 app/src/main/java/com/femi/gallery/data/color/ColorIndexHolder.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/data/color/ColorScanner.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/data/color/FileColorStore.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/data/repository/ColorIndexRepositoryImpl.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/color/ColorClassifier.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/color/ColorCodec.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/color/ColorIndex.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/color/ColorScanState.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/color/DetectedColor.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/repository/ColorIndexRepository.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/repository/ColorStore.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/usecase/ObserveColorScanUseCase.kt
+ create mode 100644 app/src/main/java/com/femi/gallery/domain/usecase/StartColorScanUseCase.kt
+ create mode 100644 app/src/test/java/com/femi/gallery/domain/color/ColorClassifierTest.kt
+ create mode 100644 app/src/test/java/com/femi/gallery/domain/color/ColorCodecTest.kt
+
+diff --git a/README.md b/README.md
+index f850218..c72d9af 100644
+--- a/README.md
++++ b/README.md
+@@ -42,7 +42,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
+ 
+ **Search**
+ - [x] Search button on the Pictures tab opens a search screen with suggestion chips
+-- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable, e.g. `whatsapp videos 2025`
++- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **colours** (`red`, `blue`, `dark`, `green`, `white`, ...), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable, e.g. `whatsapp videos blue 2025`
+ - [x] Results use the same timeline, zoom, selection and viewer (swiping stays inside the results)
+ 
+ **Albums**
+@@ -333,6 +333,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
+ | 41 | Viewer gestures | Pull a photo down and it follows your finger, shrinking, over the live grid (the background and bars fade); let go past a point (or flick) and it flies into its cell, otherwise it springs back. Pull it up for the info sheet. The Back gesture drives the same motion. Zoomed photos still pan, swiping still changes photo |
+ | 42 | Close from the picture | The photo (or video) that flies between the grid and the viewer is now the picture itself, as in Google Photos, not the whole full-screen page with the picture inside it, so closing shrinks from the picture instead of from the bottom of the screen |
+ | 43 | Text in photos | Search now finds words written in photos (screenshots, receipts, signs, documents): ML Kit's bundled text recogniser reads every photo in the background (resumable, incremental, on the phone; results in a private file kept out of backups) and each typed word matches a file name, an album or the text in a photo. The app's INTERNET permission stays removed |
++| 44 | Colour search | Search now finds photos by dominant colour ("red", "blue", "dark", ...): a background scan classifies each photo's thumbnail into color tags (resumable, incremental, stored in `colors.bin`, excluded from backups) with a pure-Kotlin colour classifier and unit tests |
+ 
+ Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
+ 
+diff --git a/app/src/main/java/com/femi/gallery/data/color/ColorIndexHolder.kt b/app/src/main/java/com/femi/gallery/data/color/ColorIndexHolder.kt
+new file mode 100644
+index 0000000..66d03b2
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/data/color/ColorIndexHolder.kt
+@@ -0,0 +1,40 @@
++package com.femi.gallery.data.color
++
++import com.femi.gallery.domain.color.ColorIndex
++import com.femi.gallery.domain.color.DetectedColor
++import com.femi.gallery.domain.repository.ColorStore
++import kotlinx.coroutines.sync.Mutex
++import kotlinx.coroutines.sync.withLock
++import javax.inject.Inject
++import javax.inject.Singleton
++
++@Singleton
++class ColorIndexHolder @Inject constructor(
++    private val store: ColorStore,
++) {
++    private val mutex = Mutex()
++
++    @Volatile
++    private var loaded: ColorIndex? = null
++
++    private val answers = HashMap<String, Set<Long>>()
++
++    suspend fun current(): ColorIndex =
++        loaded ?: mutex.withLock { loaded ?: ColorIndex(store.load()).also { loaded = it } }
++
++    suspend fun publish(entries: List<DetectedColor>) {
++        val index = ColorIndex(entries)
++        mutex.withLock {
++            loaded = index
++            synchronized(answers) { answers.clear() }
++        }
++    }
++
++    suspend fun idsMatching(term: String): Set<Long> {
++        val index = current()
++        synchronized(answers) { answers[term]?.let { return it } }
++        val found = index.idsMatching(term)
++        synchronized(answers) { if (loaded === index) answers[term] = found }
++        return found
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/data/color/ColorScanner.kt b/app/src/main/java/com/femi/gallery/data/color/ColorScanner.kt
+new file mode 100644
+index 0000000..31bcd96
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/data/color/ColorScanner.kt
+@@ -0,0 +1,41 @@
++package com.femi.gallery.data.color
++
++import android.content.ContentUris
++import android.content.Context
++import android.os.CancellationSignal
++import android.provider.MediaStore
++import android.util.Log
++import android.util.Size
++import com.femi.gallery.di.IoDispatcher
++import com.femi.gallery.domain.color.ColorClassifier
++import dagger.hilt.android.qualifiers.ApplicationContext
++import kotlinx.coroutines.CoroutineDispatcher
++import kotlinx.coroutines.withContext
++import javax.inject.Inject
++import javax.inject.Singleton
++
++@Singleton
++class ColorScanner @Inject constructor(
++    @param:ApplicationContext private val context: Context,
++    @param:IoDispatcher private val io: CoroutineDispatcher,
++) {
++    suspend fun scan(id: Long): Set<String> = withContext(io) {
++        val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
++        try {
++            val signal = CancellationSignal()
++            val bitmap = context.contentResolver.loadThumbnail(uri, Size(64, 64), signal)
++            val width = bitmap.width
++            val height = bitmap.height
++            val pixels = IntArray(width * height)
++            bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
++            ColorClassifier.classify(pixels, width, height)
++        } catch (e: Exception) {
++            Log.w(TAG, "Could not read thumbnail/colours for photo $id", e)
++            emptySet()
++        }
++    }
++
++    private companion object {
++        const val TAG = "ColorScan"
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/data/color/FileColorStore.kt b/app/src/main/java/com/femi/gallery/data/color/FileColorStore.kt
+new file mode 100644
+index 0000000..b864fd3
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/data/color/FileColorStore.kt
+@@ -0,0 +1,41 @@
++package com.femi.gallery.data.color
++
++import android.content.Context
++import com.femi.gallery.di.IoDispatcher
++import com.femi.gallery.domain.color.ColorCodec
++import com.femi.gallery.domain.color.DetectedColor
++import com.femi.gallery.domain.repository.ColorStore
++import dagger.hilt.android.qualifiers.ApplicationContext
++import kotlinx.coroutines.CoroutineDispatcher
++import kotlinx.coroutines.withContext
++import java.io.File
++import java.nio.file.Files
++import java.nio.file.StandardCopyOption
++import javax.inject.Inject
++import javax.inject.Singleton
++
++@Singleton
++class FileColorStore @Inject constructor(
++    @param:ApplicationContext private val context: Context,
++    @param:IoDispatcher private val io: CoroutineDispatcher,
++) : ColorStore {
++
++    private val file: File get() = File(context.filesDir, FILE_NAME)
++
++    override suspend fun load(): List<DetectedColor> = withContext(io) {
++        val target = file
++        if (!target.exists()) emptyList() else ColorCodec.decode(target.readBytes()).orEmpty()
++    }
++
++    override suspend fun save(entries: List<DetectedColor>) = withContext(io) {
++        val target = file
++        val temporary = File(target.parentFile, "$FILE_NAME.tmp")
++        temporary.writeBytes(ColorCodec.encode(entries))
++        Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)
++        Unit
++    }
++
++    private companion object {
++        const val FILE_NAME = "colors.bin"
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+index a3c51f6..efacbac 100644
+--- a/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
++++ b/app/src/main/java/com/femi/gallery/data/mediastore/MediaStoreDataSource.kt
+@@ -9,6 +9,7 @@ import android.database.Cursor
+ import android.net.Uri
+ import android.os.Bundle
+ import android.provider.MediaStore
++import com.femi.gallery.data.color.ColorIndexHolder
+ import com.femi.gallery.data.location.LocationIndex
+ import com.femi.gallery.data.text.TextIndexHolder
+ import com.femi.gallery.di.IoDispatcher
+@@ -37,6 +38,7 @@ class MediaStoreDataSource @Inject constructor(
+     @param:IoDispatcher private val io: CoroutineDispatcher,
+     private val locationIndex: LocationIndex,
+     private val textIndex: TextIndexHolder,
++    private val colorIndex: ColorIndexHolder,
+ ) {
+     private val resolver: ContentResolver get() = context.contentResolver
+ 
+@@ -65,7 +67,7 @@ class MediaStoreDataSource @Inject constructor(
+             MediaStore.MediaColumns.DATE_TAKEN,
+             MediaStore.MediaColumns.DATE_ADDED,
+         )
+-        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = textMatches(search)), null)?.use { cursor ->
++        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search)), null)?.use { cursor ->
+             val ids = LongArray(cursor.count)
+             val dates = LongArray(cursor.count)
+             var i = 0
+@@ -117,7 +119,7 @@ class MediaStoreDataSource @Inject constructor(
+         val byId = resolver.query(
+             collectionUri,
+             PROJECTION,
+-            queryArgs(bucketId = bucketId, search = search, onlyIds = ids, textMatches = textMatches(search)),
++            queryArgs(bucketId = bucketId, search = search, onlyIds = ids, textMatches = combinedMatches(search)),
+             null,
+         )?.use { cursor ->
+             val columns = Columns(cursor)
+@@ -233,7 +235,7 @@ class MediaStoreDataSource @Inject constructor(
+             MediaStore.Files.FileColumns.MEDIA_TYPE,
+             MediaStore.MediaColumns.IS_FAVORITE,
+         )
+-        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = textMatches(search)), null)
++        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search)), null)
+             ?.use { cursor ->
+                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+                 val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+@@ -413,9 +415,14 @@ class MediaStoreDataSource @Inject constructor(
+         return ContentUris.withAppendedId(base, id)
+     }
+ 
+-    /** For each word typed in a search, the photos with that word written in them. */
+-    private suspend fun textMatches(search: SearchCriteria?): Map<String, Set<Long>> =
+-        search?.terms?.distinct()?.associateWith { textIndex.idsMatching(it) }.orEmpty()
++    /** For each word typed in a search, matching photos by text or colour. */
++    private suspend fun combinedMatches(search: SearchCriteria?): Map<String, Set<Long>> {
++        val terms = search?.terms?.distinct().orEmpty()
++        if (terms.isEmpty()) return emptyMap()
++        return terms.associateWith { term ->
++            textIndex.idsMatching(term) + colorIndex.idsMatching(term)
++        }
++    }
+ 
+     private fun queryArgs(
+         bucketId: Long? = null,
+diff --git a/app/src/main/java/com/femi/gallery/data/repository/ColorIndexRepositoryImpl.kt b/app/src/main/java/com/femi/gallery/data/repository/ColorIndexRepositoryImpl.kt
+new file mode 100644
+index 0000000..4898522
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/data/repository/ColorIndexRepositoryImpl.kt
+@@ -0,0 +1,144 @@
++package com.femi.gallery.data.repository
++
++import android.content.Context
++import android.os.PowerManager
++import android.os.Process
++import android.os.SystemClock
++import android.util.Log
++import com.femi.gallery.core.permission.MediaPermissionChecker
++import com.femi.gallery.data.color.ColorIndexHolder
++import com.femi.gallery.data.color.ColorScanner
++import com.femi.gallery.data.mediastore.MediaStoreDataSource
++import com.femi.gallery.di.ApplicationScope
++import com.femi.gallery.domain.color.ColorScanState
++import com.femi.gallery.domain.color.ColorScanStatus
++import com.femi.gallery.domain.color.DetectedColor
++import com.femi.gallery.domain.repository.ColorIndexRepository
++import com.femi.gallery.domain.repository.ColorStore
++import com.femi.gallery.domain.text.StampPlanner
++import dagger.hilt.android.qualifiers.ApplicationContext
++import kotlinx.coroutines.CancellationException
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.Job
++import kotlinx.coroutines.async
++import kotlinx.coroutines.awaitAll
++import kotlinx.coroutines.coroutineScope
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.update
++import kotlinx.coroutines.launch
++import javax.inject.Inject
++import javax.inject.Singleton
++
++@Singleton
++class ColorIndexRepositoryImpl @Inject constructor(
++    @param:ApplicationContext private val context: Context,
++    private val dataSource: MediaStoreDataSource,
++    private val scanner: ColorScanner,
++    private val store: ColorStore,
++    private val index: ColorIndexHolder,
++    private val permissions: MediaPermissionChecker,
++    @param:ApplicationScope private val scope: CoroutineScope,
++) : ColorIndexRepository {
++
++    private val _scan = MutableStateFlow(ColorScanState())
++    override val scan: StateFlow<ColorScanState> = _scan.asStateFlow()
++
++    private val lock = Any()
++    private var job: Job? = null
++    private val workers = Dispatchers.Default.limitedParallelism(3)
++
++    @Volatile
++    private var completedGeneration = -1L
++
++    private sealed interface Outcome {
++        class Read(val entry: DetectedColor) : Outcome
++    }
++
++    override fun startScan() {
++        if (!permissions.hasMediaAccess()) return
++        if (context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return
++        synchronized(lock) {
++            if (job?.isActive == true) return
++            job = scope.launch { runScan() }
++        }
++    }
++
++    private suspend fun runScan() {
++        val generation = dataSource.generation()
++        if (generation == completedGeneration) {
++            _scan.update { it.copy(status = ColorScanStatus.Idle) }
++            return
++        }
++        val startedAt = SystemClock.elapsedRealtime()
++        try {
++            val known = index.current().entries
++            val stamps = dataSource.loadImageStamps()
++            val plan = StampPlanner.plan(
++                cachedIds = LongArray(known.size) { known[it].id },
++                cachedModified = LongArray(known.size) { known[it].modified },
++                ids = stamps.ids,
++                modified = stamps.modified,
++            )
++            val kept = known.filter { it.id in plan.keepIds }
++            if (kept.size != known.size) checkpoint(kept)
++
++            val results = ArrayList<DetectedColor>(kept)
++            var withColor = kept.count { it.colors.isNotEmpty() }
++            var scanned = 0
++            var unsaved = 0
++            _scan.value = ColorScanState(ColorScanStatus.Scanning, 0, plan.toScan, withColor)
++
++            var next = 0
++            while (next < plan.toScan) {
++                val end = minOf(plan.toScan, next + BATCH_SIZE)
++                val outcomes = coroutineScope {
++                    (next until end)
++                        .map { i ->
++                            async(workers) {
++                                Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
++                                val colors = scanner.scan(plan.scanIds[i])
++                                Outcome.Read(DetectedColor(plan.scanIds[i], plan.scanModified[i], colors.joinToString(" ")))
++                            }
++                        }
++                        .awaitAll()
++                }
++                val read = outcomes.map { it.entry }
++                results.addAll(read)
++                withColor += read.count { it.colors.isNotEmpty() }
++                scanned += outcomes.size
++                unsaved += read.size
++                if (unsaved >= CHECKPOINT_EVERY) {
++                    checkpoint(results)
++                    unsaved = 0
++                }
++                _scan.value = ColorScanState(ColorScanStatus.Scanning, scanned, plan.toScan, withColor)
++                next = end
++            }
++            if (unsaved > 0) checkpoint(results)
++
++            completedGeneration = generation
++            _scan.value = ColorScanState(ColorScanStatus.Idle, scanned, plan.toScan, withColor)
++            Log.i(TAG, "Scanned colours for ${plan.toScan} photos in ${SystemClock.elapsedRealtime() - startedAt} ms")
++        } catch (e: CancellationException) {
++            throw e
++        } catch (e: Exception) {
++            Log.w(TAG, "Color scan failed", e)
++            _scan.update { it.copy(status = ColorScanStatus.Idle) }
++        }
++    }
++
++    private suspend fun checkpoint(entries: List<DetectedColor>) {
++        val snapshot = entries.toList()
++        index.publish(snapshot)
++        store.save(snapshot)
++    }
++
++    private companion object {
++        const val TAG = "ColorScan"
++        const val BATCH_SIZE = 32
++        const val CHECKPOINT_EVERY = 100
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/di/RepositoryModule.kt b/app/src/main/java/com/femi/gallery/di/RepositoryModule.kt
+index 0b6e380..f16c4a5 100644
+--- a/app/src/main/java/com/femi/gallery/di/RepositoryModule.kt
++++ b/app/src/main/java/com/femi/gallery/di/RepositoryModule.kt
+@@ -1,13 +1,17 @@
+ package com.femi.gallery.di
+ 
++import com.femi.gallery.data.color.FileColorStore
+ import com.femi.gallery.data.edit.BitmapEditor
+ import com.femi.gallery.data.location.FileLocationStore
+ import com.femi.gallery.data.map.AssetMapDataRepository
++import com.femi.gallery.data.repository.ColorIndexRepositoryImpl
+ import com.femi.gallery.data.repository.LocationRepositoryImpl
+ import com.femi.gallery.data.repository.MediaRepositoryImpl
+ import com.femi.gallery.data.repository.TextIndexRepositoryImpl
+ import com.femi.gallery.data.text.FileTextStore
+ import com.femi.gallery.data.text.MlKitTextRecognizer
++import com.femi.gallery.domain.repository.ColorIndexRepository
++import com.femi.gallery.domain.repository.ColorStore
+ import com.femi.gallery.domain.repository.EditRepository
+ import com.femi.gallery.domain.repository.LocationRepository
+ import com.femi.gallery.domain.repository.LocationStore
+@@ -48,4 +52,10 @@ abstract class RepositoryModule {
+ 
+     @Binds
+     abstract fun bindTextIndexRepository(impl: TextIndexRepositoryImpl): TextIndexRepository
++
++    @Binds
++    abstract fun bindColorStore(impl: FileColorStore): ColorStore
++
++    @Binds
++    abstract fun bindColorIndexRepository(impl: ColorIndexRepositoryImpl): ColorIndexRepository
+ }
+diff --git a/app/src/main/java/com/femi/gallery/domain/color/ColorClassifier.kt b/app/src/main/java/com/femi/gallery/domain/color/ColorClassifier.kt
+new file mode 100644
+index 0000000..cd85d85
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/color/ColorClassifier.kt
+@@ -0,0 +1,105 @@
++package com.femi.gallery.domain.color
++
++/**
++ * Pure Kotlin colour classifier that takes an array of RGB pixel integers (packed 0xRRGGBB or 0xAARRGGBB),
++ * width, and height, and classifies the dominant colours and brightness into a set of color/tone tags.
++ */
++object ColorClassifier {
++
++    fun classify(pixels: IntArray, width: Int, height: Int): Set<String> {
++        if (pixels.isEmpty() || width <= 0 || height <= 0) return emptySet()
++
++        val votes = HashMap<String, Int>()
++        var totalSamples = 0
++
++        val stepX = maxOf(1, width / 32)
++        val stepY = maxOf(1, height / 32)
++
++        for (y in 0 until height step stepY) {
++            for (x in 0 until width step stepX) {
++                val index = y * width + x
++                if (index !in pixels.indices) continue
++                val p = pixels[index]
++                val r = (p shr 16) and 0xFF
++                val g = (p shr 8) and 0xFF
++                val b = p and 0xFF
++
++                val tags = classifyPixel(r, g, b)
++                for (tag in tags) {
++                    votes[tag] = (votes[tag] ?: 0) + 1
++                }
++                totalSamples++
++            }
++        }
++
++        if (totalSamples == 0) return emptySet()
++
++        val threshold = totalSamples * 0.08
++        val result = HashSet<String>()
++        for ((tag, count) in votes) {
++            if (count >= threshold || (tag in setOf("dark", "light") && count >= totalSamples * 0.2)) {
++                result.add(tag)
++            }
++        }
++        return result
++    }
++
++    private fun classifyPixel(r: Int, g: Int, b: Int): List<String> {
++        val rf = r / 255.0f
++        val gf = g / 255.0f
++        val bf = b / 255.0f
++
++        val max = maxOf(rf, gf, bf)
++        val min = minOf(rf, gf, bf)
++        val delta = max - min
++
++        val value = max
++        val saturation = if (max == 0f) 0f else delta / max
++
++        val tags = ArrayList<String>(2)
++
++        if (value < 0.18f) {
++            tags.add("black")
++            tags.add("dark")
++            return tags
++        }
++        if (value > 0.85f && saturation < 0.15f) {
++            tags.add("white")
++            tags.add("light")
++            return tags
++        }
++        if (saturation < 0.2f) {
++            tags.add("gray")
++            tags.add("grey")
++            if (value < 0.45f) tags.add("dark")
++            else if (value > 0.65f) tags.add("light")
++            return tags
++        }
++
++        var hue = 0f
++        if (delta != 0f) {
++            hue = when (max) {
++                rf -> 60f * (((gf - bf) / delta) % 6f)
++                gf -> 60f * (((bf - rf) / delta) + 2f)
++                else -> 60f * (((rf - gf) / delta) + 4f)
++            }
++            if (hue < 0f) hue += 360f
++        }
++
++        val color = when {
++            hue < 15f || hue >= 345f -> "red"
++            hue in 15f..<45f -> if (value < 0.55f && saturation > 0.3f) "brown" else "orange"
++            hue in 45f..<70f -> "yellow"
++            hue in 70f..<170f -> "green"
++            hue in 170f..<260f -> "blue"
++            hue in 260f..<315f -> "purple"
++            else -> "pink"
++        }
++        tags.add(color)
++
++        if (value < 0.35f) tags.add("dark")
++        else if (value > 0.7f) tags.add("light")
++
++        return tags
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/domain/color/ColorCodec.kt b/app/src/main/java/com/femi/gallery/domain/color/ColorCodec.kt
+new file mode 100644
+index 0000000..b7014e0
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/color/ColorCodec.kt
+@@ -0,0 +1,59 @@
++package com.femi.gallery.domain.color
++
++import java.io.ByteArrayInputStream
++import java.io.ByteArrayOutputStream
++import java.io.DataInputStream
++import java.io.DataOutputStream
++import java.io.IOException
++
++/**
++ * The file format the detected colours are kept in: MAGIC "GCLR", version 1, count, then for each
++ * photo its id, modified time, and colour tags string.
++ */
++object ColorCodec {
++    private const val MAGIC = 0x47434C52 // "GCLR"
++    private const val VERSION = 1
++    private const val HEADER_BYTES = 12
++    private const val ENTRY_FIXED_BYTES = 20
++
++    fun encode(entries: List<DetectedColor>): ByteArray {
++        val bytes = ByteArrayOutputStream()
++        DataOutputStream(bytes).use { out ->
++            out.writeInt(MAGIC)
++            out.writeInt(VERSION)
++            out.writeInt(entries.size)
++            for (entry in entries) {
++                val text = entry.colors.toByteArray(Charsets.UTF_8)
++                out.writeLong(entry.id)
++                out.writeLong(entry.modified)
++                out.writeInt(text.size)
++                out.write(text)
++            }
++        }
++        return bytes.toByteArray()
++    }
++
++    fun decode(bytes: ByteArray): List<DetectedColor>? {
++        if (bytes.size < HEADER_BYTES) return null
++        return try {
++            DataInputStream(ByteArrayInputStream(bytes)).use { input ->
++                if (input.readInt() != MAGIC || input.readInt() != VERSION) return null
++                val count = input.readInt()
++                if (count < 0 || count.toLong() * ENTRY_FIXED_BYTES > bytes.size) return null
++                val entries = ArrayList<DetectedColor>(count)
++                repeat(count) {
++                    val id = input.readLong()
++                    val modified = input.readLong()
++                    val length = input.readInt()
++                    if (length < 0 || length > input.available()) return null
++                    val text = ByteArray(length).also { input.readFully(it) }
++                    entries.add(DetectedColor(id, modified, String(text, Charsets.UTF_8)))
++                }
++                if (input.available() != 0) return null
++                entries
++            }
++        } catch (e: IOException) {
++            null
++        }
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/domain/color/ColorIndex.kt b/app/src/main/java/com/femi/gallery/domain/color/ColorIndex.kt
+new file mode 100644
+index 0000000..408ab7b
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/color/ColorIndex.kt
+@@ -0,0 +1,32 @@
++package com.femi.gallery.domain.color
++
++class ColorIndex(val entries: List<DetectedColor>) {
++    private val colorMap: Map<Long, Set<String>> = run {
++        val map = HashMap<Long, Set<String>>()
++        for (entry in entries) {
++            if (entry.colors.isBlank()) continue
++            val tags = entry.colors.split(" ").filter { it.isNotBlank() }.toSet()
++            if (tags.isNotEmpty()) {
++                map[entry.id] = tags
++            }
++        }
++        map
++    }
++
++    val readCount: Int get() = entries.size
++    val withColorCount: Int get() = colorMap.size
++
++    fun idsMatching(term: String): Set<Long> {
++        val wanted = term.lowercase().trim()
++        if (wanted.isEmpty()) return emptySet()
++        val result = HashSet<Long>()
++        for ((id, tags) in colorMap) {
++            if (tags.contains(wanted)) result.add(id)
++        }
++        return result
++    }
++
++    companion object {
++        val Empty = ColorIndex(emptyList())
++    }
++}
+diff --git a/app/src/main/java/com/femi/gallery/domain/color/ColorScanState.kt b/app/src/main/java/com/femi/gallery/domain/color/ColorScanState.kt
+new file mode 100644
+index 0000000..a486911
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/color/ColorScanState.kt
+@@ -0,0 +1,14 @@
++package com.femi.gallery.domain.color
++
++enum class ColorScanStatus {
++    Idle,
++    Scanning,
++    Unavailable,
++}
++
++data class ColorScanState(
++    val status: ColorScanStatus = ColorScanStatus.Idle,
++    val scanned: Int = 0,
++    val total: Int = 0,
++    val withColor: Int = 0,
++)
+diff --git a/app/src/main/java/com/femi/gallery/domain/color/DetectedColor.kt b/app/src/main/java/com/femi/gallery/domain/color/DetectedColor.kt
+new file mode 100644
+index 0000000..f807d73
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/color/DetectedColor.kt
+@@ -0,0 +1,7 @@
++package com.femi.gallery.domain.color
++
++data class DetectedColor(
++    val id: Long,
++    val modified: Long,
++    val colors: String,
++)
+diff --git a/app/src/main/java/com/femi/gallery/domain/repository/ColorIndexRepository.kt b/app/src/main/java/com/femi/gallery/domain/repository/ColorIndexRepository.kt
+new file mode 100644
+index 0000000..46816aa
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/repository/ColorIndexRepository.kt
+@@ -0,0 +1,9 @@
++package com.femi.gallery.domain.repository
++
++import com.femi.gallery.domain.color.ColorScanState
++import kotlinx.coroutines.flow.StateFlow
++
++interface ColorIndexRepository {
++    val scan: StateFlow<ColorScanState>
++    fun startScan()
++}
+diff --git a/app/src/main/java/com/femi/gallery/domain/repository/ColorStore.kt b/app/src/main/java/com/femi/gallery/domain/repository/ColorStore.kt
+new file mode 100644
+index 0000000..6e098c8
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/repository/ColorStore.kt
+@@ -0,0 +1,8 @@
++package com.femi.gallery.domain.repository
++
++import com.femi.gallery.domain.color.DetectedColor
++
++interface ColorStore {
++    suspend fun load(): List<DetectedColor>
++    suspend fun save(entries: List<DetectedColor>)
++}
+diff --git a/app/src/main/java/com/femi/gallery/domain/usecase/ObserveColorScanUseCase.kt b/app/src/main/java/com/femi/gallery/domain/usecase/ObserveColorScanUseCase.kt
+new file mode 100644
+index 0000000..0485c4b
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/usecase/ObserveColorScanUseCase.kt
+@@ -0,0 +1,12 @@
++package com.femi.gallery.domain.usecase
++
++import com.femi.gallery.domain.color.ColorScanState
++import com.femi.gallery.domain.repository.ColorIndexRepository
++import kotlinx.coroutines.flow.StateFlow
++import javax.inject.Inject
++
++class ObserveColorScanUseCase @Inject constructor(
++    private val repository: ColorIndexRepository,
++) {
++    operator fun invoke(): StateFlow<ColorScanState> = repository.scan
++}
+diff --git a/app/src/main/java/com/femi/gallery/domain/usecase/StartColorScanUseCase.kt b/app/src/main/java/com/femi/gallery/domain/usecase/StartColorScanUseCase.kt
+new file mode 100644
+index 0000000..4657125
+--- /dev/null
++++ b/app/src/main/java/com/femi/gallery/domain/usecase/StartColorScanUseCase.kt
+@@ -0,0 +1,10 @@
++package com.femi.gallery.domain.usecase
++
++import com.femi.gallery.domain.repository.ColorIndexRepository
++import javax.inject.Inject
++
++class StartColorScanUseCase @Inject constructor(
++    private val repository: ColorIndexRepository,
++) {
++    operator fun invoke() = repository.startScan()
++}
+diff --git a/app/src/main/java/com/femi/gallery/presentation/AppViewModel.kt b/app/src/main/java/com/femi/gallery/presentation/AppViewModel.kt
+index 453169e..6b6ab68 100644
+--- a/app/src/main/java/com/femi/gallery/presentation/AppViewModel.kt
++++ b/app/src/main/java/com/femi/gallery/presentation/AppViewModel.kt
+@@ -2,6 +2,7 @@ package com.femi.gallery.presentation
+ 
+ import androidx.lifecycle.ViewModel
+ import com.femi.gallery.core.security.LockSession
++import com.femi.gallery.domain.usecase.StartColorScanUseCase
+ import com.femi.gallery.domain.usecase.StartLocationScanUseCase
+ import com.femi.gallery.domain.usecase.StartTextScanUseCase
+ import dagger.hilt.android.lifecycle.HiltViewModel
+@@ -13,14 +14,16 @@ class AppViewModel @Inject constructor(
+     val lockSession: LockSession,
+     private val startLocationScan: StartLocationScanUseCase,
+     private val startTextScan: StartTextScanUseCase,
++    private val startColorScan: StartColorScanUseCase,
+ ) : ViewModel() {
+ 
+     /**
+-     * Starts the background scans of new photos: where they were taken, and the text written in them.
++     * Starts the background scans of new photos: where they were taken, the text written in them, and their dominant colours.
+      * Cheap when there is nothing new.
+      */
+     fun scanLocations() {
+         startLocationScan()
+         startTextScan()
++        startColorScan()
+     }
+ }
+diff --git a/app/src/test/java/com/femi/gallery/domain/color/ColorClassifierTest.kt b/app/src/test/java/com/femi/gallery/domain/color/ColorClassifierTest.kt
+new file mode 100644
+index 0000000..dbca10f
+--- /dev/null
++++ b/app/src/test/java/com/femi/gallery/domain/color/ColorClassifierTest.kt
+@@ -0,0 +1,43 @@
++package com.femi.gallery.domain.color
++
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class ColorClassifierTest {
++
++    @Test
++    fun testClassifyRed() {
++        val width = 10
++        val height = 10
++        val pixels = IntArray(width * height) { 0xFFFF0000.toInt() } // Pure red
++        val tags = ColorClassifier.classify(pixels, width, height)
++        assertTrue("Expected red in $tags", tags.contains("red"))
++    }
++
++    @Test
++    fun testClassifyBlue() {
++        val width = 10
++        val height = 10
++        val pixels = IntArray(width * height) { 0xFF0000FF.toInt() } // Pure blue
++        val tags = ColorClassifier.classify(pixels, width, height)
++        assertTrue("Expected blue in $tags", tags.contains("blue"))
++    }
++
++    @Test
++    fun testClassifyBlack() {
++        val width = 10
++        val height = 10
++        val pixels = IntArray(width * height) { 0xFF000000.toInt() } // Pure black
++        val tags = ColorClassifier.classify(pixels, width, height)
++        assertTrue("Expected black and dark in $tags", tags.contains("black") && tags.contains("dark"))
++    }
++
++    @Test
++    fun testClassifyWhite() {
++        val width = 10
++        val height = 10
++        val pixels = IntArray(width * height) { 0xFFFFFFFF.toInt() } // Pure white
++        val tags = ColorClassifier.classify(pixels, width, height)
++        assertTrue("Expected white and light in $tags", tags.contains("white") && tags.contains("light"))
++    }
++}
+diff --git a/app/src/test/java/com/femi/gallery/domain/color/ColorCodecTest.kt b/app/src/test/java/com/femi/gallery/domain/color/ColorCodecTest.kt
+new file mode 100644
+index 0000000..5de126a
+--- /dev/null
++++ b/app/src/test/java/com/femi/gallery/domain/color/ColorCodecTest.kt
+@@ -0,0 +1,23 @@
++package com.femi.gallery.domain.color
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++
++class ColorCodecTest {
++
++    @Test
++    fun testEncodeDecode() {
++        val entries = listOf(
++            DetectedColor(1L, 1000L, "blue dark"),
++            DetectedColor(2L, 2000L, "red light"),
++        )
++        val encoded = ColorCodec.encode(entries)
++        val decoded = ColorCodec.decode(encoded)
++
++        assertEquals(entries.size, decoded?.size)
++        assertEquals(entries[0].id, decoded?.get(0)?.id)
++        assertEquals(entries[0].colors, decoded?.get(0)?.colors)
++        assertEquals(entries[1].id, decoded?.get(1)?.id)
++        assertEquals(entries[1].colors, decoded?.get(1)?.colors)
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
