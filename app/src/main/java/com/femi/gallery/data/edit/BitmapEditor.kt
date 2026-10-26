@@ -118,11 +118,13 @@ class BitmapEditor @Inject constructor(
 
         val isPng = meta.mime == "image/png"
         val baseName = meta.name.substringBeforeLast('.', meta.name).ifEmpty { "photo" }
+        val takenMillis = meta.taken.takeIf { it > 0 } ?: (meta.addedSeconds * 1000L)
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, "$baseName-edited.${if (isPng) "png" else "jpg"}")
             put(MediaStore.MediaColumns.MIME_TYPE, if (isPng) "image/png" else "image/jpeg")
             put(MediaStore.MediaColumns.RELATIVE_PATH, destinationFor(meta.path))
-            put(MediaStore.MediaColumns.DATE_TAKEN, meta.taken.takeIf { it > 0 } ?: (meta.addedSeconds * 1000L))
+            put(MediaStore.MediaColumns.DATE_TAKEN, takenMillis)
+            put(MediaStore.MediaColumns.DATE_MODIFIED, takenMillis / 1000L)
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val target = resolver.insert(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), values)
@@ -135,25 +137,31 @@ class BitmapEditor @Inject constructor(
             }
             resolver.update(target, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
 
-            // Copy EXIF from original
+            // Copy EXIF from original using read-write mode
             runCatching {
                 resolver.openFileDescriptor(uri, "r")?.use { sourceFd ->
-                    resolver.openFileDescriptor(target, "w")?.use { targetFd ->
+                    resolver.openFileDescriptor(target, "rw")?.use { targetFd ->
                         val sourceExif = ExifInterface(sourceFd.fileDescriptor)
                         val targetExif = ExifInterface(targetFd.fileDescriptor)
                         val tags = listOf(
                             ExifInterface.TAG_DATETIME,
                             ExifInterface.TAG_DATETIME_ORIGINAL,
+                            ExifInterface.TAG_DATETIME_DIGITIZED,
                             ExifInterface.TAG_GPS_LATITUDE,
                             ExifInterface.TAG_GPS_LONGITUDE,
                             ExifInterface.TAG_GPS_LATITUDE_REF,
                             ExifInterface.TAG_GPS_LONGITUDE_REF,
+                            ExifInterface.TAG_GPS_ALTITUDE,
+                            ExifInterface.TAG_GPS_ALTITUDE_REF,
                             ExifInterface.TAG_MAKE,
                             ExifInterface.TAG_MODEL,
                             ExifInterface.TAG_FOCAL_LENGTH,
                             ExifInterface.TAG_F_NUMBER,
                             ExifInterface.TAG_EXPOSURE_TIME,
-                            ExifInterface.TAG_ISO_SPEED_RATINGS,
+                            ExifInterface.TAG_EXPOSURE_PROGRAM,
+                            ExifInterface.TAG_WHITE_BALANCE,
+                            ExifInterface.TAG_FLASH,
+                            ExifInterface.TAG_ORIENTATION,
                         )
                         for (tag in tags) {
                             sourceExif.getAttribute(tag)?.let { targetExif.setAttribute(tag, it) }
@@ -161,6 +169,8 @@ class BitmapEditor @Inject constructor(
                         targetExif.saveAttributes()
                     }
                 }
+            }.onFailure { e ->
+                Log.w(TAG, "Could not copy EXIF attributes to edited copy", e)
             }
 
             true
@@ -182,6 +192,7 @@ class BitmapEditor @Inject constructor(
     )
 
     private companion object {
+        const val TAG = "BitmapEditor"
         const val MAX_SAVE_SIZE = 4096
         const val JPEG_QUALITY = 95
     }
