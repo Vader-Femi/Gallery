@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import com.femi.gallery.data.location.LocationIndex
+import com.femi.gallery.data.text.TextIndexHolder
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
@@ -35,6 +36,7 @@ class MediaStoreDataSource @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val io: CoroutineDispatcher,
     private val locationIndex: LocationIndex,
+    private val textIndex: TextIndexHolder,
 ) {
     private val resolver: ContentResolver get() = context.contentResolver
 
@@ -63,7 +65,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.MediaColumns.DATE_TAKEN,
             MediaStore.MediaColumns.DATE_ADDED,
         )
-        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search), null)?.use { cursor ->
+        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = textMatches(search)), null)?.use { cursor ->
             val ids = LongArray(cursor.count)
             val dates = LongArray(cursor.count)
             var i = 0
@@ -115,7 +117,7 @@ class MediaStoreDataSource @Inject constructor(
         val byId = resolver.query(
             collectionUri,
             PROJECTION,
-            queryArgs(bucketId = bucketId, search = search, onlyIds = ids),
+            queryArgs(bucketId = bucketId, search = search, onlyIds = ids, textMatches = textMatches(search)),
             null,
         )?.use { cursor ->
             val columns = Columns(cursor)
@@ -231,7 +233,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             MediaStore.MediaColumns.IS_FAVORITE,
         )
-        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search), null)
+        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = textMatches(search)), null)
             ?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                 val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
@@ -270,11 +272,23 @@ class MediaStoreDataSource @Inject constructor(
     }
 
     /** Adds the conditions of [search] to a query; every condition must match. */
-    private fun appendSearch(search: SearchCriteria, selection: StringBuilder, args: MutableList<String>) {
+    private fun appendSearch(
+        search: SearchCriteria,
+        textMatches: Map<String, Set<Long>>,
+        selection: StringBuilder,
+        args: MutableList<String>,
+    ) {
         search.terms.forEach { term ->
+            // A word matches a photo by its file name, its album, or the text written in the photo.
+            // The ids are numbers written straight into the query: there can be thousands of them.
+            val written = textMatches[term].orEmpty()
             selection.append(
-                " AND (${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? OR ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} LIKE ?)",
+                " AND (${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? OR ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} LIKE ?",
             )
+            if (written.isNotEmpty()) {
+                selection.append(" OR ${MediaStore.MediaColumns._ID} IN (${written.joinToString(",")})")
+            }
+            selection.append(")")
             args.add("%$term%")
             args.add("%$term%")
         }
@@ -399,9 +413,15 @@ class MediaStoreDataSource @Inject constructor(
         return ContentUris.withAppendedId(base, id)
     }
 
+    /** For each word typed in a search, the photos with that word written in them. */
+    private suspend fun textMatches(search: SearchCriteria?): Map<String, Set<Long>> =
+        search?.terms?.distinct()?.associateWith { textIndex.idsMatching(it) }.orEmpty()
+
     private fun queryArgs(
         bucketId: Long? = null,
         search: SearchCriteria? = null,
+        /** The photos each search word is written in, see [textMatches]. */
+        textMatches: Map<String, Set<Long>> = emptyMap(),
         /** Restricts the query to these ids (used to load one page of an ordered list). */
         onlyIds: LongArray? = null,
     ): Bundle = Bundle().apply {
@@ -420,7 +440,7 @@ class MediaStoreDataSource @Inject constructor(
                 selectionArgs.add(bucketId.toString())
             }
         }
-        if (search != null) appendSearch(search, selection, selectionArgs)
+        if (search != null) appendSearch(search, textMatches, selection, selectionArgs)
         if (onlyIds != null && onlyIds.isNotEmpty()) {
             selection.append(" AND ${MediaStore.MediaColumns._ID} IN (${onlyIds.joinToString(",") { "?" }})")
             onlyIds.forEach { selectionArgs.add(it.toString()) }

@@ -3,4 +3,5 @@
 <full-backup-content>
     <exclude domain="file" path="locked/" />
     <exclude domain="file" path="locations.bin" />
+    <exclude domain="file" path="texts.bin" />
 </full-backup-content>

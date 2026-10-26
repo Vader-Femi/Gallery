@@ -21,8 +21,10 @@
     <string name="map_permission_settings">Open settings</string>
     <string name="map_attribution">Map data: Natural Earth (public domain)</string>
     <string name="place_title">Photos here</string>
-    <string name="search_help">Try a file or folder name, a date like "october 2025" or "oct 15", or words like videos, photos and favorites. Combine them: "whatsapp videos 2025".</string>
+    <string name="search_help">Try a file or folder name, a date like "october 2025" or "oct 15", or words like videos, photos and favorites. Combine them: "whatsapp videos 2025". Words written in a photo, like a sign or a receipt, are found too.</string>
     <string name="search_no_results">No matching photos or videos</string>
+    <string name="search_reading_text">Reading the text in your photos: %1$s of %2$s</string>
+    <string name="search_text_unavailable">Reading the text in photos does not work on this phone</string>
     <string name="search_suggestion_videos">Videos</string>
     <string name="search_suggestion_favorites">Favorites</string>
     <string name="search_suggestion_screenshots">Screenshots</string>

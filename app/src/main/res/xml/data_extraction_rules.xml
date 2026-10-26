@@ -4,5 +4,6 @@
     <cloud-backup>
         <exclude domain="file" path="locked/" />
         <exclude domain="file" path="locations.bin" />
+        <exclude domain="file" path="texts.bin" />
     </cloud-backup>
 </data-extraction-rules>

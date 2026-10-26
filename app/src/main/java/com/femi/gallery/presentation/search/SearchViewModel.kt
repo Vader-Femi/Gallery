@@ -10,7 +10,9 @@ import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.search.SearchCriteria
 import com.femi.gallery.domain.search.SearchQueryParser
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
+import com.femi.gallery.domain.text.TextScanState
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
+import com.femi.gallery.domain.usecase.ObserveTextScanUseCase
 import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
 import com.femi.gallery.domain.usecase.RefreshMediaUseCase
 import com.femi.gallery.domain.usecase.RequestDeleteUseCase
@@ -43,7 +45,11 @@ class SearchViewModel @Inject constructor(
     observeTimeline: ObserveTimelineUseCase,
     selectionFactory: MediaSelectionControllerFactory,
     private val refreshMedia: RefreshMediaUseCase,
+    observeTextScan: ObserveTextScanUseCase,
 ) : ViewModel() {
+
+    /** How far the reading of the text in photos has got: search matches the text of photos read so far. */
+    val textScan: StateFlow<TextScanState> = observeTextScan()
 
     private val initialQuery: String = savedStateHandle.get<String>("query").orEmpty()
     private val _query = MutableStateFlow(initialQuery)

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
@@ -53,6 +54,9 @@ import com.femi.gallery.presentation.selection.SelectionBars
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.libraryMoreActions
+import com.femi.gallery.domain.text.TextScanState
+import com.femi.gallery.domain.text.TextScanStatus
+import java.text.NumberFormat
 
 /** Suggestion chips: the label shown, and the (English) query it fills in. */
 private val Suggestions = listOf(
@@ -81,6 +85,7 @@ fun SearchScreen(
         }
     }
     val criteria by viewModel.criteria.collectAsStateWithLifecycle()
+    val textScan by viewModel.textScan.collectAsStateWithLifecycle()
     val items = viewModel.media.collectAsLazyPagingItems()
     val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
     val zoom by viewModel.timeline.zoom.collectAsStateWithLifecycle()
@@ -128,6 +133,8 @@ fun SearchScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             )
+
+            TextScanNotice(textScan)
 
             Box(modifier = Modifier.weight(1f)) {
                 when {
@@ -211,5 +218,34 @@ private fun SearchHelp(onSuggestion: (String) -> Unit) {
                 SuggestionChip(onClick = { onSuggestion(text) }, label = { Text(stringResource(label)) })
             }
         }
+    }
+}
+
+/**
+ * While the text in the photos is still being read, say so: a search only finds words in the photos
+ * that have been read, so fewer results than expected are not a mistake. Nothing is shown otherwise.
+ */
+@Composable
+private fun TextScanNotice(state: TextScanState) {
+    when (state.status) {
+        TextScanStatus.Scanning -> Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
+            val numbers = NumberFormat.getIntegerInstance()
+            Text(
+                text = stringResource(R.string.search_reading_text, numbers.format(state.scanned), numbers.format(state.total)),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LinearProgressIndicator(
+                progress = { if (state.total == 0) 0f else state.scanned.toFloat() / state.total },
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            )
+        }
+        TextScanStatus.Unavailable -> Text(
+            text = stringResource(R.string.search_text_unavailable),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+        )
+        TextScanStatus.Idle -> Unit
     }
 }
