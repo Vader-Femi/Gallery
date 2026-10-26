@@ -30,10 +30,11 @@ import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -69,6 +70,7 @@ import kotlin.math.roundToInt
 
 private val PanelColor = Color(0xFF1C1C1E)
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun EditorScreen(
     onClose: () -> Unit,
@@ -116,7 +118,7 @@ fun EditorScreen(
                     Box(
                         modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
                         contentAlignment = Alignment.Center,
-                    ) { CircularWavyProgressIndicator() }
+                    ) { LoadingIndicator() }
                 }
             }
 
@@ -169,11 +171,12 @@ private fun EditorTopBar(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun Preview(state: EditorUiState, viewModel: EditorViewModel, colorFilter: ColorFilter) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when {
-            state.loading -> CircularWavyProgressIndicator()
+            state.loading -> LoadingIndicator()
             state.loadFailed -> Text(stringResource(R.string.editor_load_failed))
             else -> {
                 val cropping = state.tool == EditorTool.Crop

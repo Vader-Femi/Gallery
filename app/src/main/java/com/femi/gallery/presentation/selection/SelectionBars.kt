@@ -10,23 +10,14 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.areNavigationBarsVisible
-import androidx.compose.foundation.layout.captionBar
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContent
-import androidx.compose.foundation.layout.safeGestures
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.systemGestures
-import androidx.compose.foundation.layout.waterfall
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,6 +26,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -126,20 +118,20 @@ fun BoxScope.SelectionBars(
         modifier = Modifier.align(Alignment.BottomCenter),
     ) {
         Surface(
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             tonalElevation = 6.dp,
             shadowElevation = 8.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 3.dp)
-                .padding(bottom = 3.dp),
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 8.dp),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(horizontal = 3.dp, vertical = 3.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -158,8 +150,8 @@ private fun BarAction(icon: ImageVector, label: String, enabled: Boolean, onClic
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(horizontal = 3.dp),
     ) {
-        IconButton(onClick = onClick, enabled = enabled) {
-            Icon(icon, contentDescription = label)
+        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(36.dp)) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(22.dp))
         }
         Text(
             text = label,
@@ -177,8 +169,8 @@ private fun MoreMenu(actions: List<SelectionAction>, enabled: Boolean) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(horizontal = 3.dp),
     ) {
-        IconButton(onClick = { expanded = true }, enabled = enabled) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
+        IconButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more), modifier = Modifier.size(22.dp))
         }
         Text(
             text = stringResource(R.string.action_more),
