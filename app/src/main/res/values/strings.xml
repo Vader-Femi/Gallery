@@ -30,7 +30,7 @@
     <string name="search_suggestion_screenshots">Screenshots</string>
     <string name="search_suggestion_yesterday">Yesterday</string>
 
-    <string name="selection_count">%d selected</string>
+    <string name="selection_count">%d</string>
     <string name="selection_none">Select items</string>
     <string name="selection_select_all">Select all</string>
     <string name="selection_cancel">Cancel selection</string>

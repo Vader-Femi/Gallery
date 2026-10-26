@@ -7,18 +7,24 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -39,6 +45,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,32 +83,60 @@ fun BoxScope.SelectionBars(
         ) + fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)),
         modifier = Modifier.align(Alignment.TopCenter),
     ) {
-        Surface(
-            shape = RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 6.dp,
-            shadowElevation = 8.dp,
+        Row (
             modifier = Modifier
                 .fillMaxWidth()
-        ) {
-            Row(
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ){
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 3.dp, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.selection_cancel))
+
+                if (count != 0)
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .wrapContentSize(),
+                    verticalAlignment = Alignment.CenterVertically,
+
+                ) {
+                    IconButton(onClick = onClose) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.selection_cancel)
+                        )
+                    }
+
+                    Text(
+                        text = stringResource(
+                            R.string.selection_count,
+                            count
+                        ),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
                 }
-                Text(
-                    text = if (count == 0) stringResource(R.string.selection_none) else stringResource(R.string.selection_count, count),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onSelectAll) { Text(stringResource(R.string.selection_select_all)) }
+            }
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            ) {
+                TextButton(onClick = onSelectAll) {
+                    Text(
+                        stringResource(R.string.selection_select_all),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }
@@ -119,7 +155,7 @@ fun BoxScope.SelectionBars(
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 6.dp,
             shadowElevation = 8.dp,
             modifier = Modifier
@@ -131,7 +167,7 @@ fun BoxScope.SelectionBars(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(top = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -151,7 +187,12 @@ private fun BarAction(icon: ImageVector, label: String, enabled: Boolean, onClic
         modifier = Modifier.padding(horizontal = 3.dp),
     ) {
         IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(36.dp)) {
-            Icon(icon, contentDescription = label, modifier = Modifier.size(22.dp))
+            Icon(
+                icon,
+                contentDescription = label,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
         }
         Text(
             text = label,
@@ -170,7 +211,12 @@ private fun MoreMenu(actions: List<SelectionAction>, enabled: Boolean) {
         modifier = Modifier.padding(horizontal = 3.dp),
     ) {
         IconButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more), modifier = Modifier.size(22.dp))
+            Icon(
+                Icons.Filled.MoreVert,
+                contentDescription = stringResource(R.string.action_more),
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
         }
         Text(
             text = stringResource(R.string.action_more),
@@ -182,7 +228,7 @@ private fun MoreMenu(actions: List<SelectionAction>, enabled: Boolean) {
             actions.forEach { action ->
                 DropdownMenuItem(
                     text = { Text(action.label) },
-                    leadingIcon = { Icon(action.icon, contentDescription = null) },
+                    leadingIcon = { Icon(action.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) },
                     onClick = {
                         expanded = false
                         action.onClick()
