@@ -19,7 +19,7 @@
     <string name="map_permission_message">Don nuna hotunanka a kan taswira, bari Gallery ta karanta wuraren da aka adana a ciki. Ba sa barin wayarka.</string>
     <string name="map_permission_allow">Bada izini</string>
     <string name="map_permission_settings">Buɗe saituna</string>
-    <string name="map_attribution">Bayanan taswira: Natural Earth (mallakar jama'a)</string>
+    <string name="map_attribution">Bayanan taswira: Natural Earth (mallakar jama\'a)</string>
     <string name="place_title">Hotunan nan</string>
     <string name="search_help">Gwada sunan fayil ko babban fayil, kwanan wata kamar \"Oktoba 2025\" ko \"Okt 15\", ko kalmomi kamar bidiyo, hotuna da abubuwan da aka fi so. Haɗa su: \"whatsapp videos 2025\". Hakanan ana samun kalmomin da aka rubuta a cikin hoto, kamar alama ko rasiti.</string>
     <string name="search_no_results">Babu hotuna ko bidiyo da suka dace</string>
@@ -121,7 +121,7 @@
     <string name="picker_done">An gama</string>
     <string name="picker_cancel_selection">Soke</string>
 
-    <string name="stories_empty">Babu labaru tukuna. Labari yana fitowa ne idan ka dauki akalla hotuna 12 a rana daya, ko cikin ‘yan kwanaki a jere.</string>
+    <string name="stories_empty">Babu labaru tukuna. Labari yana fitowa ne idan ka dauki akalla hotuna 12 a rana daya, ko cikin \u2019yan kwanaki a jere.</string>
     <plurals name="story_item_count">
         <item quantity="one">hoto ko bidiyo %d</item>
         <item quantity="other">hotuna da bidiyoyi %d</item>
@@ -181,7 +181,7 @@
     <string name="details_location">Wuri</string>
 
     <string name="permission_title">Bada izinin shiga hotunanka da bidiyoyinka</string>
-    <string name="permission_body">Gallery na buƙatar izinin karanta hotuna da bidiyo a kan na'urarka domin ta nuna su. Babu abin da ke barin wayarka.</string>
+    <string name="permission_body">Gallery na buƙatar izinin karanta hotuna da bidiyo a kan na\'urarka domin ta nuna su. Babu abin da ke barin wayarka.</string>
     <string name="permission_body_denied">An ki amincewa da izinin. Buɗe saituna kuma ka ba da izinin hotuna da bidiyo don ci gaba.</string>
     <string name="permission_grant">Bada izini</string>
     <string name="permission_open_settings">Buɗe saituna</string>
