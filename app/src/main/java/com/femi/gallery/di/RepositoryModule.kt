@@ -1,11 +1,14 @@
 package com.femi.gallery.di
 
+import com.femi.gallery.data.clip.FileClipStore
+import com.femi.gallery.data.clip.MockImageEmbedder
 import com.femi.gallery.data.color.FileColorStore
 import com.femi.gallery.data.edit.BitmapEditor
 import com.femi.gallery.data.label.FileLabelStore
 import com.femi.gallery.data.label.SceneImageLabeller
 import com.femi.gallery.data.location.FileLocationStore
 import com.femi.gallery.data.map.AssetMapDataRepository
+import com.femi.gallery.data.repository.ClipIndexRepositoryImpl
 import com.femi.gallery.data.repository.ColorIndexRepositoryImpl
 import com.femi.gallery.data.repository.LabelIndexRepositoryImpl
 import com.femi.gallery.data.repository.LocationRepositoryImpl
@@ -13,9 +16,12 @@ import com.femi.gallery.data.repository.MediaRepositoryImpl
 import com.femi.gallery.data.repository.TextIndexRepositoryImpl
 import com.femi.gallery.data.text.FileTextStore
 import com.femi.gallery.data.text.MlKitTextRecognizer
+import com.femi.gallery.domain.repository.ClipIndexRepository
+import com.femi.gallery.domain.repository.ClipStore
 import com.femi.gallery.domain.repository.ColorIndexRepository
 import com.femi.gallery.domain.repository.ColorStore
 import com.femi.gallery.domain.repository.EditRepository
+import com.femi.gallery.domain.repository.ImageEmbedder
 import com.femi.gallery.domain.repository.ImageLabeller
 import com.femi.gallery.domain.repository.LabelIndexRepository
 import com.femi.gallery.domain.repository.LabelStore
@@ -73,4 +79,13 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindLabelIndexRepository(impl: LabelIndexRepositoryImpl): LabelIndexRepository
+
+    @Binds
+    abstract fun bindClipStore(impl: FileClipStore): ClipStore
+
+    @Binds
+    abstract fun bindImageEmbedder(impl: MockImageEmbedder): ImageEmbedder
+
+    @Binds
+    abstract fun bindClipIndexRepository(impl: ClipIndexRepositoryImpl): ClipIndexRepository
 }

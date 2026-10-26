@@ -9,11 +9,13 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import com.femi.gallery.data.clip.ClipIndexHolder
 import com.femi.gallery.data.color.ColorIndexHolder
 import com.femi.gallery.data.label.LabelIndexHolder
 import com.femi.gallery.data.location.LocationIndex
 import com.femi.gallery.data.map.PhotoPlaceIndexHolder
 import com.femi.gallery.data.text.TextIndexHolder
+import com.femi.gallery.domain.repository.ImageEmbedder
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
@@ -43,6 +45,8 @@ class MediaStoreDataSource @Inject constructor(
     private val colorIndex: ColorIndexHolder,
     private val labelIndex: LabelIndexHolder,
     private val photoPlaceIndexHolder: PhotoPlaceIndexHolder,
+    private val clipIndex: ClipIndexHolder,
+    private val embedder: ImageEmbedder,
 ) {
     private val resolver: ContentResolver get() = context.contentResolver
 
@@ -419,12 +423,15 @@ class MediaStoreDataSource @Inject constructor(
         return ContentUris.withAppendedId(base, id)
     }
 
-    /** For each word typed in a search, matching photos by text, colour, object/scene labels, or place name. */
+    /** For each word typed in a search, matching photos by text, colour, object/scene labels, place name, or semantic CLIP similarity. */
     private suspend fun combinedMatches(search: SearchCriteria?): Map<String, Set<Long>> {
         val terms = search?.terms?.distinct().orEmpty()
         if (terms.isEmpty()) return emptyMap()
         return terms.associateWith { term ->
-            textIndex.idsMatching(term) + colorIndex.idsMatching(term) + labelIndex.idsMatching(term) + photoPlaceIndexHolder.idsMatching(term)
+            val lexical = textIndex.idsMatching(term) + colorIndex.idsMatching(term) + labelIndex.idsMatching(term) + photoPlaceIndexHolder.idsMatching(term)
+            val queryEmb = embedder.embedText(term)
+            val semantic = clipIndex.idsMatching(queryEmb, term)
+            lexical + semantic
         }
     }
 

@@ -2,6 +2,7 @@ package com.femi.gallery.presentation
 
 import androidx.lifecycle.ViewModel
 import com.femi.gallery.core.security.LockSession
+import com.femi.gallery.domain.usecase.StartClipScanUseCase
 import com.femi.gallery.domain.usecase.StartColorScanUseCase
 import com.femi.gallery.domain.usecase.StartLabelScanUseCase
 import com.femi.gallery.domain.usecase.StartLocationScanUseCase
@@ -17,10 +18,11 @@ class AppViewModel @Inject constructor(
     private val startTextScan: StartTextScanUseCase,
     private val startColorScan: StartColorScanUseCase,
     private val startLabelScan: StartLabelScanUseCase,
+    private val startClipScan: StartClipScanUseCase,
 ) : ViewModel() {
 
     /**
-     * Starts the background scans of new photos: where they were taken, the text written in them, their dominant colours, and object/scene labels.
+     * Starts the background scans of new photos: where they were taken, text, colours, labels, and embeddings.
      * Cheap when there is nothing new.
      */
     fun scanLocations() {
@@ -28,5 +30,6 @@ class AppViewModel @Inject constructor(
         startTextScan()
         startColorScan()
         startLabelScan()
+        startClipScan()
     }
 }

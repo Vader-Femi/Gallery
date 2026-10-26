@@ -42,7 +42,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Search**
 - [x] Search button on the Pictures tab opens a search screen with suggestion chips
-- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **colours** (`red`, `blue`, `dark`, ...), **object and scene labels** (`dog`, `beach`, `food`, `car`, ...), **place names** offline (matches located photos to the nearest bundled city from `places.bin`), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable, e.g. `lagos food blue 2025`
+- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **colours** (`red`, `blue`, `dark`, ...), **object and scene labels** (`dog`, `beach`, `food`, `car`, ...), **place names** offline, **semantic free-text descriptions** via local embeddings and cosine similarity, **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable
 - [x] Results use the same timeline, zoom, selection and viewer (swiping stays inside the results)
 
 **Albums**
@@ -336,6 +336,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 44 | Colour search | Search now finds photos by dominant colour ("red", "blue", "dark", ...): a background scan classifies each photo's thumbnail into color tags (resumable, incremental, stored in `colors.bin`, excluded from backups) with a pure-Kotlin colour classifier and unit tests |
 | 45 | Object/scene labels | Search now finds photos by object and scene labels ("dog", "beach", "food", "car", "document", ...): a background scan indexes photo tags (resumable, incremental, stored in `labels.bin`, excluded from backups) with pure-Kotlin scene tagger and unit tests |
 | 46 | Search by place name | Search now finds photos by offline place name ("paris", "london", "lagos", ...): matches each located photo to the nearest of the bundled ~1,250 cities (`places.bin`) via Haversine distance with unit tests |
+| 47 | Semantic free-text search | Search now supports natural language semantic description matching via local image and text embeddings (`clip.bin`, resumable background scan, cosine similarity matching) with unit tests |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
