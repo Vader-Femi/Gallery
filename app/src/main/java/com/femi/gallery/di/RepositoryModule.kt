@@ -1,13 +1,17 @@
 package com.femi.gallery.di
 
+import com.femi.gallery.data.color.FileColorStore
 import com.femi.gallery.data.edit.BitmapEditor
 import com.femi.gallery.data.location.FileLocationStore
 import com.femi.gallery.data.map.AssetMapDataRepository
+import com.femi.gallery.data.repository.ColorIndexRepositoryImpl
 import com.femi.gallery.data.repository.LocationRepositoryImpl
 import com.femi.gallery.data.repository.MediaRepositoryImpl
 import com.femi.gallery.data.repository.TextIndexRepositoryImpl
 import com.femi.gallery.data.text.FileTextStore
 import com.femi.gallery.data.text.MlKitTextRecognizer
+import com.femi.gallery.domain.repository.ColorIndexRepository
+import com.femi.gallery.domain.repository.ColorStore
 import com.femi.gallery.domain.repository.EditRepository
 import com.femi.gallery.domain.repository.LocationRepository
 import com.femi.gallery.domain.repository.LocationStore
@@ -48,4 +52,10 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindTextIndexRepository(impl: TextIndexRepositoryImpl): TextIndexRepository
+
+    @Binds
+    abstract fun bindColorStore(impl: FileColorStore): ColorStore
+
+    @Binds
+    abstract fun bindColorIndexRepository(impl: ColorIndexRepositoryImpl): ColorIndexRepository
 }

@@ -2,6 +2,7 @@ package com.femi.gallery.presentation
 
 import androidx.lifecycle.ViewModel
 import com.femi.gallery.core.security.LockSession
+import com.femi.gallery.domain.usecase.StartColorScanUseCase
 import com.femi.gallery.domain.usecase.StartLocationScanUseCase
 import com.femi.gallery.domain.usecase.StartTextScanUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,14 +14,16 @@ class AppViewModel @Inject constructor(
     val lockSession: LockSession,
     private val startLocationScan: StartLocationScanUseCase,
     private val startTextScan: StartTextScanUseCase,
+    private val startColorScan: StartColorScanUseCase,
 ) : ViewModel() {
 
     /**
-     * Starts the background scans of new photos: where they were taken, and the text written in them.
+     * Starts the background scans of new photos: where they were taken, the text written in them, and their dominant colours.
      * Cheap when there is nothing new.
      */
     fun scanLocations() {
         startLocationScan()
         startTextScan()
+        startColorScan()
     }
 }

@@ -9,6 +9,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import com.femi.gallery.data.color.ColorIndexHolder
 import com.femi.gallery.data.location.LocationIndex
 import com.femi.gallery.data.text.TextIndexHolder
 import com.femi.gallery.di.IoDispatcher
@@ -37,6 +38,7 @@ class MediaStoreDataSource @Inject constructor(
     @param:IoDispatcher private val io: CoroutineDispatcher,
     private val locationIndex: LocationIndex,
     private val textIndex: TextIndexHolder,
+    private val colorIndex: ColorIndexHolder,
 ) {
     private val resolver: ContentResolver get() = context.contentResolver
 
@@ -65,7 +67,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.MediaColumns.DATE_TAKEN,
             MediaStore.MediaColumns.DATE_ADDED,
         )
-        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = textMatches(search)), null)?.use { cursor ->
+        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search)), null)?.use { cursor ->
             val ids = LongArray(cursor.count)
             val dates = LongArray(cursor.count)
             var i = 0
@@ -117,7 +119,7 @@ class MediaStoreDataSource @Inject constructor(
         val byId = resolver.query(
             collectionUri,
             PROJECTION,
-            queryArgs(bucketId = bucketId, search = search, onlyIds = ids, textMatches = textMatches(search)),
+            queryArgs(bucketId = bucketId, search = search, onlyIds = ids, textMatches = combinedMatches(search)),
             null,
         )?.use { cursor ->
             val columns = Columns(cursor)
@@ -233,7 +235,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             MediaStore.MediaColumns.IS_FAVORITE,
         )
-        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = textMatches(search)), null)
+        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search)), null)
             ?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                 val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
@@ -413,9 +415,14 @@ class MediaStoreDataSource @Inject constructor(
         return ContentUris.withAppendedId(base, id)
     }
 
-    /** For each word typed in a search, the photos with that word written in them. */
-    private suspend fun textMatches(search: SearchCriteria?): Map<String, Set<Long>> =
-        search?.terms?.distinct()?.associateWith { textIndex.idsMatching(it) }.orEmpty()
+    /** For each word typed in a search, matching photos by text or colour. */
+    private suspend fun combinedMatches(search: SearchCriteria?): Map<String, Set<Long>> {
+        val terms = search?.terms?.distinct().orEmpty()
+        if (terms.isEmpty()) return emptyMap()
+        return terms.associateWith { term ->
+            textIndex.idsMatching(term) + colorIndex.idsMatching(term)
+        }
+    }
 
     private fun queryArgs(
         bucketId: Long? = null,
