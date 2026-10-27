@@ -7,6 +7,7 @@ import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.Story
+import com.femi.gallery.domain.model.StoryEdit
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
 import com.femi.gallery.domain.search.SearchCriteria
@@ -25,6 +26,15 @@ interface MediaRepository {
 
     /** Automatically found events (busy days or runs of days), newest first. */
     fun observeStories(): Flow<List<Story>>
+
+    /** The title and cover the person chose for the story [fromDay]..[toDay]; null when it has none. */
+    fun observeStoryEdit(fromDay: Long, toDay: Long): Flow<StoryEdit?>
+
+    /** Gives the story [fromDay]..[toDay] the title [title] (tidied up); null or blank goes back to the dates. */
+    suspend fun renameStory(fromDay: Long, toDay: Long, title: String?)
+
+    /** Makes the item [mediaId] the cover of the story [fromDay]..[toDay]; null goes back to the automatic cover. */
+    suspend fun setStoryCover(fromDay: Long, toDay: Long, mediaId: Long?)
 
     /** Fetches the localized or user-defined name of a specific folder. */
     suspend fun getAlbumName(bucketId: Long): String

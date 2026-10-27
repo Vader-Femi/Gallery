@@ -56,6 +56,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Stories**
 - [x] **Stories tab** finds events automatically: a busy day (5+ photos) or a run of busy days in a row (up to 10), with at least 12 photos in total
 - [x] **"On this day" memories**: photos taken on today's month and day in previous years (3 or more that day), titled "On this day in YYYY", shown before the trips; a leap day is remembered on Feb 28 in other years, and a busy day that is already a story is not listed twice
+- [x] **Story title and cover**: rename a story and pick any photo or video as its cover from the story's menu (stored in `story_edits.bin`, private to the app). The edit follows the story when a trip grows by a few days; an "On this day" memory never takes over the title of a longer trip
+- [x] **Videos in stories**: a video count on the story card, and All / Pictures / Videos chips inside a story (shown when it has videos; the viewer opens exactly what the grid shows)
 - [x] Cards with a cover from the middle of the event, a date title (`Sat, Oct 3`, `Oct 30 – Nov 2`, `Dec 30, 2025 – Jan 2, 2026`) and the number of photos and videos
 - [x] A story opens as a normal timeline (zoom, fast scroller, selection, viewer), covering exactly the days of the story
 - [x] **Slideshow** of a story's photos: tap to pause, swipe to skip, X to close
@@ -106,7 +108,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [ ] **Map extras**: photo locations for videos, a map with streets (offline vector tiles you import once), fling and smooth zoom animations
-- [ ] **Better stories**: a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album ("On this day" is done)
+- [ ] **Better slideshows**: slideshow from any album, shuffle and speed, music (cannot be tested without a device); stories already have "On this day", editable titles and covers, and video highlights
 - [ ] **Editor extras**: draw, text and stickers, and offer to replace the original (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo in your own words** ("a dog running on a beach"): needs a CLIP-style image/text model (about 100 MB) that is not in the app yet; the plumbing (`ImageEmbedder`, `clip.bin`, cosine search) exists but is switched off, so nothing is scanned and no search is affected
 
@@ -342,6 +344,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 49 | Editor extras | Photo editor gains straighten (-45° to 45°), sharpen, and vignette adjustments, plus automatic EXIF metadata preservation (date, GPS, camera model, etc.) when saving edited copies |
 | 50 | EXIF fix | Edited copies keep the original's EXIF (rw file descriptor for `ExifInterface`) |
 | 51 | Making 44–50 real | Semantic search was a placeholder (made-up vectors, so every search returned junk): switched off until a real model exists. Object labels are now real (ML Kit image labelling, synonyms, whole-word matching; the old guesses from file names are gone). Stricter colour thresholds and colour synonyms. Place search ignores accents and matches word starts. "On this day" no longer lists a day twice and handles Feb 29. Editor: sharpen and vignette now actually work (preview and save), straighten trims its empty corners, edited copies no longer get a double rotation from the copied EXIF orientation. Old index files are discarded and rebuilt |
+| 52 | Story title, cover, videos | Rename a story and choose its cover (kept across a trip growing: exact days first, then mostly overlapping multi-day ranges; a single day only matches itself). Video count badge on story cards; All / Pictures / Videos filter inside a story. Unit tests for the matching, the file format, the video count and the filter-to-query round trip |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

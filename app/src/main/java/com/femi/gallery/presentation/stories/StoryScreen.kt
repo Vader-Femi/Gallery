@@ -2,18 +2,35 @@ package com.femi.gallery.presentation.stories
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -22,6 +39,8 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
+import com.femi.gallery.domain.model.StoryFilter
+import com.femi.gallery.domain.model.StoryTitle
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HideBottomBarWhile
@@ -48,6 +67,14 @@ fun StoryScreen(
     val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
     val zoom by viewModel.timeline.zoom.collectAsStateWithLifecycle()
     val selectionState by viewModel.selection.state.collectAsStateWithLifecycle()
+    val filter by viewModel.filter.collectAsStateWithLifecycle()
+    val hasVideos by viewModel.hasVideos.collectAsStateWithLifecycle()
+    val customTitle by viewModel.customTitle.collectAsStateWithLifecycle()
+    val hasCustomCover by viewModel.hasCustomCover.collectAsStateWithLifecycle()
+    var pickingCover by rememberSaveable { mutableStateOf(false) }
+    var renaming by rememberSaveable { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    val dateTitle = StoryTitles.range(viewModel.fromDay, viewModel.toDay)
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -58,6 +85,7 @@ fun StoryScreen(
 
     HideBottomBarWhile(selectionState.active)
     BackHandler(enabled = selectionState.active) { viewModel.selection.clear() }
+    BackHandler(enabled = pickingCover) { pickingCover = false }
     SelectionHost(controller = viewModel.selection, onSuccess = viewModel.selection::clear)
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -68,11 +96,41 @@ fun StoryScreen(
             topBar = {
                 if (!selectionState.active) {
                     HugeTopAppBar(
-                        title = StoryTitles.range(viewModel.fromDay, viewModel.toDay),
-                        onBack = onBack,
+                        title = if (pickingCover) stringResource(R.string.story_pick_cover) else customTitle ?: dateTitle,
+                        onBack = { if (pickingCover) pickingCover = false else onBack() },
                         actions = {
-                            IconButton(onClick = { onPlaySlideshow(viewModel.query) }) {
-                                Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.story_slideshow))
+                            if (!pickingCover) {
+                                IconButton(onClick = { onPlaySlideshow(viewModel.slideshowQuery) }) {
+                                    Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.story_slideshow))
+                                }
+                                IconButton(onClick = { menuOpen = true }) {
+                                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
+                                }
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.rename_album_confirm)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            renaming = true
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.story_change_cover)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            pickingCover = true
+                                        },
+                                    )
+                                    if (hasCustomCover) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.story_reset_cover)) },
+                                            onClick = {
+                                                menuOpen = false
+                                                viewModel.resetCover()
+                                            },
+                                        )
+                                    }
+                                }
                             }
                         },
                         scrollBehavior = scrollBehavior,
@@ -80,28 +138,57 @@ fun StoryScreen(
                 }
             },
         ) { innerPadding ->
-            TimelineGrid(
-                items = items,
-                sections = sections,
-                zoom = zoom,
-                onMediaClick = { mediaIndex, item ->
-                    if (selectionState.active) {
-                        viewModel.selection.toggle(item.toRef())
-                    } else {
-                        onMediaClick(mediaIndex, item.id, viewModel.query)
-                    }
-                },
-                onMediaLongClick = { item -> viewModel.selection.begin(item.toRef()) },
-                onZoomIn = viewModel.timeline::zoomIn,
-                onZoomOut = viewModel.timeline::zoomOut,
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = innerPadding.calculateTopPadding()),
-                selectionActive = selectionState.active,
-                selectedIds = selectionState.ids,
-                viewed = viewed,
-                onViewedConsumed = onViewedConsumed,
-                emptyContent = { EmptyState(stringResource(R.string.story_empty)) },
+            ) {
+                if (hasVideos && !pickingCover) {
+                    StoryFilterChips(selected = filter, onSelect = viewModel::setFilter)
+                }
+                TimelineGrid(
+                    items = items,
+                    sections = sections,
+                    zoom = zoom,
+                    onMediaClick = { mediaIndex, item ->
+                        if (pickingCover) {
+                            viewModel.setCover(item.id)
+                            pickingCover = false
+                        } else if (selectionState.active) {
+                            viewModel.selection.toggle(item.toRef())
+                        } else {
+                            onMediaClick(mediaIndex, item.id, viewModel.query)
+                        }
+                    },
+                    onMediaLongClick = { item -> if (!pickingCover) viewModel.selection.begin(item.toRef()) },
+                    onZoomIn = viewModel.timeline::zoomIn,
+                    onZoomOut = viewModel.timeline::zoomOut,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    selectionActive = selectionState.active,
+                    selectedIds = selectionState.ids,
+                    viewed = viewed,
+                    onViewedConsumed = onViewedConsumed,
+                    emptyContent = { EmptyState(stringResource(R.string.story_empty)) },
+                )
+            }
+        }
+
+        if (renaming) {
+            RenameStoryDialog(
+                initial = customTitle ?: dateTitle,
+                hasCustomTitle = customTitle != null,
+                onSave = { text ->
+                    renaming = false
+                    // Typing the date title back, or nothing, goes back to the dates.
+                    viewModel.rename(text.takeUnless { StoryTitle.clean(it) == dateTitle })
+                },
+                onReset = {
+                    renaming = false
+                    viewModel.rename(null)
+                },
+                onDismiss = { renaming = false },
             )
         }
 
@@ -114,4 +201,67 @@ fun StoryScreen(
             onSelectAll = viewModel.selection::selectAll,
         )
     }
+}
+
+@Composable
+private fun StoryFilterChips(selected: StoryFilter, onSelect: (StoryFilter) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        StoryFilter.entries.forEach { filter ->
+            FilterChip(
+                selected = filter == selected,
+                onClick = { onSelect(filter) },
+                label = {
+                    Text(
+                        stringResource(
+                            when (filter) {
+                                StoryFilter.All -> R.string.story_filter_all
+                                StoryFilter.Photos -> R.string.nav_pictures
+                                StoryFilter.Videos -> R.string.menu_videos
+                            },
+                        ),
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RenameStoryDialog(
+    initial: String,
+    hasCustomTitle: Boolean,
+    onSave: (String) -> Unit,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by rememberSaveable { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.story_rename_title)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it.take(StoryTitle.MAX_LENGTH) },
+                singleLine = true,
+                label = { Text(stringResource(R.string.story_title_label)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(text) }) { Text(stringResource(R.string.rename_album_confirm)) }
+        },
+        dismissButton = {
+            Row {
+                if (hasCustomTitle) {
+                    TextButton(onClick = onReset) { Text(stringResource(R.string.story_use_dates)) }
+                }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.picker_cancel)) }
+            }
+        },
+    )
 }

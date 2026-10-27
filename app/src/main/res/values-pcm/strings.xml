@@ -134,6 +134,13 @@
         <item quantity="other">%d photos and videos</item>
     </plurals>
     <string name="story_slideshow">Play slideshow</string>
+    <string name="story_pick_cover">Choose cover picture</string>
+    <string name="story_change_cover">Change cover</string>
+    <string name="story_reset_cover">Use automatic cover</string>
+    <string name="story_rename_title">Change story name</string>
+    <string name="story_title_label">Title</string>
+    <string name="story_use_dates">Use dates</string>
+    <string name="story_filter_all">All</string>
     <string name="slideshow_close">Close slideshow</string>
 
     <string name="editor_close">Close editor</string>

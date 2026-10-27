@@ -134,6 +134,13 @@
         <item quantity="other">foto na vidiyo %d</item>
     </plurals>
     <string name="story_slideshow">Kpọọ slideshow</string>
+    <string name="story_pick_cover">Họrọ foto kpuchie</string>
+    <string name="story_change_cover">Gbanwee foto kpuchie</string>
+    <string name="story_reset_cover">Jiri foto kpuchie nke onwe ya</string>
+    <string name="story_rename_title">Gbanwee aha akụkọ</string>
+    <string name="story_title_label">Aha isiokwu</string>
+    <string name="story_use_dates">Jiri ụbọchị</string>
+    <string name="story_filter_all">Niile</string>
     <string name="slideshow_close">Mechie slideshow</string>
 
     <string name="editor_close">Mechie onye nchịkọta</string>

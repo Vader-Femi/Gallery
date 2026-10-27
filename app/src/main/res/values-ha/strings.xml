@@ -134,6 +134,13 @@
         <item quantity="other">hotuna da bidiyoyi %d</item>
     </plurals>
     <string name="story_slideshow">Kunna nunin hotuna</string>
+    <string name="story_pick_cover">Zaɓi hoton bangon labari</string>
+    <string name="story_change_cover">Canja hoton bango</string>
+    <string name="story_reset_cover">Yi amfani da hoton bango na atomatik</string>
+    <string name="story_rename_title">Sake wa labari suna</string>
+    <string name="story_title_label">Take</string>
+    <string name="story_use_dates">Yi amfani da kwanuka</string>
+    <string name="story_filter_all">Duka</string>
     <string name="slideshow_close">Rufe nunin hotuna</string>
 
     <string name="editor_close">Rufe mai gyara</string>

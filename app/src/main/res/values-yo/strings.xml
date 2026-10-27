@@ -134,6 +134,13 @@
         <item quantity="other">fọ́tò àti fídíò %d</item>
     </plurals>
     <string name="story_slideshow">Kpọ̀ àwọn fọ́tò báyìí</string>
+    <string name="story_pick_cover">Yan fọ́tò ìbòrí</string>
+    <string name="story_change_cover">Yí fọ́tò ìbòrí padà</string>
+    <string name="story_reset_cover">Lo ìbòrí àdánidá</string>
+    <string name="story_rename_title">Tún orúkọ ìtàn sọ</string>
+    <string name="story_title_label">Àkọlé</string>
+    <string name="story_use_dates">Lo ọjọ́</string>
+    <string name="story_filter_all">Gbogbo</string>
     <string name="slideshow_close">Pa ìfihàn fọ́tò rẹ́</string>
 
     <string name="editor_close">Pa olùṣàtúnṣe</string>

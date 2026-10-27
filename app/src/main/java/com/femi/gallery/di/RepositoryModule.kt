@@ -3,6 +3,7 @@ package com.femi.gallery.di
 import com.femi.gallery.data.clip.FileClipStore
 import com.femi.gallery.data.clip.UnavailableImageEmbedder
 import com.femi.gallery.data.color.FileColorStore
+import com.femi.gallery.data.story.FileStoryEditStore
 import com.femi.gallery.data.edit.BitmapEditor
 import com.femi.gallery.data.label.FileLabelStore
 import com.femi.gallery.data.label.MlKitImageLabeller
@@ -20,6 +21,7 @@ import com.femi.gallery.domain.repository.ClipIndexRepository
 import com.femi.gallery.domain.repository.ClipStore
 import com.femi.gallery.domain.repository.ColorIndexRepository
 import com.femi.gallery.domain.repository.ColorStore
+import com.femi.gallery.domain.repository.StoryEditStore
 import com.femi.gallery.domain.repository.EditRepository
 import com.femi.gallery.domain.repository.ImageEmbedder
 import com.femi.gallery.domain.repository.ImageLabeller
@@ -67,6 +69,10 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindColorStore(impl: FileColorStore): ColorStore
+
+    @Binds
+    @Singleton
+    abstract fun bindStoryEditStore(impl: FileStoryEditStore): StoryEditStore
 
     @Binds
     abstract fun bindColorIndexRepository(impl: ColorIndexRepositoryImpl): ColorIndexRepository

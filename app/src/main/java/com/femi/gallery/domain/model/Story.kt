@@ -10,4 +10,8 @@ data class Story(
     val count: Int,
     /** content:// URI of a photo from the middle of the story. */
     val coverUri: String,
+    /** The title the person chose, or null to show the dates. */
+    val title: String? = null,
+    /** How many of the [count] items are videos. */
+    val videoCount: Int = 0,
 )
