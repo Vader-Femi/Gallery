@@ -11,6 +11,7 @@
     <string name="search_hint">Wá àwọn fọ́tò àti fídíò</string>
     <string name="search_clear">Pa àwọn àwárí rẹ́</string>
     <string name="search_open">Wá</string>
+    <string name="search_ai">Àwárí AI</string>
     <string name="map_open">Máàpù</string>
     <string name="map_title">Máàpù</string>
     <string name="map_show_all">Fi gbogbo fọ́tò hàn</string>
@@ -113,6 +114,12 @@
     <string name="viewer_share">Pín</string>
     <string name="viewer_info">Àlàyé</string>
     <string name="viewer_edit">Ṣàtúnṣe</string>
+    <string name="viewer_seek">Wá</string>
+    <string name="viewer_close_seek_bar">Pa àlà wíwá rẹ́</string>
+    <string name="viewer_play">Gbé kà</string>
+    <string name="viewer_pause">Dúró</string>
+    <string name="viewer_mute">Pa ohùn rẹ́</string>
+    <string name="viewer_unmute">Ṣí ohùn</string>
 
     <string name="external_open_gallery">Ṣí Gallery</string>
     <string name="picker_title_any">Yan fọ́tò tàbí fídíò kan</string>
@@ -158,6 +165,9 @@
     <string name="adjust_contrast">Ìyàtọ̀</string>
     <string name="adjust_saturation">Àgbára àwọ̀</string>
     <string name="adjust_warmth">Ìgbóná</string>
+    <string name="adjust_straighten">Tọ́ ṣán-án</string>
+    <string name="adjust_sharpen">Mú gege</string>
+    <string name="adjust_vignette">Vignette</string>
 
     <string name="filter_none">Atijọ</string>
     <string name="filter_vivid">Tó nmọ́</string>
@@ -187,6 +197,10 @@
     <string name="permission_open_settings">Ṣí ètò fóònù</string>
 
     <string name="nav_menu">Àtòjọ</string>
+    <string name="menu_quick_access">Ìwọlé kánkán &amp; àwọn àkojọpọ̀</string>
+    <string name="menu_discover">Ṣàwárí</string>
+    <string name="coming_soon">N bọ̀ láìpẹ́</string>
+    <string name="menu_library_and_tools">Akaṣẹ́ &amp; Àwọn Iranṣẹ́</string>
     <string name="menu_videos">Fídíò</string>
     <string name="menu_favorites">Àwọn tí o fẹ́ jùlọ</string>
     <string name="menu_map">Máàpù</string>
@@ -196,6 +210,9 @@
     <string name="menu_recycle_bin">Àpótí ìdọ̀tí</string>
     <string name="menu_settings">Ètò</string>
     <string name="menu_settings_coming_soon">Ètò yóò dé láìpẹ́</string>
+
+    <string name="cd_photo">Fọ́tò</string>
+    <string name="cd_video">Fídíò, %1$s</string>
 
     <string name="albums_empty">Kò sí àlọ́bọ̀mù kankan báyìí</string>
     <string name="album_empty">Àlọ́bọ̀mù yìí ṣófo</string>

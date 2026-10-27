@@ -11,6 +11,7 @@
     <string name="search_hint">Search photos and videos</string>
     <string name="search_clear">Clear search</string>
     <string name="search_open">Search</string>
+    <string name="search_ai">AI Search</string>
     <string name="map_open">Map</string>
     <string name="map_title">Map</string>
     <string name="map_show_all">Show all photos</string>
@@ -113,6 +114,12 @@
     <string name="viewer_share">Share</string>
     <string name="viewer_info">Details</string>
     <string name="viewer_edit">Edit</string>
+    <string name="viewer_seek">Seek</string>
+    <string name="viewer_close_seek_bar">Close seek bar</string>
+    <string name="viewer_play">Play</string>
+    <string name="viewer_pause">Pause</string>
+    <string name="viewer_mute">Mute</string>
+    <string name="viewer_unmute">Unmute</string>
 
     <string name="external_open_gallery">Open Gallery</string>
     <string name="picker_title_any">Choose a photo or video</string>
@@ -158,6 +165,9 @@
     <string name="adjust_contrast">Contrast</string>
     <string name="adjust_saturation">Saturation</string>
     <string name="adjust_warmth">Warmth</string>
+    <string name="adjust_straighten">Straighten</string>
+    <string name="adjust_sharpen">Sharpen</string>
+    <string name="adjust_vignette">Vignette</string>
 
     <string name="filter_none">Original</string>
     <string name="filter_vivid">Vivid</string>
@@ -187,6 +197,10 @@
     <string name="permission_open_settings">Open settings</string>
 
     <string name="nav_menu">Menu</string>
+    <string name="menu_quick_access">Quick access &amp; collections</string>
+    <string name="menu_discover">Discover</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="menu_library_and_tools">Library &amp; Tools</string>
     <string name="menu_videos">Videos</string>
     <string name="menu_favorites">Favourites</string>
     <string name="menu_map">Map</string>
@@ -196,6 +210,9 @@
     <string name="menu_recycle_bin">Recycle bin</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_settings_coming_soon">Settings coming soon</string>
+
+    <string name="cd_photo">Photo</string>
+    <string name="cd_video">Video, %1$s</string>
 
     <string name="albums_empty">No albums yet</string>
     <string name="album_empty">This album is empty</string>

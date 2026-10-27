@@ -285,6 +285,8 @@ private fun MediaCell(
     onClick: (Int, MediaItem) -> Unit,
     onLongClick: (MediaItem) -> Unit,
 ) {
+    val cdPhoto = stringResource(R.string.cd_photo)
+    val cdVideo = if (item?.isVideo == true) stringResource(R.string.cd_video, formatDuration(item.durationMillis)) else ""
     val sharedModifier = if (shared && item != null) Modifier.gridSharedBounds(item.id) else Modifier
     Box(
         modifier = Modifier
@@ -293,7 +295,7 @@ private fun MediaCell(
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .semantics {
                 if (item != null) {
-                    contentDescription = if (item.isVideo) "Video, ${formatDuration(item.durationMillis)}" else "Photo"
+                    contentDescription = if (item.isVideo) cdVideo else cdPhoto
                 }
             }
             .combinedClickable(

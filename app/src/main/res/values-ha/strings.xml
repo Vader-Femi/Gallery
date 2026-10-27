@@ -11,6 +11,7 @@
     <string name="search_hint">Bincika hotuna da bidiyo</string>
     <string name="search_clear">Goge bincike</string>
     <string name="search_open">Bincika</string>
+    <string name="search_ai">Binciken AI</string>
     <string name="map_open">Taswira</string>
     <string name="map_title">Taswira</string>
     <string name="map_show_all">Nuna duk hotunan</string>
@@ -113,6 +114,12 @@
     <string name="viewer_share">Raba</string>
     <string name="viewer_info">Bayani</string>
     <string name="viewer_edit">Gyara</string>
+    <string name="viewer_seek">Nemi</string>
+    <string name="viewer_close_seek_bar">Rufe mashaya neman</string>
+    <string name="viewer_play">Murna</string>
+    <string name="viewer_pause">Tsaya</string>
+    <string name="viewer_mute">Kashe sauti</string>
+    <string name="viewer_unmute">Kunna sauti</string>
 
     <string name="external_open_gallery">Buɗe Hotuna</string>
     <string name="picker_title_any">Zaɓi hoto ko bidiyo</string>
@@ -158,6 +165,9 @@
     <string name="adjust_contrast">Banbanci</string>
     <string name="adjust_saturation">Cikewa</string>
     <string name="adjust_warmth">Ɗumi</string>
+    <string name="adjust_straighten">Madaidaici</string>
+    <string name="adjust_sharpen">Kaifi</string>
+    <string name="adjust_vignette">Vignette</string>
 
     <string name="filter_none">Na asali</string>
     <string name="filter_vivid">Mai haske sosai</string>
@@ -187,6 +197,10 @@
     <string name="permission_open_settings">Buɗe saituna</string>
 
     <string name="nav_menu">Menu</string>
+    <string name="menu_quick_access">Samun sauri &amp; tarin</string>
+    <string name="menu_discover">Gano</string>
+    <string name="coming_soon">Muna nan zuwa ba da jimawa ba</string>
+    <string name="menu_library_and_tools">Laburare &amp; Kayan aiki</string>
     <string name="menu_videos">Bidiyo</string>
     <string name="menu_favorites">Abubuwan da aka fi so</string>
     <string name="menu_map">Taswira</string>
@@ -196,6 +210,9 @@
     <string name="menu_recycle_bin">Kwandon shara</string>
     <string name="menu_settings">Saituna</string>
     <string name="menu_settings_coming_soon">Saitunan suna zuwa nan ba da jimawa ba</string>
+
+    <string name="cd_photo">Hoto</string>
+    <string name="cd_video">Bidiyo, %1$s</string>
 
     <string name="albums_empty">Babu kundin hotuna tukuna</string>
     <string name="album_empty">Wannan kundin hotunan babu komai a ciki</string>

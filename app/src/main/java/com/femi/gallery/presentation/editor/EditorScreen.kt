@@ -241,13 +241,13 @@ private fun CropPanel(state: EditorUiState, viewModel: EditorViewModel) {
 @Composable
 private fun AdjustPanel(edit: EditState, viewModel: EditorViewModel) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        AdjustSlider(R.string.adjust_brightness, edit.brightness, -1f..1f, viewModel::setBrightness)
-        AdjustSlider(R.string.adjust_contrast, edit.contrast, -1f..1f, viewModel::setContrast)
-        AdjustSlider(R.string.adjust_saturation, edit.saturation, -1f..1f, viewModel::setSaturation)
-        AdjustSlider(R.string.adjust_warmth, edit.warmth, -1f..1f, viewModel::setWarmth)
-        AdjustSlider("Straighten", edit.straightenAngle, -45f..45f, viewModel::setStraighten)
-        AdjustSlider("Sharpen", edit.sharpen, 0f..1f, viewModel::setSharpen)
-        AdjustSlider("Vignette", edit.vignette, 0f..1f, viewModel::setVignette)
+        AdjustSlider(R.string.adjust_brightness, edit.brightness, onChange = viewModel::setBrightness)
+        AdjustSlider(R.string.adjust_contrast, edit.contrast, onChange = viewModel::setContrast)
+        AdjustSlider(R.string.adjust_saturation, edit.saturation, onChange = viewModel::setSaturation)
+        AdjustSlider(R.string.adjust_warmth, edit.warmth, onChange = viewModel::setWarmth)
+        AdjustSlider(R.string.adjust_straighten, edit.straightenAngle, range = -45f..45f, onChange = viewModel::setStraighten)
+        AdjustSlider(R.string.adjust_sharpen, edit.sharpen, range = 0f..1f, onChange = viewModel::setSharpen)
+        AdjustSlider(R.string.adjust_vignette, edit.vignette, range = 0f..1f, onChange = viewModel::setVignette)
     }
 }
 
@@ -274,12 +274,12 @@ private fun AdjustSlider(label: String, value: Float, range: ClosedFloatingPoint
 }
 
 @Composable
-private fun AdjustSlider(@StringRes label: Int, value: Float, onChange: (Float) -> Unit) {
-    AdjustSlider(stringResource(label), value, -1f..1f, onChange)
-}
-
-@Composable
-private fun AdjustSlider(@StringRes label: Int, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+private fun AdjustSlider(
+    @StringRes label: Int,
+    value: Float,
+    range: ClosedFloatingPointRange<Float> = -1f..1f,
+    onChange: (Float) -> Unit,
+) {
     AdjustSlider(stringResource(label), value, range, onChange)
 }
 

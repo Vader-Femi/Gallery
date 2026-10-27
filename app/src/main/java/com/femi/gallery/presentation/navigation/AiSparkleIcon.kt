@@ -7,6 +7,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.femi.gallery.R
 
 @Composable
 fun AiBadgeIcon(
@@ -15,7 +17,7 @@ fun AiBadgeIcon(
 ) {
     Icon(
         imageVector = Icons.Filled.AutoAwesome,
-        contentDescription = "AI Search",
+        contentDescription = stringResource(R.string.search_ai),
         tint = tint,
         modifier = modifier
     )

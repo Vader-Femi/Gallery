@@ -81,7 +81,7 @@ fun MenuBottomSheet(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Quick access & collections",
+                        text = stringResource(R.string.menu_quick_access),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -107,7 +107,7 @@ fun MenuBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "Discover",
+                    text = stringResource(R.string.menu_discover),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
@@ -139,7 +139,7 @@ fun MenuBottomSheet(
                         icon = Icons.Outlined.Widgets,
                         label = stringResource(R.string.menu_placeholder),
                         onClick = {
-                            Toast.makeText(context, "Coming soon", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, R.string.coming_soon, Toast.LENGTH_SHORT).show()
                         },
                     )
                 }
@@ -150,7 +150,7 @@ fun MenuBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "Library & Tools",
+                    text = stringResource(R.string.menu_library_and_tools),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,

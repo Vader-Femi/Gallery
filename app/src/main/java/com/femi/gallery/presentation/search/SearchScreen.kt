@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.KeyboardActions
@@ -21,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
@@ -141,6 +144,10 @@ fun SearchScreen(
                 when {
                     criteria.isEmpty -> SearchHelp(onSuggestion = viewModel::onQueryChange)
 
+                    !criteria.isEmpty && items.loadState.refresh is LoadState.Loading -> {
+                        SearchLoadingIndicator()
+                    }
+
                     items.loadState.refresh is LoadState.NotLoading && items.itemCount == 0 -> {
                         Text(
                             text = stringResource(R.string.search_no_results),
@@ -249,5 +256,18 @@ private fun TextScanNotice(state: TextScanState) {
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
         )
         TextScanStatus.Idle -> Unit
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SearchLoadingIndicator() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        LoadingIndicator(
+            modifier = Modifier.size(64.dp).offset(y = (-48).dp),
+        )
     }
 }

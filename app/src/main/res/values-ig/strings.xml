@@ -11,6 +11,7 @@
     <string name="search_hint">Chọọ foto na vidiyo</string>
     <string name="search_clear">Hichapụ ọchịchọ</string>
     <string name="search_open">Chọọ</string>
+    <string name="search_ai">Ọchịchọ AI</string>
     <string name="map_open">Maapụ</string>
     <string name="map_title">Maapụ</string>
     <string name="map_show_all">Gosi foto niile</string>
@@ -113,6 +114,12 @@
     <string name="viewer_share">Kesaa</string>
     <string name="viewer_info">Nkọwa</string>
     <string name="viewer_edit">Dezie</string>
+    <string name="viewer_seek">Chọọ</string>
+    <string name="viewer_close_seek_bar">Mechie ogwe ọchịchọ</string>
+    <string name="viewer_play">Kpọọ</string>
+    <string name="viewer_pause">Kwụsị</string>
+    <string name="viewer_mute">Mechie ụda</string>
+    <string name="viewer_unmute">Mepee ụda</string>
 
     <string name="external_open_gallery">Mepee Gallery</string>
     <string name="picker_title_any">Họrọ foto ma ọ bụ vidiyo</string>
@@ -158,6 +165,9 @@
     <string name="adjust_contrast">Ọdịiche</string>
     <string name="adjust_saturation">Nchapụta agba</string>
     <string name="adjust_warmth">Nkwụ ọkụ</string>
+    <string name="adjust_straighten">Guzo ọtọ</string>
+    <string name="adjust_sharpen">Mụọ nkọ</string>
+    <string name="adjust_vignette">Vignette</string>
 
     <string name="filter_none">Nke izizi</string>
     <string name="filter_vivid">Nke doro anya</string>
@@ -187,6 +197,10 @@
     <string name="permission_open_settings">Mepee ntọala</string>
 
     <string name="nav_menu">Nchịkọta</string>
+    <string name="menu_quick_access">Nnweta ngwa ngwa &amp; nchịkọta</string>
+    <string name="menu_discover">Chọpụta</string>
+    <string name="coming_soon">Anọ ebe a dị n\'oge na-adịghị anya</string>
+    <string name="menu_library_and_tools">Ọbá akwụkwọ &amp; Kayan aiki</string>
     <string name="menu_videos">Vidiyo</string>
     <string name="menu_favorites">Ọkacha mmasị</string>
     <string name="menu_map">Maapụ</string>
@@ -196,6 +210,9 @@
     <string name="menu_recycle_bin">Igbe mkpofu</string>
     <string name="menu_settings">Ntọala</string>
     <string name="menu_settings_coming_soon">Ntọala na-abịa n\'oge adịghị anya</string>
+
+    <string name="cd_photo">Foto</string>
+    <string name="cd_video">Vidiyo, %1$s</string>
 
     <string name="albums_empty">Enweghị album ọ bụla ka</string>
     <string name="album_empty">Album a tọgbọ chakoo</string>

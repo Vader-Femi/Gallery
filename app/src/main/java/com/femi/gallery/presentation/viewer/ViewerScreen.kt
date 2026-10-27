@@ -316,7 +316,7 @@ private fun ViewerContent(
                             if (current.isVideo) {
                                 ViewerAction(
                                     icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
-                                    label = if (isStripExpanded) "Close seek bar" else "Seek",
+                                    label = stringResource(if (isStripExpanded) R.string.viewer_close_seek_bar else R.string.viewer_seek),
                                 ) {
                                     isStripExpanded = !isStripExpanded
                                 }
@@ -335,7 +335,7 @@ private fun ViewerContent(
                             if (current.isVideo) {
                                 ViewerAction(
                                     icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
-                                    label = if (isStripExpanded) "Close seek bar" else "Seek",
+                                    label = stringResource(if (isStripExpanded) R.string.viewer_close_seek_bar else R.string.viewer_seek),
                                 ) {
                                     isStripExpanded = !isStripExpanded
                                 }
@@ -355,7 +355,7 @@ private fun ViewerContent(
                             if (current.isVideo) {
                                 ViewerAction(
                                     icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
-                                    label = if (isStripExpanded) "Close seek bar" else "Seek",
+                                    label = stringResource(if (isStripExpanded) R.string.viewer_close_seek_bar else R.string.viewer_seek),
                                 ) {
                                     isStripExpanded = !isStripExpanded
                                 }
@@ -594,7 +594,7 @@ private fun VideoControlsOverlay(
         ) {
             Icon(
                 imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
+                contentDescription = stringResource(if (isPlaying) R.string.viewer_pause else R.string.viewer_play),
                 tint = contentColor,
                 modifier = Modifier.size(20.dp),
             )
@@ -615,7 +615,7 @@ private fun VideoControlsOverlay(
         ) {
             Icon(
                 imageVector = if (isMuted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
-                contentDescription = if (isMuted) "Unmute" else "Mute",
+                contentDescription = stringResource(if (isMuted) R.string.viewer_unmute else R.string.viewer_mute),
                 tint = contentColor,
                 modifier = Modifier.size(20.dp),
             )
