@@ -96,6 +96,7 @@ fun EditorScreen(
         }
     }
 
+    // Only changes to the colors need a new filter; crop drags happen far more often.
     val edit = state.edit
     val previewFilter = remember(edit.brightness, edit.contrast, edit.saturation, edit.warmth, edit.filter) {
         ColorFilter.colorMatrix(ColorMatrix(edit.colorMatrix()))
@@ -179,8 +180,9 @@ private fun Preview(state: EditorUiState, viewModel: EditorViewModel, colorFilte
             state.loadFailed -> Text(stringResource(R.string.editor_load_failed))
             else -> {
                 val cropping = state.tool == EditorTool.Crop
-                val bitmap = (if (cropping) state.oriented else state.cropped) ?: return@Box
+                val bitmap = (if (cropping) state.oriented else state.effects ?: state.cropped) ?: return@Box
                 val imageBitmap = remember(bitmap) { bitmap.asImageBitmap() }
+                // The image and the crop overlay share these bounds, which keeps their math aligned.
                 val bounds = Modifier.fillMaxSize().padding(16.dp)
                 Image(
                     bitmap = imageBitmap,

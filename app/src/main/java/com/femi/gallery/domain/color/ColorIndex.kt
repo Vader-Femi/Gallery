@@ -17,8 +17,7 @@ class ColorIndex(val entries: List<DetectedColor>) {
     val withColorCount: Int get() = colorMap.size
 
     fun idsMatching(term: String): Set<Long> {
-        val wanted = term.lowercase().trim()
-        if (wanted.isEmpty()) return emptySet()
+        val wanted = ColorWords.tagFor(term) ?: return emptySet()
         val result = HashSet<Long>()
         for ((id, tags) in colorMap) {
             if (tags.contains(wanted)) result.add(id)

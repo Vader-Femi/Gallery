@@ -7,12 +7,12 @@ import java.io.DataOutputStream
 import java.io.IOException
 
 /**
- * The file format the detected colours are kept in: MAGIC "GCLR", version 1, count, then for each
+ * The file format the detected colours are kept in: MAGIC "GCLR", version 2, count, then for each
  * photo its id, modified time, and colour tags string.
  */
 object ColorCodec {
     private const val MAGIC = 0x47434C52 // "GCLR"
-    private const val VERSION = 1
+    private const val VERSION = 2 // 2: stricter colour thresholds, so older files are scanned again
     private const val HEADER_BYTES = 12
     private const val ENTRY_FIXED_BYTES = 20
 

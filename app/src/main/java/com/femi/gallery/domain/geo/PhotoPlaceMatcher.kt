@@ -19,7 +19,7 @@ object PhotoPlaceMatcher {
             }
         }
 
-        return if (minDistance <= maxDistanceKm) nearestName?.lowercase() else null
+        return if (minDistance <= maxDistanceKm) nearestName?.let(PlaceNames::fold) else null
     }
 
     private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {

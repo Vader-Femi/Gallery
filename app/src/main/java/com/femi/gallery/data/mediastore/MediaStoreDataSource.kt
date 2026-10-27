@@ -423,15 +423,13 @@ class MediaStoreDataSource @Inject constructor(
         return ContentUris.withAppendedId(base, id)
     }
 
-    /** For each word typed in a search, matching photos by text, colour, object/scene labels, place name, or semantic CLIP similarity. */
+    /** For each word typed in a search, matching photos by text, colour, object/scene labels or place name, and by description when an image/text model is available. */
     private suspend fun combinedMatches(search: SearchCriteria?): Map<String, Set<Long>> {
         val terms = search?.terms?.distinct().orEmpty()
         if (terms.isEmpty()) return emptyMap()
         return terms.associateWith { term ->
             val lexical = textIndex.idsMatching(term) + colorIndex.idsMatching(term) + labelIndex.idsMatching(term) + photoPlaceIndexHolder.idsMatching(term)
-            val queryEmb = embedder.embedText(term)
-            val semantic = clipIndex.idsMatching(queryEmb, term)
-            lexical + semantic
+            if (!embedder.isAvailable) lexical else lexical + clipIndex.idsMatching(embedder.embedText(term), term)
         }
     }
 

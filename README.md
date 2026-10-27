@@ -42,7 +42,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Search**
 - [x] Search button on the Pictures tab opens a search screen with suggestion chips
-- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **colours** (`red`, `blue`, `dark`, ...), **object and scene labels** (`dog`, `beach`, `food`, `car`, ...), **place names** offline, **semantic free-text descriptions** via local embeddings and cosine similarity, **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable
+- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **text written in photos** (on-device OCR), **colours** (`red`, `blue`, `dark`, also `navy`, `violet`, `beige`, ...), **objects and scenes** found by ML Kit's bundled image labeller (`dog`, `beach`, `food`, `car`, ...; everyday words like `puppy` or `dinner` work too), **place names** offline (`paris`, `sao paulo`; accents ignored), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable
 - [x] Results use the same timeline, zoom, selection and viewer (swiping stays inside the results)
 
 **Albums**
@@ -55,7 +55,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Stories**
 - [x] **Stories tab** finds events automatically: a busy day (5+ photos) or a run of busy days in a row (up to 10), with at least 12 photos in total
-- [x] **"On this day" memories**: automatically surfaces photos taken on today's month and day in previous years, titled "On this day in YYYY"
+- [x] **"On this day" memories**: photos taken on today's month and day in previous years (3 or more that day), titled "On this day in YYYY", shown before the trips; a leap day is remembered on Feb 28 in other years, and a busy day that is already a story is not listed twice
 - [x] Cards with a cover from the middle of the event, a date title (`Sat, Oct 3`, `Oct 30 – Nov 2`, `Dec 30, 2025 – Jan 2, 2026`) and the number of photos and videos
 - [x] A story opens as a normal timeline (zoom, fast scroller, selection, viewer), covering exactly the days of the story
 - [x] **Slideshow** of a story's photos: tap to pause, swipe to skip, X to close
@@ -74,7 +74,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Edit** button in the viewer opens the editor (photos only)
 - [x] **Crop** with free or fixed shapes (1:1, 4:3, 3:4, 16:9, 9:16, original), rule-of-thirds grid and draggable corners
 - [x] **Rotate** in 90° steps, **straighten** (-45° to 45°) and **flip**
-- [x] **Adjust** brightness, contrast, saturation, warmth, **sharpen** and **vignette** with live preview
+- [x] **Adjust** brightness, contrast, saturation, warmth, **sharpen**, **vignette** and **straighten** with live preview; straightening trims the empty corners automatically
 - [x] **Filters**: Vivid, Warm, Cool, Mono, Noir, Sepia, Fade and Dramatic, previewed on your photo
 - [x] **Save copy** next to the original with EXIF metadata preserved (date, camera, GPS, etc.) — the original is never touched
 
@@ -106,12 +106,12 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [ ] **Map extras**: photo locations for videos, a map with streets (offline vector tiles you import once), fling and smooth zoom animations
-- [ ] **Better stories**: a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album
-- [ ] **Editor extras**: draw, text and stickers, straighten, sharpen/vignette, keep camera details (EXIF) and offer to replace the original
-- [ ] **Search by place** (needs reverse geocoding, so it has to be an opt-in network feature)
+- [ ] **Better stories**: a title and cover you can change, highlight videos, music for the slideshow, slideshow from any album ("On this day" is done)
+- [ ] **Editor extras**: draw, text and stickers, and offer to replace the original (straighten, sharpen, vignette and keeping the camera details are done)
+- [ ] **Describe a photo in your own words** ("a dog running on a beach"): needs a CLIP-style image/text model (about 100 MB) that is not in the app yet; the plumbing (`ImageEmbedder`, `clip.bin`, cosine search) exists but is switched off, so nothing is scanned and no search is affected
 
 **Later**
-- [ ] On-device ML (ML Kit / TFLite): search by what is *in* a photo, text-in-image search and copy, **people / face groups**, auto scene albums
+- [ ] More on-device ML: copy text from a photo, **people / face groups**, auto scene albums
 - [ ] Video editor: trim, speed and basic effects
 - [ ] Duplicate finder (perceptual hashing)
 - [ ] Motion photo playback, set as wallpaper
@@ -181,7 +181,7 @@ app/src/main/java/com/femi/gallery/
 ├── domain/
 │   ├── model/                MediaItem, Album, Story, StoryDetector, TimelineGrouper, MediaOrdering, AlbumPaths …
 │   ├── search/               SearchCriteria, SearchQueryParser
-│   ├── edit/                 EditState, ColorMatrices, CropMath
+│   ├── edit/                 EditState, ColorMatrices, CropMath, StraightenMath, Sharpen, Vignette
 │   ├── repository/           MediaRepository, EditRepository (interfaces)
 │   └── usecase/              Paged media, timeline, albums, stories, selection actions, lock, edit …
 ├── data/
@@ -269,7 +269,7 @@ When you favorite, trash, delete, move or rename files, Android asks you to conf
 
 ## Testing
 
-The pure logic is covered by JVM unit tests (`app/src/test`): day/month/year grouping, zoom levels, grid index mapping, date ordering, selection, album folder rules, search parsing (including date ranges), story detection and titles, and the editor's color and crop math. Screens, MediaStore access and the Locked folder are checked by hand on a device.
+The pure logic is covered by JVM unit tests (`app/src/test`): day/month/year grouping, zoom levels, grid index mapping, date ordering, selection, album folder rules, search parsing (including date ranges), story detection and titles, and the editor's colour, crop, straighten, sharpen and vignette math, label, colour and place matching. Screens, MediaStore access and the Locked folder are checked by hand on a device.
 
 ---
 
@@ -281,7 +281,7 @@ The pure logic is covered by JVM unit tests (`app/src/test`): day/month/year gro
 - **Trashed photos may not open full-size in the viewer**; thumbnails always show. This depends on how a given Android version exposes trashed files.
 - **System confirmation dialogs** appear for every favorite / trash / delete / move / rename action, and very large selections show several in a row.
 - **Moving and renaming need Android's permission** to change files other apps created. New albums are created under `DCIM`. Android only allows videos under `DCIM` and `Movies` and photos under `DCIM` and `Pictures`, so a video moved into a `Pictures/...` album lands in the matching `Movies/...` folder. Renaming merges into an existing folder if one already has that name, and the camera folder and apps' private folders (like WhatsApp) cannot be renamed or used as destinations.
-- **The editor saves a copy, never replaces the original,** and renders it from the original at up to 4096 px on the longest side (a 50 MP photo would not fit in memory). Copies are JPEG (PNG stays PNG); camera details (EXIF), location and HDR gain maps are not carried over, and the copy appears under the original's date taken. Rotating or flipping resets the crop box.
+- **The editor saves a copy, never replaces the original,** and renders it from the original at up to 4096 px on the longest side (a 50 MP photo would not fit in memory). Copies are JPEG (PNG stays PNG); the date, location and camera details (EXIF) are carried over (not the orientation tag, since the pixels are already upright), HDR gain maps are not, and the copy appears under the original's date taken. Rotating, flipping or straightening resets the crop box.
 - **The Locked folder lives inside the app.** Uninstalling the app or clearing its data deletes everything in it, and it is excluded from backups (so it is also not copied to a new phone by cloud restore). Files are protected by Android's per-app storage and your screen lock, but not separately encrypted. Moving items in permanently deletes the originals from your gallery (after Android asks you to confirm).
 - **Unlocking** restores a photo to its original folder when that is Pictures, DCIM or Movies; anything else (for example WhatsApp's private folder) goes to `Pictures/Restored` or `Movies/Restored`, and the date it appears under is its date taken.
 - **The Locked folder needs a phone screen lock** (PIN, pattern, password, fingerprint or face).
@@ -340,6 +340,8 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 47 | Semantic free-text search | Search now supports natural language semantic description matching via local image and text embeddings (`clip.bin`, resumable background scan, cosine similarity matching) with unit tests |
 | 48 | "On this day" stories | Stories tab now automatically surfaces past memories taken on today's month and day in previous years, titled "On this day in YYYY", with unit tests |
 | 49 | Editor extras | Photo editor gains straighten (-45° to 45°), sharpen, and vignette adjustments, plus automatic EXIF metadata preservation (date, GPS, camera model, etc.) when saving edited copies |
+| 50 | EXIF fix | Edited copies keep the original's EXIF (rw file descriptor for `ExifInterface`) |
+| 51 | Making 44–50 real | Semantic search was a placeholder (made-up vectors, so every search returned junk): switched off until a real model exists. Object labels are now real (ML Kit image labelling, synonyms, whole-word matching; the old guesses from file names are gone). Stricter colour thresholds and colour synonyms. Place search ignores accents and matches word starts. "On this day" no longer lists a day twice and handles Feb 29. Editor: sharpen and vignette now actually work (preview and save), straighten trims its empty corners, edited copies no longer get a double rotation from the copied EXIF orientation. Old index files are discarded and rebuilt |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

@@ -1,14 +1,11 @@
 package com.femi.gallery.domain.label
 
 class LabelIndex(val entries: List<DetectedLabel>) {
-    private val labelMap: Map<Long, Set<String>> = run {
-        val map = HashMap<Long, Set<String>>()
+    private val labelMap: Map<Long, List<String>> = run {
+        val map = HashMap<Long, List<String>>()
         for (entry in entries) {
-            if (entry.labels.isBlank()) continue
-            val tags = entry.labels.split(" ").filter { it.isNotBlank() }.toSet()
-            if (tags.isNotEmpty()) {
-                map[entry.id] = tags
-            }
+            val labels = entry.labels.split(" ").filter { it.isNotBlank() }
+            if (labels.isNotEmpty()) map[entry.id] = labels
         }
         map
     }
@@ -16,12 +13,13 @@ class LabelIndex(val entries: List<DetectedLabel>) {
     val readCount: Int get() = entries.size
     val withLabelCount: Int get() = labelMap.size
 
+    /** The photos that have a label answering [term] (see [LabelMatcher]). */
     fun idsMatching(term: String): Set<Long> {
-        val wanted = term.lowercase().trim()
+        val wanted = LabelMatcher.expand(term)
         if (wanted.isEmpty()) return emptySet()
         val result = HashSet<Long>()
-        for ((id, tags) in labelMap) {
-            if (tags.any { it.contains(wanted) }) result.add(id)
+        for ((id, labels) in labelMap) {
+            if (labels.any { LabelMatcher.matches(it, wanted) }) result.add(id)
         }
         return result
     }

@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
 
     <!--
-        This app never uses the network. ML Kit (text recognition) declares INTERNET in its own manifest,
+        This app never uses the network. ML Kit (text recognition and image labelling) declares INTERNET in its own manifest,
         for downloading models and sending usage statistics; the model used here is bundled, so neither
         is needed. Removing it keeps the app unable to go online. Check "Merged Manifest" in Android
         Studio: INTERNET must not be listed.

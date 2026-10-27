@@ -14,6 +14,9 @@ interface EditRepository {
     /** Applies the rotation and flips of [state], and the crop too when [includeCrop] is set. */
     suspend fun applyGeometry(bitmap: Bitmap, state: EditState, includeCrop: Boolean): Bitmap
 
+    /** Applies the sharpen and vignette of [state] to [bitmap] (already rotated and cropped); the same bitmap when there is nothing to do. */
+    suspend fun applyEffects(bitmap: Bitmap, state: EditState): Bitmap
+
     /** Renders [state] onto the original photo and saves the result as a new picture next to it. */
     suspend fun saveCopy(uri: String, state: EditState): Boolean
 }

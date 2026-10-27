@@ -23,3 +23,9 @@ class SaveEditedCopyUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(uri: String, state: EditState): Boolean = repository.saveCopy(uri, state)
 }
+
+class ApplyEditEffectsUseCase @Inject constructor(
+    private val repository: EditRepository,
+) {
+    suspend operator fun invoke(bitmap: Bitmap, state: EditState): Bitmap = repository.applyEffects(bitmap, state)
+}

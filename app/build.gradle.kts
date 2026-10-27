@@ -65,6 +65,8 @@ dependencies {
     // Reads the text in photos. This is the bundled model (it is part of the app and works offline), not the
     // one that downloads through Google Play services.
     implementation(libs.mlkit.text.recognition)
+    // Names objects and scenes in photos (bundled model, offline).
+    implementation(libs.mlkit.image.labeling)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)
     ksp(libs.hilt.compiler)

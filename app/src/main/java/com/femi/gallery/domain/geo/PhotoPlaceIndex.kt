@@ -19,11 +19,11 @@ class PhotoPlaceIndex(
     }
 
     fun idsMatching(term: String): Set<Long> {
-        val wanted = term.lowercase().trim()
+        val wanted = PlaceNames.fold(term.trim())
         if (wanted.isEmpty()) return emptySet()
         val result = HashSet<Long>()
         for ((city, ids) in cityMap) {
-            if (city.contains(wanted)) {
+            if (PlaceNames.matches(city, wanted)) {
                 result.addAll(ids)
             }
         }

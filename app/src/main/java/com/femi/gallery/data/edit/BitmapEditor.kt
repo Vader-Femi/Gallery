@@ -4,12 +4,15 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
@@ -17,6 +20,9 @@ import androidx.exifinterface.media.ExifInterface
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.edit.CropRect
 import com.femi.gallery.domain.edit.EditState
+import com.femi.gallery.domain.edit.Sharpen
+import com.femi.gallery.domain.edit.StraightenMath
+import com.femi.gallery.domain.edit.Vignette
 import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.repository.EditRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,6 +30,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 @Singleton
@@ -46,9 +53,11 @@ class BitmapEditor @Inject constructor(
         runCatching { save(Uri.parse(uri), state) }.getOrDefault(false)
     }
 
+    /** Decodes with the photo's orientation applied, scaled so the longest side is at most [maxSize]. */
     private fun decode(uri: Uri, maxSize: Int): Bitmap {
         val source = ImageDecoder.createSource(context.contentResolver, uri)
         return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+            // Software bitmaps can be drawn into and transformed; hardware ones cannot.
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             val longest = maxOf(info.size.width, info.size.height)
             if (longest > maxSize) {
@@ -61,6 +70,7 @@ class BitmapEditor @Inject constructor(
         }
     }
 
+    /** Rotation first, then flips, so "flip horizontal" always means left-right on screen. */
     private fun orient(bitmap: Bitmap, state: EditState): Bitmap {
         if (state.rotationTurns == 0 && state.straightenAngle == 0f && !state.flipHorizontal && !state.flipVertical) return bitmap
         val matrix = Matrix().apply {
@@ -68,7 +78,75 @@ class BitmapEditor @Inject constructor(
             if (state.flipHorizontal) postScale(-1f, 1f)
             if (state.flipVertical) postScale(1f, -1f)
         }
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        val turned = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        return if (state.straightenAngle == 0f) turned else trimCorners(turned, bitmap, state)
+    }
+
+    /**
+     * A bitmap turned by a few degrees is surrounded by empty corners; this keeps the biggest centred
+     * rectangle of the picture's own shape that has none (see [StraightenMath]).
+     */
+    private fun trimCorners(turned: Bitmap, original: Bitmap, state: EditState): Bitmap {
+        val sideways = state.rotationTurns % 2 != 0
+        val width = if (sideways) original.height else original.width
+        val height = if (sideways) original.width else original.height
+        val (left, top, w, h) = StraightenMath.trim(width, height, turned.width, turned.height, state.straightenAngle)
+        val trimmed = Bitmap.createBitmap(turned, left, top, w, h)
+        if (trimmed !== turned) turned.recycle()
+        return trimmed
+    }
+
+    /** Sharpen and vignette. They change pixels, so they come after the crop and before the colour matrix. */
+    override suspend fun applyEffects(bitmap: Bitmap, state: EditState): Bitmap = withContext(io) {
+        renderEffects(bitmap, state)
+    }
+
+    private fun renderEffects(source: Bitmap, state: EditState): Bitmap {
+        if (state.sharpen <= 0f && state.vignette <= 0f) return source
+        var result = source
+        if (state.sharpen > 0f) result = sharpen(result, Sharpen.amountFor(state.sharpen))
+        if (state.vignette > 0f) {
+            val target = if (result === source) source.copy(Bitmap.Config.ARGB_8888, true) else result
+            drawVignette(Canvas(target), target.width, target.height, state.vignette)
+            result = target
+        }
+        return result
+    }
+
+    /** Row by row, so no second copy of all the pixels is needed (see [Sharpen]). */
+    private fun sharpen(source: Bitmap, amount: Float): Bitmap {
+        val w = source.width
+        val h = source.height
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        var above = IntArray(w)
+        var current = IntArray(w)
+        var below = IntArray(w)
+        val result = IntArray(w)
+        source.getPixels(current, 0, w, 0, 0, w, 1)
+        System.arraycopy(current, 0, above, 0, w)
+        for (y in 0 until h) {
+            if (y < h - 1) source.getPixels(below, 0, w, 0, y + 1, w, 1) else System.arraycopy(current, 0, below, 0, w)
+            Sharpen.row(above, current, below, result, amount)
+            out.setPixels(result, 0, w, 0, y, w, 1)
+            val spare = above
+            above = current
+            current = below
+            below = spare
+        }
+        return out
+    }
+
+    private fun drawVignette(canvas: Canvas, width: Int, height: Int, value: Float) {
+        val stops = Vignette.stops(value)
+        val shader = RadialGradient(
+            width / 2f,
+            height / 2f,
+            hypot(width / 2f, height / 2f),
+            IntArray(stops.size) { AndroidColor.argb((stops[it].second * 255f).roundToInt(), 0, 0, 0) },
+            FloatArray(stops.size) { stops[it].first },
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), Paint().apply { this.shader = shader })
     }
 
     private fun crop(bitmap: Bitmap, rect: CropRect): Bitmap {
@@ -104,17 +182,20 @@ class BitmapEditor @Inject constructor(
             }
         } ?: return false
 
+        // Edits are rendered from the photo itself (up to MAX_SAVE_SIZE) rather than the preview.
         val full = decode(uri, MAX_SAVE_SIZE)
         val oriented = orient(full, state)
-        if (oriented !== full) full.recycle()
+        if (oriented !== full) full.recycle() // a 4096 px bitmap is ~50 MB; free copies as soon as possible
         val geometry = crop(oriented, state.crop)
         if (geometry !== oriented) oriented.recycle()
-        val result = Bitmap.createBitmap(geometry.width, geometry.height, Bitmap.Config.ARGB_8888)
+        val effected = renderEffects(geometry, state)
+        if (effected !== geometry) geometry.recycle()
+        val result = Bitmap.createBitmap(effected.width, effected.height, Bitmap.Config.ARGB_8888)
         val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
             colorFilter = ColorMatrixColorFilter(ColorMatrix(state.colorMatrix()))
         }
-        Canvas(result).drawBitmap(geometry, 0f, 0f, paint)
-        geometry.recycle()
+        Canvas(result).drawBitmap(effected, 0f, 0f, paint)
+        effected.recycle()
 
         val isPng = meta.mime == "image/png"
         val baseName = meta.name.substringBeforeLast('.', meta.name).ifEmpty { "photo" }
@@ -161,11 +242,13 @@ class BitmapEditor @Inject constructor(
                             ExifInterface.TAG_EXPOSURE_PROGRAM,
                             ExifInterface.TAG_WHITE_BALANCE,
                             ExifInterface.TAG_FLASH,
-                            ExifInterface.TAG_ORIENTATION,
                         )
                         for (tag in tags) {
                             sourceExif.getAttribute(tag)?.let { targetExif.setAttribute(tag, it) }
                         }
+                        // The saved pixels are already upright (the decoder applied the original's
+                        // orientation), so copying that tag would turn the picture a second time.
+                        targetExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
                         targetExif.saveAttributes()
                     }
                 }
@@ -180,6 +263,7 @@ class BitmapEditor @Inject constructor(
         }
     }
 
+    /** Next to the original when apps may write there, otherwise in Pictures/Edited. */
     private fun destinationFor(originalPath: String): String =
         if (AlbumPaths.isAlbumFolder(originalPath)) AlbumPaths.forMedia(originalPath, isVideo = false) else "Pictures/Edited/"
 
@@ -193,6 +277,7 @@ class BitmapEditor @Inject constructor(
 
     private companion object {
         const val TAG = "BitmapEditor"
+        /** Longest side of a saved edit; a 50 MP photo would need ~200 MB of memory at full size. */
         const val MAX_SAVE_SIZE = 4096
         const val JPEG_QUALITY = 95
     }

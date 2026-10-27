@@ -58,6 +58,7 @@ class ClipIndexRepositoryImpl @Inject constructor(
     }
 
     override fun startScan() {
+        if (!embedder.isAvailable) return
         if (!permissions.hasMediaAccess()) return
         if (context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return
         synchronized(lock) {

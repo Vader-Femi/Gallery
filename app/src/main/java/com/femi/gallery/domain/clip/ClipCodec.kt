@@ -10,7 +10,7 @@ import java.nio.ByteOrder
 
 object ClipCodec {
     private const val MAGIC = 0x47434C50 // "GCLP"
-    private const val VERSION = 1
+    private const val VERSION = 2 // 2: version 1 files hold made-up vectors from a placeholder embedder
     private const val HEADER_BYTES = 12
 
     fun encode(entries: List<DetectedEmbedding>): ByteArray {

@@ -6,6 +6,10 @@ package com.femi.gallery.domain.color
  */
 object ColorClassifier {
 
+    private const val COLOUR_SHARE = 0.12
+    private const val NEUTRAL_SHARE = 0.25
+    private const val TONE_SHARE = 0.40
+
     fun classify(pixels: IntArray, width: Int, height: Int): Set<String> {
         if (pixels.isEmpty() || width <= 0 || height <= 0) return emptySet()
 
@@ -34,14 +38,22 @@ object ColorClassifier {
 
         if (totalSamples == 0) return emptySet()
 
-        val threshold = totalSamples * 0.08
         val result = HashSet<String>()
         for ((tag, count) in votes) {
-            if (count >= threshold || (tag in setOf("dark", "light") && count >= totalSamples * 0.2)) {
-                result.add(tag)
-            }
+            if (count >= totalSamples * minimumShare(tag)) result.add(tag)
         }
         return result
+    }
+
+    /**
+     * How much of the picture a colour must cover to be named. A vivid colour is noticed in a small
+     * area, but the neutrals and the dark/light tones are everywhere (a patch of shadow, a white
+     * wall), so they must dominate or "dark" and "white" would match nearly every photo.
+     */
+    fun minimumShare(tag: String): Double = when (tag) {
+        "black", "white", "gray", "grey" -> NEUTRAL_SHARE
+        "dark", "light" -> TONE_SHARE
+        else -> COLOUR_SHARE
     }
 
     private fun classifyPixel(r: Int, g: Int, b: Int): List<String> {

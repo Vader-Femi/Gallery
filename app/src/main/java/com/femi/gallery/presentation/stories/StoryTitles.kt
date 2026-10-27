@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.stories
 
+import com.femi.gallery.domain.model.StoryDetector
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -24,7 +25,7 @@ object StoryTitles {
         val dayOnly = DateTimeFormatter.ofPattern("d", locale)
         val withYear = DateTimeFormatter.ofPattern("MMM d, yyyy", locale)
 
-        val isPastOnThisDay = from == to && from.month == today.month && from.dayOfMonth == today.dayOfMonth && from.year < today.year
+        val isPastOnThisDay = from == to && StoryDetector.isAnniversary(from, today)
         if (isPastOnThisDay) return "On this day in ${from.year}"
 
         return when {

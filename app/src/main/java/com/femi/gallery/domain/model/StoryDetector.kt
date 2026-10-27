@@ -20,27 +20,33 @@ object StoryDetector {
     const val MIN_STORY_PHOTOS = 12
     const val MAX_STORY_DAYS = 10
 
+    /** Fewest photos a past year's day needs to be offered as a memory. */
+    const val MIN_ON_THIS_DAY_PHOTOS = 3
+
+    /**
+     * Whether [date] is the same calendar day as [today] in an earlier year. A leap day (Feb 29) is
+     * remembered on Feb 28 in years that have no Feb 29.
+     */
+    fun isAnniversary(date: LocalDate, today: LocalDate): Boolean {
+        if (date.year >= today.year) return false
+        if (date.monthValue == today.monthValue && date.dayOfMonth == today.dayOfMonth) return true
+        return date.monthValue == 2 && date.dayOfMonth == 29 &&
+            today.monthValue == 2 && today.dayOfMonth == 28 && !today.isLeapYear
+    }
+
     fun detect(days: List<TimelineSection>, today: LocalDate = LocalDate.now()): List<StoryCandidate> {
+        val trips = detectTrips(days)
+        // A busy single day that is already a story is not offered a second time as a memory.
+        val tripKeys = trips.mapTo(HashSet()) { it.fromDay to it.toDay }
+        val memories = days
+            .filter { it.count >= MIN_ON_THIS_DAY_PHOTOS && isAnniversary(LocalDate.ofEpochDay(it.epochDay), today) }
+            .filter { (it.epochDay to it.epochDay) !in tripKeys }
+            .map { StoryCandidate(fromDay = it.epochDay, toDay = it.epochDay, count = it.count, coverIndex = it.startIndex) }
+        return memories + trips
+    }
+
+    private fun detectTrips(days: List<TimelineSection>): List<StoryCandidate> {
         val stories = ArrayList<StoryCandidate>()
-
-        // 1. "On this day" memories in past years (min 3 photos)
-        val todayMonth = today.monthValue
-        val todayDay = today.dayOfMonth
-        for (day in days) {
-            val date = LocalDate.ofEpochDay(day.epochDay)
-            if (date.monthValue == todayMonth && date.dayOfMonth == todayDay && date.year < today.year && day.count >= 3) {
-                stories.add(
-                    StoryCandidate(
-                        fromDay = day.epochDay,
-                        toDay = day.epochDay,
-                        count = day.count,
-                        coverIndex = day.startIndex,
-                    ),
-                )
-            }
-        }
-
-        // 2. Regular trip/event stories
         var run = ArrayList<TimelineSection>()
 
         fun finishRun() {

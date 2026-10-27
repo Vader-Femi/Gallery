@@ -8,7 +8,7 @@ import java.io.IOException
 
 object LabelCodec {
     private const val MAGIC = 0x474C424C // "GLBL"
-    private const val VERSION = 1
+    private const val VERSION = 2 // 2: real ML Kit labels; version 1 files only hold the empty results of a placeholder
     private const val HEADER_BYTES = 12
     private const val ENTRY_FIXED_BYTES = 20
 
