@@ -142,6 +142,10 @@
     <string name="story_use_dates">Jiri ụbọchị</string>
     <string name="story_filter_all">Niile</string>
     <string name="slideshow_close">Mechie slideshow</string>
+    <string name="slideshow_shuffle">Gwakọta</string>
+    <string name="slideshow_speed_slow">Nwayọ</string>
+    <string name="slideshow_speed_normal">Nkịtị</string>
+    <string name="slideshow_speed_fast">Ngwa ngwa</string>
 
     <string name="editor_close">Mechie onye nchịkọta</string>
     <string name="editor_reset">Tọgharịa</string>

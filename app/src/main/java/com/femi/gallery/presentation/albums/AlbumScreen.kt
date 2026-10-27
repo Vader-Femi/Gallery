@@ -4,7 +4,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +43,7 @@ fun AlbumScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit,
+    onPlaySlideshow: (bucketId: Long) -> Unit = {},
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
     viewModel: AlbumViewModel = hiltViewModel(),
@@ -46,10 +51,10 @@ fun AlbumScreen(
     if (viewModel.isLocked) {
         // Nothing from the Locked folder is shown until the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            AlbumContent(onBack, onMediaClick, viewed, onViewedConsumed, viewModel, modifier)
+            AlbumContent(onBack, onMediaClick, onPlaySlideshow, viewed, onViewedConsumed, viewModel, modifier)
         }
     } else {
-        AlbumContent(onBack, onMediaClick, viewed, onViewedConsumed, viewModel, modifier)
+        AlbumContent(onBack, onMediaClick, onPlaySlideshow, viewed, onViewedConsumed, viewModel, modifier)
     }
 }
 
@@ -58,6 +63,7 @@ fun AlbumScreen(
 private fun AlbumContent(
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit,
+    onPlaySlideshow: (bucketId: Long) -> Unit,
     viewed: ViewedMedia?,
     onViewedConsumed: () -> Unit,
     viewModel: AlbumViewModel,
@@ -98,6 +104,12 @@ private fun AlbumContent(
                         title = albumTitle,
                         onBack = onBack,
                         actions = {
+                            // Not for the recycle bin, and not for the Locked folder (nothing from it is shown outside its own screen).
+                            if (!viewModel.isRecycleBin && !viewModel.isLocked && items.itemCount > 0) {
+                                IconButton(onClick = { onPlaySlideshow(viewModel.bucketId) }) {
+                                    Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.story_slideshow))
+                                }
+                            }
                             if (viewModel.isRecycleBin && items.itemCount > 0) {
                                 TextButton(onClick = viewModel.selection::emptyBin) {
                                     Text(stringResource(R.string.action_empty_bin))

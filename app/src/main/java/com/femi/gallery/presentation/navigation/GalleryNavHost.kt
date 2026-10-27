@@ -208,6 +208,7 @@ fun GalleryNavHost(
                 onMediaClick = { bucketId, mediaIndex, mediaId ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, bucketId), origin = entry.id)
                 },
+                onPlaySlideshow = { bucketId -> navController.navigate(GalleryRoutes.slideshow(bucketId = bucketId)) },
                 viewed = viewerSession.viewedFor(entry.id),
                 onViewedConsumed = viewerSession::consumeViewed,
             )
@@ -285,7 +286,16 @@ fun GalleryNavHost(
         }
         composable(
             route = GalleryRoutes.SLIDESHOW,
-            arguments = listOf(navArgument(SlideshowViewModel.QUERY_ARG) { type = NavType.StringType }),
+            arguments = listOf(
+                navArgument(SlideshowViewModel.QUERY_ARG) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument(SlideshowViewModel.BUCKET_ARG) {
+                    type = NavType.LongType
+                    defaultValue = GalleryRoutes.NO_BUCKET
+                },
+            ),
         ) {
             SlideshowScreen(onClose = { navController.popBackStack() })
         }

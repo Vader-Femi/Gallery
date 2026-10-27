@@ -1,6 +1,19 @@
 package com.femi.gallery.presentation.stories
 
 import androidx.compose.foundation.background
+import kotlin.random.Random
+import com.femi.gallery.domain.model.SlideshowSpeed
+import com.femi.gallery.domain.model.SlideshowOrder
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.material3.Text
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -38,9 +51,10 @@ import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.ImmersiveMode
 import kotlinx.coroutines.delay
 
-private const val SlideDurationMs = 3_500L
-
-/** Plays a story's photos one after another. Tap to pause or resume, swipe to skip, X to close. */
+/**
+ * Plays photos one after another (a story, a place or an album). Tap to pause or resume, swipe to
+ * skip, X to close. While paused, the speed and shuffle can be changed.
+ */
 @Composable
 fun SlideshowScreen(
     onClose: () -> Unit,
@@ -49,6 +63,9 @@ fun SlideshowScreen(
     val items = viewModel.media.collectAsLazyPagingItems()
     val context = LocalContext.current
     var playing by remember { mutableStateOf(true) }
+    var speed by rememberSaveable { mutableStateOf(SlideshowSpeed.Default) }
+    var shuffle by rememberSaveable { mutableStateOf(false) }
+    var seed by rememberSaveable { mutableLongStateOf(Random.nextLong()) }
 
     ImmersiveMode(enabled = true)
 
@@ -68,13 +85,17 @@ fun SlideshowScreen(
             )
         } else if (items.itemCount > 0) {
             val pagerState = rememberPagerState { items.itemCount }
+            // Which photo each page shows: the list order, or a shuffled order that stays the same until reshuffled.
+            val order = remember(shuffle, seed, items.itemCount) {
+                if (shuffle) SlideshowOrder.shuffled(items.itemCount, seed) else null
+            }
 
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
                 beyondViewportPageCount = 1,
             ) { page ->
-                val item = items[page]
+                val item = items[order?.getOrNull(page) ?: page]
                 if (item != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(item.uri).crossfade(true).build(),
@@ -85,12 +106,15 @@ fun SlideshowScreen(
                 }
             }
 
-            // Advance after each slide has been shown for a while; restarts whenever the page changes.
-            LaunchedEffect(playing, pagerState.settledPage, items.itemCount) {
+            // Turning shuffle on or off starts the show from its first picture.
+            LaunchedEffect(shuffle, seed) { pagerState.scrollToPage(0) }
+
+            // Advance after each slide has been shown for a while; restarts whenever the page or the speed changes.
+            LaunchedEffect(playing, pagerState.settledPage, items.itemCount, speed) {
                 if (playing && items.itemCount > 1) {
-                    delay(SlideDurationMs)
-                    val next = pagerState.settledPage + 1
-                    if (next < items.itemCount) pagerState.animateScrollToPage(next) else pagerState.scrollToPage(0)
+                    delay(speed.millis)
+                    val next = SlideshowOrder.pageAfter(pagerState.settledPage, items.itemCount)
+                    if (next > pagerState.settledPage) pagerState.animateScrollToPage(next) else pagerState.scrollToPage(next)
                 }
             }
         }
@@ -104,6 +128,41 @@ fun SlideshowScreen(
                     .align(Alignment.Center)
                     .size(72.dp),
             )
+        }
+
+        if (!playing && items.itemCount > 1) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                FilterChip(
+                    selected = shuffle,
+                    onClick = {
+                        shuffle = !shuffle
+                        if (shuffle) seed = Random.nextLong()
+                    },
+                    label = { Text(stringResource(R.string.slideshow_shuffle)) },
+                    leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                )
+                AssistChip(
+                    onClick = { speed = speed.next() },
+                    label = {
+                        Text(
+                            stringResource(
+                                when (speed) {
+                                    SlideshowSpeed.Slow -> R.string.slideshow_speed_slow
+                                    SlideshowSpeed.Normal -> R.string.slideshow_speed_normal
+                                    SlideshowSpeed.Fast -> R.string.slideshow_speed_fast
+                                },
+                            ),
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Filled.Speed, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                )
+            }
         }
 
         IconButton(

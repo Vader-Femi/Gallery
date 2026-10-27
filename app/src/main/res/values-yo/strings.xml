@@ -142,6 +142,10 @@
     <string name="story_use_dates">Lo ọjọ́</string>
     <string name="story_filter_all">Gbogbo</string>
     <string name="slideshow_close">Pa ìfihàn fọ́tò rẹ́</string>
+    <string name="slideshow_shuffle">Dàpọ̀</string>
+    <string name="slideshow_speed_slow">Lọ́ra</string>
+    <string name="slideshow_speed_normal">Déédé</string>
+    <string name="slideshow_speed_fast">Yára</string>
 
     <string name="editor_close">Pa olùṣàtúnṣe</string>
     <string name="editor_reset">Tún bẹ̀rẹ̀</string>

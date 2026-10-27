@@ -22,7 +22,7 @@ object GalleryRoutes {
     const val VIDEOS = "videos"
     const val PLACE = "place?query={query}"
     const val STORY = "story/{fromDay}/{toDay}"
-    const val SLIDESHOW = "slideshow?query={query}"
+    const val SLIDESHOW = "slideshow?query={query}&bucketId={bucketId}"
     const val EDITOR = "editor?uri={uri}"
     const val VIEWER = "viewer/{index}?mediaId={mediaId}&bucketId={bucketId}&query={query}"
 
@@ -36,8 +36,8 @@ object GalleryRoutes {
     /** The photos taken inside a map area; [query] is the area as a search query (`in:...`). */
     fun place(query: String) = "place?query=${Uri.encode(query)}"
 
-    /** A slideshow of the photos a search [query] describes. */
-    fun slideshow(query: String) = "slideshow?query=${Uri.encode(query)}"
+    /** A slideshow of the photos a search [query] describes, or of one album ([bucketId]). */
+    fun slideshow(query: String = "", bucketId: Long = NO_BUCKET) = "slideshow?query=${Uri.encode(query)}&bucketId=$bucketId"
 
     /** The photo editor for the photo at content [uri]. */
     fun editor(uri: String) = "editor?uri=${Uri.encode(uri)}"

@@ -142,6 +142,10 @@
     <string name="story_use_dates">Yi amfani da kwanuka</string>
     <string name="story_filter_all">Duka</string>
     <string name="slideshow_close">Rufe nunin hotuna</string>
+    <string name="slideshow_shuffle">Gauraya</string>
+    <string name="slideshow_speed_slow">A hankali</string>
+    <string name="slideshow_speed_normal">Matsakaici</string>
+    <string name="slideshow_speed_fast">Mai sauri</string>
 
     <string name="editor_close">Rufe mai gyara</string>
     <string name="editor_reset">Sake saitawa</string>

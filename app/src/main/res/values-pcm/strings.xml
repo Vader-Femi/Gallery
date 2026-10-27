@@ -142,6 +142,10 @@
     <string name="story_use_dates">Use dates</string>
     <string name="story_filter_all">All</string>
     <string name="slideshow_close">Close slideshow</string>
+    <string name="slideshow_shuffle">Shuffle</string>
+    <string name="slideshow_speed_slow">Slow</string>
+    <string name="slideshow_speed_normal">Normal</string>
+    <string name="slideshow_speed_fast">Fast</string>
 
     <string name="editor_close">Close editor</string>
     <string name="editor_reset">Reset</string>
