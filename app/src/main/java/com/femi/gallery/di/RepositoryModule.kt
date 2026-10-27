@@ -71,7 +71,6 @@ abstract class RepositoryModule {
     abstract fun bindColorStore(impl: FileColorStore): ColorStore
 
     @Binds
-    @Singleton
     abstract fun bindStoryEditStore(impl: FileStoryEditStore): StoryEditStore
 
     @Binds
