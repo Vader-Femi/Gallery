@@ -212,6 +212,7 @@
     <string name="menu_discover">Discover</string>
     <string name="coming_soon">E dey come soon</string>
     <string name="menu_library_and_tools">Library &amp; Tools</string>
+    <string name="menu_images">Images</string>
     <string name="menu_videos">Videos</string>
     <string name="menu_favorites">Favourites</string>
     <string name="menu_map">Map</string>
@@ -221,6 +222,22 @@
     <string name="menu_recycle_bin">Recycle bin</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_settings_coming_soon">Settings dey come soon</string>
+
+    <string name="settings_language">Language</string>
+    <string name="settings_language_summary">Choose your preferred language</string>
+    <string name="language_system">System default</string>
+    <string name="language_en">English</string>
+    <string name="language_yo">Yoruba</string>
+    <string name="language_ig">Igbo</string>
+    <string name="language_ha">Hausa</string>
+    <string name="language_pcm">Nigerian Pidgin</string>
+
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_summary">Choose how you want am to look</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="recycle_bin_info">Dem dey delete items forever after 30 days.</string>
 
     <string name="cd_photo">Photo</string>
     <string name="cd_video">Video, %1$s</string>
@@ -232,6 +249,7 @@
     <string name="locked_empty">Locked folder empty</string>
     <string name="pictures_empty">No photos or videos yet</string>
     <string name="videos_empty">No videos yet</string>
+    <string name="images_empty">No images yet</string>
     <string name="place_empty">No photos here yet</string>
     <string name="story_empty">No photos inside this story</string>
     <string name="picker_empty">No items to choose</string>

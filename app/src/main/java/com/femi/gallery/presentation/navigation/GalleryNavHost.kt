@@ -34,6 +34,8 @@ import com.femi.gallery.presentation.map.MapScreen
 import com.femi.gallery.presentation.place.PlaceScreen
 import com.femi.gallery.presentation.place.PlaceViewModel
 import com.femi.gallery.presentation.search.SearchScreen
+import com.femi.gallery.presentation.settings.SettingsScreen
+import com.femi.gallery.presentation.images.ImagesScreen
 import com.femi.gallery.presentation.videos.VideosScreen
 import com.femi.gallery.presentation.viewer.ViewerSession
 import com.femi.gallery.presentation.stories.SlideshowScreen
@@ -223,6 +225,16 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
+        sharedComposable(GalleryRoutes.IMAGES) { entry ->
+            ImagesScreen(
+                onBack = { navController.popBackStack() },
+                onMediaClick = { mediaIndex, mediaId, query ->
+                    viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, query = query), origin = entry.id)
+                },
+                viewed = viewerSession.viewedFor(entry.id),
+                onViewedConsumed = viewerSession::consumeViewed,
+            )
+        }
         sharedComposable(GalleryRoutes.VIDEOS) { entry ->
             VideosScreen(
                 onBack = { navController.popBackStack() },
@@ -304,6 +316,11 @@ fun GalleryNavHost(
             arguments = listOf(navArgument(EditorViewModel.URI_ARG) { type = NavType.StringType }),
         ) {
             EditorScreen(onClose = { navController.popBackStack() })
+        }
+        composable(GalleryRoutes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

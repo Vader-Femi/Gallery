@@ -212,6 +212,7 @@
     <string name="menu_discover">Ṣàwárí</string>
     <string name="coming_soon">N bọ̀ láìpẹ́</string>
     <string name="menu_library_and_tools">Akaṣẹ́ &amp; Àwọn Iranṣẹ́</string>
+    <string name="menu_images">Àwọn Fọ́tò</string>
     <string name="menu_videos">Fídíò</string>
     <string name="menu_favorites">Àwọn tí o fẹ́ jùlọ</string>
     <string name="menu_map">Máàpù</string>
@@ -221,6 +222,22 @@
     <string name="menu_recycle_bin">Àpótí ìdọ̀tí</string>
     <string name="menu_settings">Ètò</string>
     <string name="menu_settings_coming_soon">Ètò yóò dé láìpẹ́</string>
+
+    <string name="settings_language">Èdè</string>
+    <string name="settings_language_summary">Yan èdè tí o fẹ́</string>
+    <string name="language_system">Èdè ẹ̀rọ (System default)</string>
+    <string name="language_en">Gẹ̀ẹ́sì (English)</string>
+    <string name="language_yo">Yorùbá</string>
+    <string name="language_ig">Igbo</string>
+    <string name="language_ha">Hausa</string>
+    <string name="language_pcm">Pidgin</string>
+
+    <string name="settings_theme">Àṣàyàn àwọ̀</string>
+    <string name="settings_theme_summary">Yan irisi tí o fẹ́</string>
+    <string name="theme_system">Èdè ẹ̀rọ (System default)</string>
+    <string name="theme_light">Imọlẹ̀</string>
+    <string name="theme_dark">Òkùnkùn</string>
+    <string name="recycle_bin_info">A óò pa àwọn nǹkan rẹ́ títí laelae lẹ́yìn ọjọ́ 30.</string>
 
     <string name="cd_photo">Fọ́tò</string>
     <string name="cd_video">Fídíò, %1$s</string>
@@ -232,6 +249,7 @@
     <string name="locked_empty">Fọ́lídà tí ó ní tìpa ṣófo</string>
     <string name="pictures_empty">Kò sí fọ́tò tàbí fídíò báyìí</string>
     <string name="videos_empty">Kò sí fídíò báyìí</string>
+    <string name="images_empty">Kò sí fọ́tò báyìí</string>
     <string name="place_empty">Kò sí fọ́tò níbí báyìí</string>
     <string name="story_empty">Kò sí fọ́tò nínú ìtàn yìí</string>
     <string name="picker_empty">Kò sí ohun tí o lè yan</string>

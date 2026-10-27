@@ -212,6 +212,7 @@
     <string name="menu_discover">Gano</string>
     <string name="coming_soon">Muna nan zuwa ba da jimawa ba</string>
     <string name="menu_library_and_tools">Laburare &amp; Kayan aiki</string>
+    <string name="menu_images">Hotuna</string>
     <string name="menu_videos">Bidiyo</string>
     <string name="menu_favorites">Abubuwan da aka fi so</string>
     <string name="menu_map">Taswira</string>
@@ -221,6 +222,22 @@
     <string name="menu_recycle_bin">Kwandon shara</string>
     <string name="menu_settings">Saituna</string>
     <string name="menu_settings_coming_soon">Saitunan suna zuwa nan ba da jimawa ba</string>
+
+    <string name="settings_language">Harshe</string>
+    <string name="settings_language_summary">Zaɓi harshen da kake so</string>
+    <string name="language_system">Tsarin waya (System default)</string>
+    <string name="language_en">Turanci (English)</string>
+    <string name="language_yo">Yoruba</string>
+    <string name="language_ig">Igbo</string>
+    <string name="language_ha">Hausa</string>
+    <string name="language_pcm">Pidgin</string>
+
+    <string name="settings_theme">Jigo</string>
+    <string name="settings_theme_summary">Zaɓi bayyanar da kake so</string>
+    <string name="theme_system">Tsarin waya</string>
+    <string name="theme_light">Haske</string>
+    <string name="theme_dark">Duhu</string>
+    <string name="recycle_bin_info">Za a goge abubuwan har abada bayan kwanaki 30.</string>
 
     <string name="cd_photo">Hoto</string>
     <string name="cd_video">Bidiyo, %1$s</string>
@@ -232,6 +249,7 @@
     <string name="locked_empty">Kundin da aka kulle ba komai</string>
     <string name="pictures_empty">Babu hotuna ko bidiyo tukuna</string>
     <string name="videos_empty">Babu bidiyo tukuna</string>
+    <string name="images_empty">Babu hotuna tukuna</string>
     <string name="place_empty">Babu hotuna a nan tukuna</string>
     <string name="story_empty">Babu hotuna a cikin wannan labarin</string>
     <string name="picker_empty">Babu abubuwan da za a zaɓa</string>

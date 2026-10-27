@@ -212,6 +212,7 @@
     <string name="menu_discover">Chọpụta</string>
     <string name="coming_soon">Anọ ebe a dị n\'oge na-adịghị anya</string>
     <string name="menu_library_and_tools">Ọbá akwụkwọ &amp; Kayan aiki</string>
+    <string name="menu_images">Foto</string>
     <string name="menu_videos">Vidiyo</string>
     <string name="menu_favorites">Ọkacha mmasị</string>
     <string name="menu_map">Maapụ</string>
@@ -221,6 +222,22 @@
     <string name="menu_recycle_bin">Igbe mkpofu</string>
     <string name="menu_settings">Ntọala</string>
     <string name="menu_settings_coming_soon">Ntọala na-abịa n\'oge adịghị anya</string>
+
+    <string name="settings_language">Asụsụ</string>
+    <string name="settings_language_summary">Họrọ asụsụ masịrị gị</string>
+    <string name="language_system">Ndịdị sistemụ (System default)</string>
+    <string name="language_en">Bekee (English)</string>
+    <string name="language_yo">Yoruba</string>
+    <string name="language_ig">Igbo</string>
+    <string name="language_ha">Hausa</string>
+    <string name="language_pcm">Pidgin</string>
+
+    <string name="settings_theme">Isi</string>
+    <string name="settings_theme_summary">Họrọ ọdịdị masịrị gị</string>
+    <string name="theme_system">Ndịdị sistemụ</string>
+    <string name="theme_light">Ihe ọkụ</string>
+    <string name="theme_dark">Gbara ọchịchịrị</string>
+    <string name="recycle_bin_info">A ga-ehichapụ ihe kpamkpam mgbe ụbọchị 30 gachara.</string>
 
     <string name="cd_photo">Foto</string>
     <string name="cd_video">Vidiyo, %1$s</string>
@@ -232,6 +249,7 @@
     <string name="locked_empty">Folda e kpochiri tọgbọ chakoo</string>
     <string name="pictures_empty">Enweghị foto ma ọ bụ vidiyo ka</string>
     <string name="videos_empty">Enweghị vidiyo ka</string>
+    <string name="images_empty">Enweghị foto ka</string>
     <string name="place_empty">Enweghị foto ebe a ka</string>
     <string name="story_empty">Enweghị foto n\'akụkọ a</string>
     <string name="picker_empty">Enweghị ihe ị ga-ahọrọ</string>

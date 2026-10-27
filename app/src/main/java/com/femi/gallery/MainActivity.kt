@@ -6,7 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import com.femi.gallery.core.perf.FrameMonitor
 import com.femi.gallery.presentation.GalleryApp
 import com.femi.gallery.presentation.launch.LaunchRequest
@@ -14,8 +14,8 @@ import com.femi.gallery.ui.theme.GalleryTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-// FragmentActivity (still a ComponentActivity) because BiometricPrompt needs one.
-class MainActivity : FragmentActivity() {
+// AppCompatActivity (subclass of FragmentActivity) because BiometricPrompt needs one and per-app language needs AppCompatDelegate.
+class MainActivity : AppCompatActivity() {
 
     /** Logs (tag "Frames") which screen drops frames and why; silent while the app is smooth. */
     private val frameMonitor by lazy { FrameMonitor(window) }

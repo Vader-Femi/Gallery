@@ -1,6 +1,5 @@
 package com.femi.gallery.presentation.navigation
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,11 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VideoLibrary
-import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,7 +47,6 @@ fun MenuBottomSheet(
     onItemClick: (route: String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState()
 
     ModalBottomSheet(
@@ -118,6 +115,12 @@ fun MenuBottomSheet(
                 ) {
                     ExpressiveMenuCard(
                         modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.Image,
+                        label = stringResource(R.string.menu_images),
+                        onClick = { onItemClick(GalleryRoutes.IMAGES) },
+                    )
+                    ExpressiveMenuCard(
+                        modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.VideoLibrary,
                         label = stringResource(R.string.menu_videos),
                         onClick = { onItemClick(GalleryRoutes.VIDEOS) },
@@ -133,14 +136,6 @@ fun MenuBottomSheet(
                         icon = Icons.Outlined.Map,
                         label = stringResource(R.string.menu_map),
                         onClick = { onItemClick(GalleryRoutes.MAP) },
-                    )
-                    ExpressiveMenuCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.Widgets,
-                        label = stringResource(R.string.menu_placeholder),
-                        onClick = {
-                            Toast.makeText(context, R.string.coming_soon, Toast.LENGTH_SHORT).show()
-                        },
                     )
                 }
             }
@@ -189,9 +184,7 @@ fun MenuBottomSheet(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Settings,
                             label = stringResource(R.string.menu_settings),
-                            onClick = {
-                                Toast.makeText(context, R.string.menu_settings_coming_soon, Toast.LENGTH_SHORT).show()
-                            },
+                            onClick = { onItemClick(GalleryRoutes.SETTINGS) },
                         )
                     }
                 }
