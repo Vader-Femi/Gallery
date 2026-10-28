@@ -56,4 +56,28 @@ class MediaStripMathTest {
         assertFalse(MediaStripMath.shouldAnimate(0, 400))
         assertTrue(MediaStripMath.shouldAnimate(3, 3))
     }
+
+    @Test
+    fun itemsWithVaryingSizesAreCenteredCorrectly() {
+        // Mix of picture (size 36) and wider video (size 64) items.
+        val indices = intArrayOf(0, 1, 2)
+        val offsets = intArrayOf(0, 40, 108)
+        val sizes = intArrayOf(36, 64, 36) // middle item (1) is wider (64)
+        // Viewport 0..200 -> middle is 100
+        // Item 0 middle = 18
+        // Item 1 middle = 72 (distance 28)
+        // Item 2 middle = 126 (distance 26)
+        val result = MediaStripMath.centeredIndex(indices, offsets, sizes, 0, 200)
+        assertEquals(2, result)
+    }
+
+    @Test
+    fun calculateExpandedWidthScalesWithDuration() {
+        val shortVid = MediaStripMath.calculateExpandedWidth(3000L)
+        val mediumVid = MediaStripMath.calculateExpandedWidth(60000L)
+        val longVid = MediaStripMath.calculateExpandedWidth(300000L)
+
+        assertTrue(shortVid < mediumVid)
+        assertTrue(mediumVid < longVid)
+    }
 }

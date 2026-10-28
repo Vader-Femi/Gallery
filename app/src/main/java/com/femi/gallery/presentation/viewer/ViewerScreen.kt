@@ -12,7 +12,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,7 +34,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
@@ -220,7 +218,6 @@ private fun ViewerContent(
             var isMuted by rememberSaveable(activeVideoUri) { mutableStateOf(muteDefault) }
             var currentPositionMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
             var durationMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
-            var isStripExpanded by remember(activeVideoUri) { mutableStateOf(false) }
 
             // The full-screen player (the Play action). It opens above the viewer and carries on from where the small one was.
             var fullPlayerUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -428,7 +425,7 @@ private fun ViewerContent(
                             },
                         )
                     }
-                    val cachedActions = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite, isStripExpanded) { actions }
+                    val cachedActions = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions }
                     Column {
                         if (current.isVideo && activePlayer != null) {
                             VideoControlsOverlay(
@@ -455,25 +452,16 @@ private fun ViewerContent(
                             )
                         }
                         if (items.itemCount > 1) {
-                            if (current.isVideo && isStripExpanded) {
-                                ExpandedVideoSeekBar(
-                                    item = current,
-                                    currentPositionMs = { currentPositionMs },
-                                    durationMs = { durationMs },
-                                    onSeek = { seekMs ->
-                                        activePlayer?.seekTo(seekMs)
-                                        currentPositionMs = seekMs
-                                    },
-                                )
-                            } else {
-                                MediaStrip(
-                                    items = items,
-                                    pagerState = pagerState,
-                                    onVideoItemTap = {
-                                        isStripExpanded = !isStripExpanded
-                                    },
-                                )
-                            }
+                            MediaStrip(
+                                items = items,
+                                pagerState = pagerState,
+                                currentPositionMs = { currentPositionMs },
+                                durationMs = { durationMs },
+                                onSeek = { seekMs ->
+                                    activePlayer?.seekTo(seekMs)
+                                    currentPositionMs = seekMs
+                                },
+                            )
                         }
                         ActionBar(actions = cachedActions)
                     }
