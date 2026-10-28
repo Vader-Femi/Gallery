@@ -228,7 +228,8 @@ private fun ViewerContent(
                     onDispose { }
                 } else {
                     val autoPlay = ThemePreferences.getAutoPlayVideos(context)
-                    val newPlayer = playerHolder.acquire().apply {
+                    val newPlayer = playerHolder.acquire(!isMuted).apply {
+                        setAudioAttributes(AudioAttributes.DEFAULT, !isMuted)
                         setMediaItem(PlayerMediaItem.fromUri(activeVideoUri!!))
                         playWhenReady = autoPlay
                         volume = if (isMuted) 0f else 1f
@@ -256,6 +257,11 @@ private fun ViewerContent(
                         activePlayer = null
                     }
                 }
+            }
+
+            LaunchedEffect(isMuted) {
+                activePlayer?.setAudioAttributes(AudioAttributes.DEFAULT, !isMuted)
+                activePlayer?.volume = if (isMuted) 0f else 1f
             }
 
             // Hook up volume up button to unmute automatically when a video is muted.
@@ -812,8 +818,8 @@ private const val PositionPollMs = 100L
 private class SharedPlayer(private val context: Context) {
     private var player: ExoPlayer? = null
 
-    fun acquire(): ExoPlayer = player ?: ExoPlayer.Builder(context).build()
-        .apply { setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true) }
+    fun acquire(handleFocus: Boolean): ExoPlayer = player ?: ExoPlayer.Builder(context).build()
+        .apply { setAudioAttributes(AudioAttributes.DEFAULT, handleFocus) }
         .also { player = it }
 
     fun release() {
