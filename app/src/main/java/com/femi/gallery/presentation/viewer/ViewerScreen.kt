@@ -527,12 +527,6 @@ internal fun VideoPage(
         sharedBounds = sharedModifier,
         initialImageSize = GridThumbnails.sizeFor(item.id) ?: Size.Zero,
     ) { onImageSize ->
-        LaunchedEffect(item.width, item.height) {
-            if (item.width > 0 && item.height > 0) {
-                onImageSize(Size(item.width.toFloat(), item.height.toFloat()))
-            }
-        }
-
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
                 model = thumbnail,
@@ -547,6 +541,7 @@ internal fun VideoPage(
                 VideoPlayer(
                     uri = item.uri,
                     activePlayer = activePlayer,
+                    onVideoSizeChanged = onImageSize,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -560,6 +555,7 @@ private fun VideoPlayer(
     modifier: Modifier = Modifier,
     uri: String,
     activePlayer: ExoPlayer? = null,
+    onVideoSizeChanged: ((Size) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val fallbackPlayer = remember(uri, activePlayer) {
@@ -577,6 +573,27 @@ private fun VideoPlayer(
         onDispose { fallbackPlayer?.release() }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { player.pause() }
+
+    DisposableEffect(player, onVideoSizeChanged) {
+        if (onVideoSizeChanged == null) return@DisposableEffect onDispose { }
+        @Suppress("DEPRECATION")
+        val reportSize = { videoSize: androidx.media3.common.VideoSize ->
+            if (videoSize.width > 0 && videoSize.height > 0) {
+                val rotated = videoSize.unappliedRotationDegrees == 90 || videoSize.unappliedRotationDegrees == 270
+                val w = if (rotated) videoSize.height else videoSize.width
+                val h = if (rotated) videoSize.width else videoSize.height
+                onVideoSizeChanged(Size(w.toFloat(), h.toFloat()))
+            }
+        }
+        reportSize(player.videoSize)
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                reportSize(videoSize)
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
 
     AndroidView(
         modifier = modifier,
