@@ -32,6 +32,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -118,13 +120,14 @@ internal fun MediaStrip(
             verticalAlignment = Alignment.CenterVertically,
             flingBehavior = rememberSnapFlingBehavior(listState, SnapPosition.Center),
         ) {
-            items(
-                count = items.itemCount,
-                key = { index -> items.peekOrNull(index)?.id ?: index },
-            ) { index ->
+            // No custom key: an item's key would change from its position to its id the moment it loads, and
+            // each change makes the list throw the item away and build it again while you are scrubbing.
+            items(count = items.itemCount) { index ->
+                // Only the two items whose answer changes recompose when the page changes, not every thumbnail.
+                val selected = remember(index, pagerState) { derivedStateOf { pagerState.currentPage == index } }
                 StripItem(
                     item = items[index],
-                    selected = pagerState.currentPage == index,
+                    selected = selected,
                     onClick = {
                         if (pagerState.currentPage == index && items.peekOrNull(index)?.isVideo == true && onVideoItemTap != null) {
                             onVideoItemTap(index)
@@ -147,15 +150,13 @@ internal fun MediaStrip(
 @Composable
 internal fun ExpandedVideoSeekBar(
     item: MediaItem,
-    currentPositionMs: Long,
-    durationMs: Long,
+    /** Read while drawing and seeking, so the playhead moving does not recompose the bar. */
+    currentPositionMs: () -> Long,
+    durationMs: () -> Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val seekRatio = remember(currentPositionMs, durationMs) {
-        if (durationMs > 0) (currentPositionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
-    }
     val surface = MaterialTheme.colorScheme.surface
     val borderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     val playheadColor = MaterialTheme.colorScheme.primary
@@ -173,20 +174,22 @@ internal fun ExpandedVideoSeekBar(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp))
                 .border(1.dp, borderColor, RoundedCornerShape(8.dp))
-                .pointerInput(durationMs) {
+                .pointerInput(Unit) {
                     detectTapGestures { offset ->
-                        if (size.width > 0 && durationMs > 0) {
+                        val duration = durationMs()
+                        if (size.width > 0 && duration > 0) {
                             val ratio = (offset.x / size.width).coerceIn(0f, 1f)
-                            onSeek((ratio * durationMs).toLong())
+                            onSeek((ratio * duration).toLong())
                         }
                     }
                 }
-                .pointerInput(durationMs) {
+                .pointerInput(Unit) {
                     detectDragGestures { change, _ ->
                         change.consume()
-                        if (size.width > 0 && durationMs > 0) {
+                        val duration = durationMs()
+                        if (size.width > 0 && duration > 0) {
                             val ratio = (change.position.x / size.width).coerceIn(0f, 1f)
-                            onSeek((ratio * durationMs).toLong())
+                            onSeek((ratio * duration).toLong())
                         }
                     }
                 },
@@ -217,6 +220,8 @@ internal fun ExpandedVideoSeekBar(
                     .fillMaxHeight()
                     .width(4.dp)
                     .graphicsLayer {
+                        val duration = durationMs()
+                        val seekRatio = if (duration > 0) (currentPositionMs().toFloat() / duration).coerceIn(0f, 1f) else 0f
                         translationX = (width.toPx() * seekRatio) - (2.dp.toPx())
                     }
                     .background(playheadColor, CircleShape),
@@ -239,14 +244,15 @@ private fun LazyListState.centeredIndex(): Int? {
 }
 
 @Composable
-private fun StripItem(item: MediaItem?, selected: Boolean, onClick: () -> Unit) {
+private fun StripItem(item: MediaItem?, selected: State<Boolean>, onClick: () -> Unit) {
+    val isSelected by selected
     val context = LocalContext.current
     val request = remember(item?.uri) {
         item?.let { ImageRequest.Builder(context).data(it.uri).size(ThumbnailPixels).build() }
     }
     val scale = remember { Animatable(1f) }
-    LaunchedEffect(selected) {
-        scale.animateTo(if (selected) 1.15f else 1f)
+    LaunchedEffect(isSelected) {
+        scale.animateTo(if (isSelected) 1.15f else 1f)
     }
     val shape = RoundedCornerShape(6.dp)
     val borderColor = MaterialTheme.colorScheme.onSurface
@@ -261,7 +267,7 @@ private fun StripItem(item: MediaItem?, selected: Boolean, onClick: () -> Unit) 
             }
             .clip(shape)
             .background(bgColor)
-            .then(if (selected) Modifier.border(2.dp, borderColor, shape) else Modifier)
+            .then(if (isSelected) Modifier.border(2.dp, borderColor, shape) else Modifier)
             .clickable(onClick = onClick),
     ) {
         if (request != null) {

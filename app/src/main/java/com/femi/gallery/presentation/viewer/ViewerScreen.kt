@@ -115,6 +115,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.media3.common.MediaItem as PlayerMediaItem
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val Tag = "Viewer"
@@ -191,7 +192,23 @@ private fun ViewerContent(
             }
 
             val current = items.peekOrNull(pagerState.currentPage)
-            val activeVideoUri = if (current?.isVideo == true) current.uri else null
+
+            // A video is only prepared once the pager has rested on it for a moment. Swiping quickly past
+            // several videos therefore prepares none of them (preparing one is heavy work on the main thread).
+            val settledItem = items.peekOrNull(pagerState.settledPage)
+            var activeVideoUri by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(pagerState.settledPage, settledItem?.id) {
+                val uri = settledItem?.takeIf { it.isVideo }?.uri
+                if (activeVideoUri != uri) activeVideoUri = null // let go of the previous video at once
+                if (uri != null) {
+                    delay(VideoSettleDelayMs)
+                    activeVideoUri = uri
+                }
+            }
+
+            // One player for the whole visit: creating a player is far more expensive than pointing one at a new video.
+            val playerHolder = remember { SharedPlayer(context) }
+            DisposableEffect(Unit) { onDispose { playerHolder.release() } }
 
             var activePlayer by remember(activeVideoUri) { mutableStateOf<ExoPlayer?>(null) }
             var isPlaying by remember(activeVideoUri) { mutableStateOf(false) }
@@ -205,9 +222,8 @@ private fun ViewerContent(
                     activePlayer = null
                     onDispose { }
                 } else {
-                    val newPlayer = ExoPlayer.Builder(context).build().apply {
-                        setAudioAttributes(AudioAttributes.DEFAULT, true)
-                        setMediaItem(PlayerMediaItem.fromUri(activeVideoUri))
+                    val newPlayer = playerHolder.acquire().apply {
+                        setMediaItem(PlayerMediaItem.fromUri(activeVideoUri!!))
                         playWhenReady = false
                         volume = if (isMuted) 0f else 1f
                         prepare()
@@ -228,18 +244,21 @@ private fun ViewerContent(
 
                     onDispose {
                         newPlayer.removeListener(listener)
-                        newPlayer.release()
+                        newPlayer.stop()
+                        newPlayer.clearMediaItems()
                         activePlayer = null
                     }
                 }
             }
 
+            // The position only moves while playing; when paused it is read once (a seek sets it directly).
             LaunchedEffect(activePlayer, isPlaying) {
                 val p = activePlayer ?: return@LaunchedEffect
                 while (true) {
                     currentPositionMs = p.currentPosition.coerceAtLeast(0L)
                     durationMs = p.duration.coerceAtLeast(0L)
-                    kotlinx.coroutines.delay(100)
+                    if (!isPlaying) break
+                    delay(PositionPollMs)
                 }
             }
 
@@ -275,13 +294,15 @@ private fun ViewerContent(
                             key = { page -> items.peekOrNull(page)?.id ?: (-page - 1L) },
                         ) { page ->
                             val handleChromeChange: (Boolean) -> Unit = remember { { chromeVisible = it } }
+                            val pageItem = items.getOrNull(page)
                             ViewerPage(
-                                item = items.getOrNull(page),
+                                item = pageItem,
                                 isCurrent = pagerState.settledPage == page,
                                 chromeVisible = chromeVisible,
                                 onChromeChange = handleChromeChange,
                                 bottomReserve = 0.dp,
-                                activePlayer = if (pagerState.settledPage == page) activePlayer else null,
+                                activePlayer = if (pagerState.settledPage == page && pageItem?.uri == activeVideoUri) activePlayer else null,
+                                playerProvided = true,
                             )
                         }
                     }
@@ -380,8 +401,8 @@ private fun ViewerContent(
                         if (current.isVideo && activePlayer != null) {
                             VideoControlsOverlay(
                                 isPlaying = isPlaying,
-                                currentPositionMs = currentPositionMs,
-                                durationMs = durationMs,
+                                currentPositionMs = { currentPositionMs },
+                                durationMs = { durationMs },
                                 isMuted = isMuted,
                                 onTogglePlayPause = {
                                     val p = activePlayer ?: return@VideoControlsOverlay
@@ -405,9 +426,12 @@ private fun ViewerContent(
                             if (current.isVideo && isStripExpanded) {
                                 ExpandedVideoSeekBar(
                                     item = current,
-                                    currentPositionMs = currentPositionMs,
-                                    durationMs = durationMs,
-                                    onSeek = { seekMs -> activePlayer?.seekTo(seekMs) },
+                                    currentPositionMs = { currentPositionMs },
+                                    durationMs = { durationMs },
+                                    onSeek = { seekMs ->
+                                        activePlayer?.seekTo(seekMs)
+                                        currentPositionMs = seekMs
+                                    },
                                 )
                             } else {
                                 MediaStrip(
@@ -438,10 +462,12 @@ private fun ViewerPage(
     /** Room to keep free at the bottom, for the strip. */
     bottomReserve: Dp,
     activePlayer: ExoPlayer? = null,
+    /** True when the caller supplies the player (the viewer does, once it has prepared one); no page then makes its own. */
+    playerProvided: Boolean = false,
 ) {
     when {
         item == null -> Box(Modifier.fillMaxSize())
-        item.isVideo -> VideoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) }, activePlayer = activePlayer)
+        item.isVideo -> VideoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) }, activePlayer = activePlayer, ownsPlayer = !playerProvided)
         else -> PhotoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) })
     }
 }
@@ -487,6 +513,8 @@ internal fun VideoPage(
     isCurrent: Boolean,
     onTap: () -> Unit,
     activePlayer: ExoPlayer? = null,
+    /** Whether the page may make a player of its own when none is given (the external viewer relies on that). */
+    ownsPlayer: Boolean = true,
 ) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
@@ -514,7 +542,8 @@ internal fun VideoPage(
                 modifier = Modifier.fillMaxSize(),
                 onSuccess = { onImageSize(it.painter.intrinsicSize) },
             )
-            if (isCurrent && settled) {
+            // With a player supplied by the viewer, wait for it: building a second one here is wasted work.
+            if (isCurrent && settled && (ownsPlayer || activePlayer != null)) {
                 VideoPlayer(
                     uri = item.uri,
                     activePlayer = activePlayer,
@@ -561,14 +590,16 @@ private fun VideoPlayer(
             it.useController = false
             it.player = player
         },
+        onRelease = { it.player = null }, // the player outlives this view
     )
 }
 
 @Composable
 private fun VideoControlsOverlay(
     isPlaying: Boolean,
-    currentPositionMs: Long,
-    durationMs: Long,
+    /** Read where it is shown, so the clock ticking does not recompose everything around it. */
+    currentPositionMs: () -> Long,
+    durationMs: () -> Long,
     isMuted: Boolean,
     onTogglePlayPause: () -> Unit,
     onToggleMute: () -> Unit,
@@ -599,7 +630,7 @@ private fun VideoControlsOverlay(
                 modifier = Modifier.size(20.dp),
             )
             Text(
-                text = "${formatVideoTime(currentPositionMs)} / ${formatVideoTime(durationMs)}",
+                text = "${formatVideoTime(currentPositionMs())} / ${formatVideoTime(durationMs())}",
                 color = contentColor,
                 style = MaterialTheme.typography.labelMedium,
             )
@@ -726,3 +757,24 @@ internal fun LazyPagingItems<MediaItem>.peekOrNull(index: Int): MediaItem? =
 
 private fun LazyPagingItems<MediaItem>.getOrNull(index: Int): MediaItem? =
     if (index in 0 until itemCount) get(index) else null
+
+/** How long the pager must rest on a video before it is prepared. */
+private const val VideoSettleDelayMs = 250L
+
+/** How often the position shown on the video controls is refreshed while playing. */
+private const val PositionPollMs = 100L
+
+/** The viewer's video player, made the first time a video needs it and released with the viewer. */
+@OptIn(UnstableApi::class)
+private class SharedPlayer(private val context: Context) {
+    private var player: ExoPlayer? = null
+
+    fun acquire(): ExoPlayer = player ?: ExoPlayer.Builder(context).build()
+        .apply { setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true) }
+        .also { player = it }
+
+    fun release() {
+        player?.release()
+        player = null
+    }
+}

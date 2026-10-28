@@ -124,7 +124,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Select a whole day by tapping its header; drag-to-select
 - [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
 - [ ] Tablet / landscape layouts
-- [ ] Baseline Profiles and further performance work
+- [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.
@@ -348,6 +348,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 52 | Story title, cover, videos | Rename a story and choose its cover (kept across a trip growing: exact days first, then mostly overlapping multi-day ranges; a single day only matches itself). Video count badge on story cards; All / Pictures / Videos filter inside a story. Unit tests for the matching, the file format, the video count and the filter-to-query round trip |
 | 53 | Better slideshows | Play a slideshow from any album (route takes a `bucketId`), shuffle (seeded Fisher-Yates, covers the whole album) and slow/normal/fast speed, both changed while paused. Unit tests for the order and the speed cycle |
 | 54 | Shuffle without black slides | A shuffled slideshow now loads and shuffles the whole list first (M3 Expressive `LoadingIndicator`), then plays from memory; before, random positions in a 4000+ item paged list were mostly not loaded yet and showed black slides. `tools/startup_bench.sh` measures cold start with `verify` vs `speed` compilation to decide whether a baseline profile is worth adding |
+| 55 | Smoother viewer video and strip | One reusable `ExoPlayer` for the whole viewer visit, prepared only after the pager has rested on a video for 250 ms (before, one was built and released for every video the pager passed, and a second one was built by the video page itself before the first was ready). The position clock only runs while playing and is read where it is shown, so it no longer recomposes the whole bottom area every 100 ms. Media strip items no longer change key when they load, and only the two items whose selection changes recompose when the page changes |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
