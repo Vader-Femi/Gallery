@@ -13,17 +13,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -137,23 +142,56 @@ fun SlideshowScreen(
                         shuffle = !shuffle
                         if (shuffle) seed = Random.nextLong()
                     },
-                    label = { Text(stringResource(R.string.slideshow_shuffle)) },
+                    label = {
+                        Text(
+                            text = stringResource(R.string.slideshow_shuffle),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    shape = RoundedCornerShape(28.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.Black.copy(alpha = 0.75f),
+                        labelColor = Color.White,
+                        iconColor = Color.White,
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = shuffle,
+                        borderColor = Color.White.copy(alpha = 0.25f),
+                        selectedBorderColor = Color.Transparent,
+                    ),
                 )
                 AssistChip(
                     onClick = { speed = speed.next() },
                     label = {
                         Text(
-                            stringResource(
+                            text = stringResource(
                                 when (speed) {
                                     SlideshowSpeed.Slow -> R.string.slideshow_speed_slow
                                     SlideshowSpeed.Normal -> R.string.slideshow_speed_normal
                                     SlideshowSpeed.Fast -> R.string.slideshow_speed_fast
                                 },
                             ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
                         )
                     },
                     leadingIcon = { Icon(Icons.Filled.Speed, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    shape = RoundedCornerShape(28.dp),
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = Color.Black.copy(alpha = 0.75f),
+                        labelColor = Color.White,
+                        leadingIconContentColor = Color.White,
+                    ),
+                    border = AssistChipDefaults.assistChipBorder(
+                        enabled = true,
+                        borderColor = Color.White.copy(alpha = 0.25f),
+                    ),
                 )
             }
         }
