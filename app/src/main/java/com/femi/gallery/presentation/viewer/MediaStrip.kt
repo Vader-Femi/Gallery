@@ -6,8 +6,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import coil3.compose.AsyncImage
@@ -79,6 +82,9 @@ internal fun MediaStrip(
 ) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = pagerState.currentPage)
+    val density = LocalDensity.current
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+
     // True while the strip is being moved by the code below rather than by a finger.
     var followingPager by remember { mutableStateOf(false) }
     var expandedPageIndex by remember { mutableStateOf<Int?>(null) }
@@ -92,10 +98,10 @@ internal fun MediaStrip(
 
     val surface = MaterialTheme.colorScheme.surface
 
-    // Scrubbing video when expanded: swiping the strip across the expanded filmstrip seeks the video.
-    LaunchedEffect(listState, pagerState, expandedPageIndex) {
+    // Scrubbing video when expanded: ONLY when user physically drags/swipes the strip with their finger.
+    LaunchedEffect(listState, pagerState, expandedPageIndex, isDragged) {
         snapshotFlow {
-            if (!listState.isScrollInProgress || followingPager) return@snapshotFlow null
+            if (!isDragged || followingPager) return@snapshotFlow null
             val info = listState.layoutInfo
             val visible = info.visibleItemsInfo
             val expIdx = expandedPageIndex
@@ -112,14 +118,14 @@ internal fun MediaStrip(
             }
             null
         }
-        .filterNotNull()
-        .distinctUntilChanged()
-        .collectLatest { ratio ->
-            val dur = durationMs?.invoke() ?: 0L
-            if (dur > 0L && onSeek != null) {
-                onSeek((ratio * dur).toLong())
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collectLatest { ratio ->
+                val dur = durationMs?.invoke() ?: 0L
+                if (dur > 0L && onSeek != null) {
+                    onSeek((ratio * dur).toLong())
+                }
             }
-        }
     }
 
     // Finger on the strip: the viewer follows the item in the middle (when not actively scrubbing an expanded video).
@@ -129,9 +135,9 @@ internal fun MediaStrip(
                 listState.centeredIndex()
             } else null
         }
-        .filterNotNull()
-        .distinctUntilChanged()
-        .collectLatest { pagerState.scrollToPage(it) }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collectLatest { pagerState.scrollToPage(it) }
     }
 
     // Swiping the photos: the strip follows once they settle (unless a finger is on the strip).
@@ -173,23 +179,48 @@ internal fun MediaStrip(
         val startPadding = ((maxWidth - firstWidth) / 2).coerceAtLeast(minSidePadding)
         val endPadding = ((maxWidth - lastWidth) / 2).coerceAtLeast(minSidePadding)
 
+        // Continuous scrolling of filmstrip while video plays in expanded mode
+        LaunchedEffect(listState, expandedPageIndex, isDragged, currentPositionMs?.invoke()) {
+            if (expandedPageIndex == null || isDragged || followingPager) return@LaunchedEffect
+            val expIdx = expandedPageIndex ?: return@LaunchedEffect
+            if (expIdx == pagerState.currentPage) {
+                val curMs = currentPositionMs?.invoke() ?: 0L
+                val dur = durationMs?.invoke() ?: 0L
+                if (dur > 0L) {
+                    val ratio = (curMs.toFloat() / dur).coerceIn(0f, 1f)
+                    val expandedWDp = MediaStripMath.calculateExpandedWidth(dur).dp
+                    val expandedWPx = with(density) { expandedWDp.toPx() }
+
+                    // Fixed: Since startPadding aligns the start edge perfectly with the center,
+                    // we just shift by the ratio of the total width.
+                    val targetOffsetPx = (ratio * expandedWPx).toInt()
+                    listState.scrollToItem(expIdx, targetOffsetPx)
+                }
+            }
+        }
+
+        val defaultFling = ScrollableDefaults.flingBehavior()
+        val snapFling = rememberSnapFlingBehavior(listState, SnapPosition.Center)
+
         LazyRow(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = startPadding, end = endPadding),
             horizontalArrangement = Arrangement.spacedBy(ItemSpacing),
             verticalAlignment = Alignment.CenterVertically,
-            flingBehavior = rememberSnapFlingBehavior(listState, SnapPosition.Center),
+            // Fixed: Turn off snapping when expanded so scrubbing manually works flawlessly.
+            flingBehavior = if (expandedPageIndex != null) defaultFling else snapFling,
         ) {
             items(count = items.itemCount) { index ->
                 val selected = remember(index, pagerState) { derivedStateOf { pagerState.currentPage == index } }
+                val isSelected by selected
                 val isExpanded = expandedPageIndex == index
                 StripItem(
                     item = items[index],
                     selected = selected,
                     isExpanded = isExpanded,
-                    currentPositionMs = if (pagerState.currentPage == index) currentPositionMs else null,
-                    durationMs = if (pagerState.currentPage == index) durationMs else null,
+                    currentPositionMs = if (isSelected) currentPositionMs else null,
+                    durationMs = if (isSelected) durationMs else null,
                     onClick = {
                         if (pagerState.currentPage == index) {
                             if (items.peekOrNull(index)?.isVideo == true) {
@@ -198,7 +229,15 @@ internal fun MediaStrip(
                                 } else {
                                     expandedPageIndex = index
                                     scope.launch {
-                                        listState.animateScrollToItem(index)
+                                        val curMs = currentPositionMs?.invoke() ?: 0L
+                                        val totalDur = durationMs?.invoke() ?: 0L
+                                        val ratio = if (totalDur > 0) (curMs.toFloat() / totalDur).coerceIn(0f, 1f) else 0f
+                                        val targetWDp = MediaStripMath.calculateExpandedWidth(totalDur).dp
+                                        val targetWPx = with(density) { targetWDp.toPx() }
+
+                                        // Fixed: Adjust the target offset here as well
+                                        val offsetPx = (ratio * targetWPx).toInt()
+                                        listState.animateScrollToItem(index, offsetPx)
                                     }
                                 }
                                 onVideoItemTap?.invoke(index)
@@ -215,6 +254,17 @@ internal fun MediaStrip(
                     },
                 )
             }
+        }
+
+        // Fixed Center Cursor Overlay for Expanded Video
+        if (expandedPageIndex != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(3.dp)
+                    .align(Alignment.Center)
+                    .background(Color.White, CircleShape)
+            )
         }
     }
 }
@@ -309,13 +359,15 @@ private fun StripItem(
 
         // Seek head & progress bar: ALWAYS visible on video items when selected and with position
         if (isVideo && isSelected && currentPositionMs != null && durationMs != null) {
-            VideoStripSeekHead(
-                currentPositionMs = currentPositionMs,
-                durationMs = durationMs,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .align(Alignment.Center),
-            )
+            if (!isExpanded) {
+                VideoStripSeekHead(
+                    currentPositionMs = currentPositionMs,
+                    durationMs = durationMs,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center),
+                )
+            }
         }
     }
 }
