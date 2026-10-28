@@ -15,6 +15,8 @@
     <string name="map_open">Taswira</string>
     <string name="map_title">Taswira</string>
     <string name="map_show_all">Nuna duk hotunan</string>
+    <string name="map_zoom_in">Kara girma</string>
+    <string name="map_zoom_out">Rage girma</string>
     <string name="map_scanning">Ana karanta wuraren hotuna: %1$s na %2$s</string>
     <string name="map_empty">Babu hotunan da ke da wuri a yanzu</string>
     <string name="map_permission_message">Don nuna hotunanka a kan taswira, bari Gallery ta karanta wuraren da aka adana a ciki. Ba sa barin wayarka.</string>

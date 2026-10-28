@@ -80,6 +80,25 @@ data class MapViewport(
 
         fun worldSize(zoom: Double): Double = TILE_SIZE * 2.0.pow(zoom)
 
+        /**
+         * The viewport [fraction] of the way (0 = [from], 1 = [to]) from one to the other, for flying the
+         * map between two views. The centre moves in a straight line across the flat map and the zoom
+         * changes evenly, so the two ends are reproduced exactly.
+         */
+        fun between(from: MapViewport, to: MapViewport, fraction: Double, width: Double, height: Double): MapViewport {
+            val t = fraction.coerceIn(0.0, 1.0)
+            if (t == 0.0) return from
+            if (t == 1.0) return to
+            val zoom = from.zoom + (to.zoom - from.zoom) * t
+            return atWorld(
+                from.centerX + (to.centerX - from.centerX) * t,
+                from.centerY + (to.centerY - from.centerY) * t,
+                zoom,
+                width,
+                height,
+            )
+        }
+
         /** The smallest zoom at which the world still covers the whole screen. */
         fun minZoom(width: Double, height: Double): Double =
             log2(max(width, height) / TILE_SIZE).coerceAtLeast(0.0)

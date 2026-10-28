@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,8 +29,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -44,6 +46,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -94,8 +98,8 @@ import com.femi.gallery.domain.geo.PlaceVisibility
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.ln
+import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -124,6 +128,8 @@ fun MapScreen(
     val viewport by viewModel.viewport.collectAsStateWithLifecycle()
     var size by remember { mutableStateOf(IntSize.Zero) }
     val colors = mapColors()
+    val scope = rememberCoroutineScope()
+    val motion = remember(viewModel, scope) { MapMotion(scope, viewModel::updateViewport) { viewModel.viewport.value } }
 
     // New photos get their place read whenever the map comes back to the front.
     LifecycleResumeEffect(Unit) {
@@ -154,6 +160,7 @@ fun MapScreen(
                 width = size.width.toFloat(),
                 height = size.height.toFloat(),
                 onTransform = viewModel::updateViewport,
+                motion = motion,
                 onClusterClick = onOpenCluster,
             )
         }
@@ -177,11 +184,39 @@ fun MapScreen(
                 IconButton(
                     onClick = {
                         if (size.width > 0) {
-                            viewModel.setViewport(showAll(media, size.width.toDouble(), size.height.toDouble()))
+                            val w = size.width.toDouble()
+                            val h = size.height.toDouble()
+                            motion.flyTo(showAll(media, w, h), w, h)
                         }
                     },
                 ) {
                     Icon(Icons.Outlined.Public, contentDescription = stringResource(R.string.map_show_all))
+                }
+            }
+        }
+
+        if (viewport != null) {
+            Column(
+                Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilledTonalIconButton(
+                    onClick = {
+                        viewport?.let {
+                            motion.zoomAbout(size.width / 2.0, size.height / 2.0, min(it.zoom + 1.0, MaxZoom), size.width.toDouble(), size.height.toDouble())
+                        }
+                    },
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.map_zoom_in))
+                }
+                FilledTonalIconButton(
+                    onClick = {
+                        viewport?.let {
+                            motion.zoomAbout(size.width / 2.0, size.height / 2.0, it.zoom - 1.0, size.width.toDouble(), size.height.toDouble())
+                        }
+                    },
+                ) {
+                    Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.map_zoom_out))
                 }
             }
         }
@@ -219,9 +254,11 @@ private fun MapCanvas(
     width: Float,
     height: Float,
     onTransform: ((MapViewport) -> MapViewport) -> Unit,
+    motion: MapMotion,
     onClusterClick: (GeoCluster) -> Unit,
 ) {
     val density = LocalDensity.current
+    val latestViewport by rememberUpdatedState(viewport)
     val textMeasurer = rememberTextMeasurer(cacheSize = 256)
     val labelStyle = MaterialTheme.typography.labelMedium.copy(
         color = colors.label,
@@ -235,29 +272,25 @@ private fun MapCanvas(
             .fillMaxSize()
             .clipToBounds()
             .pointerInput(w, h) {
-                detectTransformGestures { centroid, pan, zoomChange, _ ->
-                    onTransform { current ->
-                        var next = current.panned(pan.x.toDouble(), pan.y.toDouble(), w, h)
-                        if (zoomChange != 1f) {
-                            val zoom = next.zoom + ln(zoomChange.toDouble()) / ln(2.0)
-                            next = next.zoomedAbout(
-                                centroid.x.toDouble(),
-                                centroid.y.toDouble(),
-                                min(zoom, MaxZoom),
-                                w,
-                                h,
-                            )
+                detectMapGestures(
+                    onDown = motion::stop,
+                    onGesture = { centroid, pan, zoomChange ->
+                        onTransform { current ->
+                            var next = current.panned(pan.x.toDouble(), pan.y.toDouble(), w, h)
+                            if (zoomChange != 1f) {
+                                val zoom = next.zoom + ln(zoomChange.toDouble()) / ln(2.0)
+                                next = next.zoomedAbout(centroid.x.toDouble(), centroid.y.toDouble(), min(zoom, MaxZoom), w, h)
+                            }
+                            next
                         }
-                        next
-                    }
-                }
+                    },
+                    onFling = { velocity -> motion.fling(velocity, w, h) },
+                )
             }
             .pointerInput(w, h) {
                 detectTapGestures(
                     onDoubleTap = { tap ->
-                        onTransform { current ->
-                            current.zoomedAbout(tap.x.toDouble(), tap.y.toDouble(), min(current.zoom + 1.0, MaxZoom), w, h)
-                        }
+                        motion.zoomAbout(tap.x.toDouble(), tap.y.toDouble(), min(latestViewport.zoom + 1.0, MaxZoom), w, h)
                     },
                 )
             },

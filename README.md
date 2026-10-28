@@ -36,7 +36,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Map**
 - [x] Map button on the Pictures tab opens an **offline map**: land, borders and cities are drawn from data bundled in the app (Natural Earth, public domain), so the app still has no internet permission
-- [x] Photos with a location are grouped into **bubbles with a cover photo and a count**; pinch, drag and double-tap to zoom, tap a bubble to open its photos (one photo opens the viewer)
+- [x] Photos with a location are grouped into **bubbles with a cover photo and a count**; pinch, drag (the map **coasts on after a throw**) and double-tap to zoom (**animated**; plus + / − buttons), tap a bubble to open its photos (one photo opens the viewer)
 - [x] A background scan reads where each photo was taken (EXIF, needs the "location in photos" permission), is incremental and resumable, and its results never leave the phone
 - [x] `in:south,west,north,east` works in search too, so any area can be searched
 
@@ -108,7 +108,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 ### Still to do
 
 **Next up**
-- [ ] **Map extras**: photo locations for videos, a map with streets (offline vector tiles you import once), fling and smooth zoom animations
+- [ ] **Map extras**: photo locations for videos, a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
 - [ ] **Slideshow music** (cannot be tested without a device), remembering the shuffle and speed choice between launches, a progress bar, videos in slideshows
 - [ ] **Editor extras**: draw, text and stickers, and offer to replace the original (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo in your own words** ("a dog running on a beach"): needs a CLIP-style image/text model (about 100 MB) that is not in the app yet; the plumbing (`ImageEmbedder`, `clip.bin`, cosine search) exists but is switched off, so nothing is scanned and no search is affected
@@ -350,6 +350,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 54 | Shuffle without black slides | A shuffled slideshow now loads and shuffles the whole list first (M3 Expressive `LoadingIndicator`), then plays from memory; before, random positions in a 4000+ item paged list were mostly not loaded yet and showed black slides. `tools/startup_bench.sh` measures cold start with `verify` vs `speed` compilation to decide whether a baseline profile is worth adding |
 | 55 | Smoother viewer video and strip | One reusable `ExoPlayer` for the whole viewer visit, prepared only after the pager has rested on a video for 250 ms (before, one was built and released for every video the pager passed, and a second one was built by the video page itself before the first was ready). The position clock only runs while playing and is read where it is shown, so it no longer recomposes the whole bottom area every 100 ms. Media strip items no longer change key when they load, and only the two items whose selection changes recompose when the page changes |
 | 56 | Full video player | New `FullVideoPlayer`: a full-screen player with the standard Media3 controls and sound, used for videos opened from other apps ("Open with"; before, that screen reused the viewer's video page, which has no controls, starts paused and needs a thumbnail and a known size, none of which an outside file has) and for the viewer's new **Play** action, which replaces the expanded seek bar button and carries on from the current position. Keeps its position across rotation and pauses when you leave the app. Tapping the selected video in the media strip still opens the expanded seek bar |
+| 57 | Map fling and animated zoom | The map coasts after a throw (velocity from a `VelocityTracker`, exponential decay; touching the map stops it; no throw after a pinch), double-tap and the new + / − buttons zoom smoothly about a point, and "show all" flies there (`MapViewport.between`, unit tested). `MapMotion` runs one movement at a time and always changes the viewport from its latest value |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

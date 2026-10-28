@@ -15,6 +15,8 @@
     <string name="map_open">Máàpù</string>
     <string name="map_title">Máàpù</string>
     <string name="map_show_all">Fi gbogbo fọ́tò hàn</string>
+    <string name="map_zoom_in">Sún mọ́ra</string>
+    <string name="map_zoom_out">Sún jìnnà</string>
     <string name="map_scanning">Ń ka àwọn ibi tí a ti ya fọ́tò: %1$s nínú %2$s</string>
     <string name="map_empty">Kò sí fọ́tò tó ní ibi tí a ti ya báyìí</string>
     <string name="map_permission_message">Láti fi àwọn fọ́tò rẹ hàn lórí máàpù, jẹ́ kí Gallery ka ibi tí a ti ya wọn. Kò ní kúrò lórí fóònù rẹ láé.</string>

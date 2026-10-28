@@ -15,6 +15,8 @@
     <string name="map_open">Maapụ</string>
     <string name="map_title">Maapụ</string>
     <string name="map_show_all">Gosi foto niile</string>
+    <string name="map_zoom_in">Gbasaa</string>
+    <string name="map_zoom_out">Belata</string>
     <string name="map_scanning">Na-agụ ebe foto dị: %1$s n\'ime %2$s</string>
     <string name="map_empty">Enweghị foto nwere ebe ha nọ ka</string>
     <string name="map_permission_message">Iji gosi foto gị na maapụ, kwe ka Gallery gụọ ebe e chekwara ha. Ọ naghị ahapụ ekwentị gị.</string>
