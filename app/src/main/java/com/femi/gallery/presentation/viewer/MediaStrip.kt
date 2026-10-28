@@ -58,10 +58,10 @@ import kotlinx.coroutines.launch
 /** The height of the strip; pages that draw near the bottom (a video's controls) keep clear of it. */
 internal val MediaStripHeight = 60.dp
 
-private val PictureItemWidth = 36.dp
+private val PictureItemWidth = 42.dp
 private val VideoItemWidth = 64.dp
-private val ItemHeight = 48.dp
-private val ItemSpacing = 6.dp
+private val ItemHeight = 56.dp
+private val ItemSpacing = 4.dp
 private const val ThumbnailPixels = 160
 
 /**
@@ -140,12 +140,12 @@ internal fun MediaStrip(
             .collectLatest { pagerState.scrollToPage(it) }
     }
 
-    // Swiping the photos: the strip follows once they settle (unless a finger is on the strip).
-    LaunchedEffect(pagerState.settledPage) {
+    // Swiping the photos: the strip follows the current page as it changes.
+    LaunchedEffect(pagerState.currentPage) {
         if (listState.isScrollInProgress) return@LaunchedEffect
         followingPager = true
         try {
-            listState.animateScrollToItem(pagerState.settledPage)
+            listState.animateScrollToItem(pagerState.currentPage)
         } finally {
             followingPager = false
         }
