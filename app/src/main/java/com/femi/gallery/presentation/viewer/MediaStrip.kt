@@ -27,8 +27,10 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,7 +63,8 @@ import kotlinx.coroutines.launch
 /** The height of the strip; pages that draw near the bottom (a video's controls) keep clear of it. */
 internal val MediaStripHeight = 60.dp
 
-private val ItemWidth = 36.dp
+private val PictureItemWidth = 36.dp
+private val VideoItemWidth = 64.dp
 private val ItemHeight = 48.dp
 private val ItemSpacing = 4.dp
 private const val ThumbnailPixels = 160
@@ -78,6 +81,8 @@ internal fun MediaStrip(
     pagerState: PagerState,
     modifier: Modifier = Modifier,
     onVideoItemTap: ((Int) -> Unit)? = null,
+    currentPositionMs: (() -> Long)? = null,
+    durationMs: (() -> Long)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = pagerState.currentPage)
@@ -110,12 +115,20 @@ internal fun MediaStrip(
             .height(MediaStripHeight)
             .background(surface),
     ) {
-        // Room on both sides, so that the first and the last photo can also come to the middle.
-        val sidePadding = (maxWidth - ItemWidth) / 2
+        // Room on both sides, so that the first and the last photo/video can also come to the middle.
+        val firstIsVideo = items.itemCount > 0 && items.peekOrNull(0)?.isVideo == true
+        val lastIsVideo = items.itemCount > 0 && items.peekOrNull(items.itemCount - 1)?.isVideo == true
+
+        val firstWidth = if (firstIsVideo) VideoItemWidth else PictureItemWidth
+        val lastWidth = if (lastIsVideo) VideoItemWidth else PictureItemWidth
+
+        val startPadding = ((maxWidth - firstWidth) / 2).coerceAtLeast(0.dp)
+        val endPadding = ((maxWidth - lastWidth) / 2).coerceAtLeast(0.dp)
+
         LazyRow(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = sidePadding),
+            contentPadding = PaddingValues(start = startPadding, end = endPadding),
             horizontalArrangement = Arrangement.spacedBy(ItemSpacing),
             verticalAlignment = Alignment.CenterVertically,
             flingBehavior = rememberSnapFlingBehavior(listState, SnapPosition.Center),
@@ -128,6 +141,8 @@ internal fun MediaStrip(
                 StripItem(
                     item = items[index],
                     selected = selected,
+                    currentPositionMs = if (pagerState.currentPage == index) currentPositionMs else null,
+                    durationMs = if (pagerState.currentPage == index) durationMs else null,
                     onClick = {
                         if (pagerState.currentPage == index && items.peekOrNull(index)?.isVideo == true && onVideoItemTap != null) {
                             onVideoItemTap(index)
@@ -155,6 +170,7 @@ internal fun ExpandedVideoSeekBar(
     durationMs: () -> Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onCollapse: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val surface = MaterialTheme.colorScheme.surface
@@ -226,6 +242,23 @@ internal fun ExpandedVideoSeekBar(
                     }
                     .background(playheadColor, CircleShape),
             )
+            if (onCollapse != null) {
+                IconButton(
+                    onClick = onCollapse,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                        .size(24.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Collapse seek bar",
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -244,9 +277,18 @@ private fun LazyListState.centeredIndex(): Int? {
 }
 
 @Composable
-private fun StripItem(item: MediaItem?, selected: State<Boolean>, onClick: () -> Unit) {
+private fun StripItem(
+    item: MediaItem?,
+    selected: State<Boolean>,
+    onClick: () -> Unit,
+    currentPositionMs: (() -> Long)? = null,
+    durationMs: (() -> Long)? = null,
+) {
     val isSelected by selected
     val context = LocalContext.current
+    val isVideo = item?.isVideo == true
+    val itemWidth = if (isVideo) VideoItemWidth else PictureItemWidth
+
     val request = remember(item?.uri) {
         item?.let { ImageRequest.Builder(context).data(it.uri).size(ThumbnailPixels).build() }
     }
@@ -260,7 +302,7 @@ private fun StripItem(item: MediaItem?, selected: State<Boolean>, onClick: () ->
 
     Box(
         Modifier
-            .size(ItemWidth, ItemHeight)
+            .size(itemWidth, ItemHeight)
             .graphicsLayer {
                 scaleX = scale.value
                 scaleY = scale.value
@@ -278,13 +320,77 @@ private fun StripItem(item: MediaItem?, selected: State<Boolean>, onClick: () ->
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        if (item?.isVideo == true) {
+        if (isVideo) {
             Icon(
                 imageVector = Icons.Filled.PlayArrow,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.align(Alignment.BottomStart).size(18.dp),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(3.dp)
+                    .size(14.dp)
+                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                    .padding(1.dp),
             )
+
+            if (isSelected && currentPositionMs != null && durationMs != null) {
+                VideoStripSeekHead(
+                    currentPositionMs = currentPositionMs,
+                    durationMs = durationMs,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun VideoStripSeekHead(
+    currentPositionMs: () -> Long,
+    durationMs: () -> Long,
+    modifier: Modifier = Modifier,
+) {
+    val trackColor = Color.Black.copy(alpha = 0.5f)
+    val progressColor = MaterialTheme.colorScheme.primary
+    val playheadColor = Color.White
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(14.dp),
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        val width = maxWidth
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .background(trackColor),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .graphicsLayer {
+                    val dur = durationMs()
+                    val ratio = if (dur > 0) (currentPositionMs().toFloat() / dur).coerceIn(0f, 1f) else 0f
+                    scaleX = ratio
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                }
+                .background(progressColor),
+        )
+        Box(
+            modifier = Modifier
+                .height(12.dp)
+                .width(3.dp)
+                .graphicsLayer {
+                    val dur = durationMs()
+                    val ratio = if (dur > 0) (currentPositionMs().toFloat() / dur).coerceIn(0f, 1f) else 0f
+                    translationX = (width.toPx() * ratio) - (1.5.dp.toPx())
+                }
+                .background(playheadColor, CircleShape),
+        )
     }
 }

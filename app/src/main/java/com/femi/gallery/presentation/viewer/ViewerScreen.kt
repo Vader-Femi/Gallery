@@ -12,7 +12,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -464,6 +463,7 @@ private fun ViewerContent(
                                         activePlayer?.seekTo(seekMs)
                                         currentPositionMs = seekMs
                                     },
+                                    onCollapse = { isStripExpanded = false },
                                 )
                             } else {
                                 MediaStrip(
@@ -472,6 +472,8 @@ private fun ViewerContent(
                                     onVideoItemTap = {
                                         isStripExpanded = !isStripExpanded
                                     },
+                                    currentPositionMs = { currentPositionMs },
+                                    durationMs = { durationMs },
                                 )
                             }
                         }
