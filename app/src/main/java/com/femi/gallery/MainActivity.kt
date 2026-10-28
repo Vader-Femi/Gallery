@@ -20,6 +20,16 @@ class MainActivity : AppCompatActivity() {
     /** Logs (tag "Frames") which screen drops frames and why; silent while the app is smooth. */
     private val frameMonitor by lazy { FrameMonitor(window) }
 
+    /** Intercepts volume up key when viewing a muted video to unmute automatically. */
+    var viewerVolumeHandler: (() -> Unit)? = null
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP && event.action == android.view.KeyEvent.ACTION_DOWN) {
+            viewerVolumeHandler?.invoke()
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

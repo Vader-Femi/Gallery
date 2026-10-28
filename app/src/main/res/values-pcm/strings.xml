@@ -234,6 +234,10 @@
 
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_summary">Choose how you want am to look</string>
+    <string name="settings_autoplay_videos">Auto-play videos</string>
+    <string name="settings_autoplay_videos_summary">Make video start to play automatically as you open am</string>
+    <string name="settings_mute_videos">Mute video by default</string>
+    <string name="settings_mute_videos_summary">Make video start without sound</string>
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

@@ -234,6 +234,10 @@
 
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_summary">Choose your preferred appearance</string>
+    <string name="settings_autoplay_videos">Auto-play videos</string>
+    <string name="settings_autoplay_videos_summary">Automatically play videos when opened</string>
+    <string name="settings_mute_videos">Mute videos by default</string>
+    <string name="settings_mute_videos_summary">Start video playback with sound muted</string>
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

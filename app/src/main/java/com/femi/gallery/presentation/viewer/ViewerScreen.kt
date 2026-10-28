@@ -100,6 +100,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.femi.gallery.R
+import com.femi.gallery.MainActivity
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.toRef
@@ -110,6 +111,7 @@ import com.femi.gallery.presentation.common.rememberTransitionSettled
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
+import com.femi.gallery.presentation.settings.ThemePreferences
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -210,9 +212,12 @@ private fun ViewerContent(
             val playerHolder = remember { SharedPlayer(context) }
             DisposableEffect(Unit) { onDispose { playerHolder.release() } }
 
+            val autoPlayDefault = remember { ThemePreferences.getAutoPlayVideos(context) }
+            val muteDefault = remember { ThemePreferences.getMuteVideos(context) }
+
             var activePlayer by remember(activeVideoUri) { mutableStateOf<ExoPlayer?>(null) }
-            var isPlaying by remember(activeVideoUri) { mutableStateOf(false) }
-            var isMuted by remember { mutableStateOf(true) }
+            var isPlaying by remember(activeVideoUri) { mutableStateOf(autoPlayDefault) }
+            var isMuted by rememberSaveable(activeVideoUri) { mutableStateOf(muteDefault) }
             var currentPositionMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
             var durationMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
             var isStripExpanded by remember(activeVideoUri) { mutableStateOf(false) }
@@ -222,13 +227,15 @@ private fun ViewerContent(
                     activePlayer = null
                     onDispose { }
                 } else {
+                    val autoPlay = ThemePreferences.getAutoPlayVideos(context)
                     val newPlayer = playerHolder.acquire().apply {
                         setMediaItem(PlayerMediaItem.fromUri(activeVideoUri!!))
-                        playWhenReady = false
+                        playWhenReady = autoPlay
                         volume = if (isMuted) 0f else 1f
                         prepare()
                     }
                     activePlayer = newPlayer
+                    isPlaying = autoPlay
 
                     val listener = object : androidx.media3.common.Player.Listener {
                         override fun onIsPlayingChanged(playing: Boolean) {
@@ -248,6 +255,25 @@ private fun ViewerContent(
                         newPlayer.clearMediaItems()
                         activePlayer = null
                     }
+                }
+            }
+
+            // Hook up volume up button to unmute automatically when a video is muted.
+            DisposableEffect(activePlayer, isMuted) {
+                val act = context.findActivity() as? MainActivity
+                if (act != null && isMuted) {
+                    act.viewerVolumeHandler = {
+                        isMuted = false
+                        activePlayer?.volume = 1f
+                        if (!isPlaying && ThemePreferences.getAutoPlayVideos(context)) {
+                            activePlayer?.play()
+                        }
+                    }
+                } else {
+                    act?.viewerVolumeHandler = null
+                }
+                onDispose {
+                    act?.viewerVolumeHandler = null
                 }
             }
 

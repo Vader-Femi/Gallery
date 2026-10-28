@@ -234,6 +234,10 @@
 
     <string name="settings_theme">Àṣàyàn àwọ̀</string>
     <string name="settings_theme_summary">Yan irisi tí o fẹ́</string>
+    <string name="settings_autoplay_videos">Gbe fídíò tààrà</string>
+    <string name="settings_autoplay_videos_summary">Gbe fídíò tààrà ní gbogbo ìgbà tí o bá ṣí i</string>
+    <string name="settings_mute_videos">Mú ohùn fídíò kúrò ní àtètèkọ́ṣe</string>
+    <string name="settings_mute_videos_summary">Bẹ̀rẹ̀ sí gbé fídíò ní aláiṣẹ ohùn</string>
     <string name="theme_system">Èdè ẹ̀rọ (System default)</string>
     <string name="theme_light">Imọlẹ̀</string>
     <string name="theme_dark">Òkùnkùn</string>

@@ -234,6 +234,10 @@
 
     <string name="settings_theme">Jigo</string>
     <string name="settings_theme_summary">Zaɓi bayyanar da kake so</string>
+    <string name="settings_autoplay_videos">Kunna bidiyo kai tsaye</string>
+    <string name="settings_autoplay_videos_summary">Kunna bidiyo ta atomatik idan an buɗe</string>
+    <string name="settings_mute_videos">Kashe murya bidiyo ta tsohuwa</string>
+    <string name="settings_mute_videos_summary">Fara kunna bidiyo ba tare da murya ba</string>
     <string name="theme_system">Tsarin waya</string>
     <string name="theme_light">Haske</string>
     <string name="theme_dark">Duhu</string>

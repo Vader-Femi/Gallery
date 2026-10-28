@@ -234,6 +234,10 @@
 
     <string name="settings_theme">Isi</string>
     <string name="settings_theme_summary">Họrọ ọdịdị masịrị gị</string>
+    <string name="settings_autoplay_videos">Kpọọ vidiyo na-akpaghị aka</string>
+    <string name="settings_autoplay_videos_summary">Kpọọ vidiyo na-akpaghị aka mgbe emepere ya</string>
+    <string name="settings_mute_videos">Gbanyụọ ụda vidiyo na mbụ</string>
+    <string name="settings_mute_videos_summary">Maliite ịkpọ vidiyo na-enweghị ụda</string>
     <string name="theme_system">Ndịdị sistemụ</string>
     <string name="theme_light">Ihe ọkụ</string>
     <string name="theme_dark">Gbara ọchịchịrị</string>
