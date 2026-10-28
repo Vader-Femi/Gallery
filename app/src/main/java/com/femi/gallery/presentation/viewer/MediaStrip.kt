@@ -1,11 +1,11 @@
 package com.femi.gallery.presentation.viewer
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
@@ -26,11 +24,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -66,7 +58,7 @@ internal val MediaStripHeight = 60.dp
 private val PictureItemWidth = 36.dp
 private val VideoItemWidth = 64.dp
 private val ItemHeight = 48.dp
-private val ItemSpacing = 4.dp
+private val ItemSpacing = 6.dp
 private const val ThumbnailPixels = 160
 
 /**
@@ -83,21 +75,65 @@ internal fun MediaStrip(
     onVideoItemTap: ((Int) -> Unit)? = null,
     currentPositionMs: (() -> Long)? = null,
     durationMs: (() -> Long)? = null,
+    onSeek: ((Long) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = pagerState.currentPage)
     // True while the strip is being moved by the code below rather than by a finger.
     var followingPager by remember { mutableStateOf(false) }
+    var expandedPageIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Reset expansion when changing pages
+    LaunchedEffect(pagerState.settledPage) {
+        if (expandedPageIndex != pagerState.settledPage) {
+            expandedPageIndex = null
+        }
+    }
 
     val surface = MaterialTheme.colorScheme.surface
 
-    // Finger on the strip: the viewer follows the item in the middle.
-    LaunchedEffect(listState, pagerState) {
-        snapshotFlow { if (listState.isScrollInProgress && !followingPager) listState.centeredIndex() else null }
-            .filterNotNull()
-            .distinctUntilChanged()
-            .collectLatest { pagerState.scrollToPage(it) }
+    // Scrubbing video when expanded: swiping the strip across the expanded filmstrip seeks the video.
+    LaunchedEffect(listState, pagerState, expandedPageIndex) {
+        snapshotFlow {
+            if (!listState.isScrollInProgress || followingPager) return@snapshotFlow null
+            val info = listState.layoutInfo
+            val visible = info.visibleItemsInfo
+            val expIdx = expandedPageIndex
+            val dur = durationMs?.invoke() ?: 0L
+
+            if (expIdx != null && expIdx == pagerState.currentPage && dur > 0L) {
+                val targetItem = visible.firstOrNull { it.index == expIdx }
+                if (targetItem != null && targetItem.size > 0) {
+                    val viewportMiddle = (info.viewportStartOffset + info.viewportEndOffset) / 2.0
+                    val itemMiddleOffset = viewportMiddle - targetItem.offset
+                    val ratio = (itemMiddleOffset / targetItem.size.toDouble()).coerceIn(0.0, 1.0)
+                    return@snapshotFlow ratio
+                }
+            }
+            null
+        }
+        .filterNotNull()
+        .distinctUntilChanged()
+        .collectLatest { ratio ->
+            val dur = durationMs?.invoke() ?: 0L
+            if (dur > 0L && onSeek != null) {
+                onSeek((ratio * dur).toLong())
+            }
+        }
     }
+
+    // Finger on the strip: the viewer follows the item in the middle (when not actively scrubbing an expanded video).
+    LaunchedEffect(listState, pagerState, expandedPageIndex) {
+        snapshotFlow {
+            if (listState.isScrollInProgress && !followingPager && expandedPageIndex == null) {
+                listState.centeredIndex()
+            } else null
+        }
+        .filterNotNull()
+        .distinctUntilChanged()
+        .collectLatest { pagerState.scrollToPage(it) }
+    }
+
     // Swiping the photos: the strip follows once they settle (unless a finger is on the strip).
     LaunchedEffect(pagerState.settledPage) {
         if (listState.isScrollInProgress) return@LaunchedEffect
@@ -115,15 +151,27 @@ internal fun MediaStrip(
             .height(MediaStripHeight)
             .background(surface),
     ) {
-        // Room on both sides, so that the first and the last photo/video can also come to the middle.
+        val durMs = durationMs?.invoke() ?: 0L
         val firstIsVideo = items.itemCount > 0 && items.peekOrNull(0)?.isVideo == true
         val lastIsVideo = items.itemCount > 0 && items.peekOrNull(items.itemCount - 1)?.isVideo == true
 
-        val firstWidth = if (firstIsVideo) VideoItemWidth else PictureItemWidth
-        val lastWidth = if (lastIsVideo) VideoItemWidth else PictureItemWidth
+        val firstIsExpanded = firstIsVideo && expandedPageIndex == 0
+        val lastIsExpanded = lastIsVideo && expandedPageIndex == items.itemCount - 1
 
-        val startPadding = ((maxWidth - firstWidth) / 2).coerceAtLeast(0.dp)
-        val endPadding = ((maxWidth - lastWidth) / 2).coerceAtLeast(0.dp)
+        val firstWidth = when {
+            firstIsExpanded -> MediaStripMath.calculateExpandedWidth(durMs).dp
+            firstIsVideo -> VideoItemWidth
+            else -> PictureItemWidth
+        }
+        val lastWidth = when {
+            lastIsExpanded -> MediaStripMath.calculateExpandedWidth(durMs).dp
+            lastIsVideo -> VideoItemWidth
+            else -> PictureItemWidth
+        }
+
+        val minSidePadding = maxWidth / 2
+        val startPadding = ((maxWidth - firstWidth) / 2).coerceAtLeast(minSidePadding)
+        val endPadding = ((maxWidth - lastWidth) / 2).coerceAtLeast(minSidePadding)
 
         LazyRow(
             state = listState,
@@ -133,19 +181,28 @@ internal fun MediaStrip(
             verticalAlignment = Alignment.CenterVertically,
             flingBehavior = rememberSnapFlingBehavior(listState, SnapPosition.Center),
         ) {
-            // No custom key: an item's key would change from its position to its id the moment it loads, and
-            // each change makes the list throw the item away and build it again while you are scrubbing.
             items(count = items.itemCount) { index ->
-                // Only the two items whose answer changes recompose when the page changes, not every thumbnail.
                 val selected = remember(index, pagerState) { derivedStateOf { pagerState.currentPage == index } }
+                val isExpanded = expandedPageIndex == index
                 StripItem(
                     item = items[index],
                     selected = selected,
+                    isExpanded = isExpanded,
                     currentPositionMs = if (pagerState.currentPage == index) currentPositionMs else null,
                     durationMs = if (pagerState.currentPage == index) durationMs else null,
                     onClick = {
-                        if (pagerState.currentPage == index && items.peekOrNull(index)?.isVideo == true && onVideoItemTap != null) {
-                            onVideoItemTap(index)
+                        if (pagerState.currentPage == index) {
+                            if (items.peekOrNull(index)?.isVideo == true) {
+                                if (expandedPageIndex == index) {
+                                    expandedPageIndex = null
+                                } else {
+                                    expandedPageIndex = index
+                                    scope.launch {
+                                        listState.animateScrollToItem(index)
+                                    }
+                                }
+                                onVideoItemTap?.invoke(index)
+                            }
                         } else {
                             scope.launch {
                                 if (MediaStripMath.shouldAnimate(pagerState.currentPage, index)) {
@@ -157,107 +214,6 @@ internal fun MediaStrip(
                         }
                     },
                 )
-            }
-        }
-    }
-}
-
-@Composable
-internal fun ExpandedVideoSeekBar(
-    item: MediaItem,
-    /** Read while drawing and seeking, so the playhead moving does not recompose the bar. */
-    currentPositionMs: () -> Long,
-    durationMs: () -> Long,
-    onSeek: (Long) -> Unit,
-    modifier: Modifier = Modifier,
-    onCollapse: (() -> Unit)? = null,
-) {
-    val context = LocalContext.current
-    val surface = MaterialTheme.colorScheme.surface
-    val borderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-    val playheadColor = MaterialTheme.colorScheme.primary
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(MediaStripHeight)
-            .background(surface)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, borderColor, RoundedCornerShape(8.dp))
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val duration = durationMs()
-                        if (size.width > 0 && duration > 0) {
-                            val ratio = (offset.x / size.width).coerceIn(0f, 1f)
-                            onSeek((ratio * duration).toLong())
-                        }
-                    }
-                }
-                .pointerInput(Unit) {
-                    detectDragGestures { change, _ ->
-                        change.consume()
-                        val duration = durationMs()
-                        if (size.width > 0 && duration > 0) {
-                            val ratio = (change.position.x / size.width).coerceIn(0f, 1f)
-                            onSeek((ratio * duration).toLong())
-                        }
-                    }
-                },
-        ) {
-            val width = maxWidth
-            Row(modifier = Modifier.fillMaxSize()) {
-                repeat(7) {
-                    val request = remember(item.uri) {
-                        ImageRequest.Builder(context).data(item.uri).size(ThumbnailPixels).build()
-                    }
-                    AsyncImage(
-                        model = request,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                    )
-                }
-            }
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.25f)),
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(4.dp)
-                    .graphicsLayer {
-                        val duration = durationMs()
-                        val seekRatio = if (duration > 0) (currentPositionMs().toFloat() / duration).coerceIn(0f, 1f) else 0f
-                        translationX = (width.toPx() * seekRatio) - (2.dp.toPx())
-                    }
-                    .background(playheadColor, CircleShape),
-            )
-            if (onCollapse != null) {
-                IconButton(
-                    onClick = onCollapse,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(2.dp)
-                        .size(24.dp)
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Collapse seek bar",
-                        tint = Color.White,
-                        modifier = Modifier.size(14.dp),
-                    )
-                }
             }
         }
     }
@@ -280,6 +236,7 @@ private fun LazyListState.centeredIndex(): Int? {
 private fun StripItem(
     item: MediaItem?,
     selected: State<Boolean>,
+    isExpanded: Boolean,
     onClick: () -> Unit,
     currentPositionMs: (() -> Long)? = null,
     durationMs: (() -> Long)? = null,
@@ -287,61 +244,78 @@ private fun StripItem(
     val isSelected by selected
     val context = LocalContext.current
     val isVideo = item?.isVideo == true
-    val itemWidth = if (isVideo) VideoItemWidth else PictureItemWidth
+    val dur = durationMs?.invoke() ?: 0L
 
-    val request = remember(item?.uri) {
-        item?.let { ImageRequest.Builder(context).data(it.uri).size(ThumbnailPixels).build() }
+    val targetWidth = when {
+        isVideo && isExpanded -> MediaStripMath.calculateExpandedWidth(dur).dp
+        isVideo -> VideoItemWidth
+        else -> PictureItemWidth
     }
-    val scale = remember { Animatable(1f) }
-    LaunchedEffect(isSelected) {
-        scale.animateTo(if (isSelected) 1.15f else 1f)
-    }
+
+    val animatedWidth by animateDpAsState(
+        targetValue = targetWidth,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "stripItemWidth",
+    )
+
     val shape = RoundedCornerShape(6.dp)
     val borderColor = MaterialTheme.colorScheme.onSurface
     val bgColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
     Box(
         Modifier
-            .size(itemWidth, ItemHeight)
-            .graphicsLayer {
-                scaleX = scale.value
-                scaleY = scale.value
-            }
+            .width(animatedWidth)
+            .height(ItemHeight)
             .clip(shape)
             .background(bgColor)
             .then(if (isSelected) Modifier.border(2.dp, borderColor, shape) else Modifier)
             .clickable(onClick = onClick),
     ) {
-        if (request != null) {
-            AsyncImage(
-                model = request,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        if (isVideo) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(3.dp)
-                    .size(14.dp)
-                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                    .padding(1.dp),
-            )
-
-            if (isSelected && currentPositionMs != null && durationMs != null) {
-                VideoStripSeekHead(
-                    currentPositionMs = currentPositionMs,
-                    durationMs = durationMs,
+        if (item != null) {
+            if (isVideo && isExpanded) {
+                val frameCount = (targetWidth.value / 36f).toInt().coerceAtLeast(3)
+                Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter),
+                        .fillMaxSize()
+                        .background(Color.Black),
+                    horizontalArrangement = Arrangement.spacedBy(1.dp),
+                ) {
+                    repeat(frameCount) {
+                        val request = remember(item.uri) {
+                            ImageRequest.Builder(context).data(item.uri).size(ThumbnailPixels).build()
+                        }
+                        AsyncImage(
+                            model = request,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                        )
+                    }
+                }
+            } else {
+                val request = remember(item.uri) {
+                    ImageRequest.Builder(context).data(item.uri).size(ThumbnailPixels).build()
+                }
+                AsyncImage(
+                    model = request,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
+        }
+
+        // Seek head & progress bar: ALWAYS visible on video items when selected and with position
+        if (isVideo && isSelected && currentPositionMs != null && durationMs != null) {
+            VideoStripSeekHead(
+                currentPositionMs = currentPositionMs,
+                durationMs = durationMs,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .align(Alignment.Center),
+            )
         }
     }
 }
@@ -357,9 +331,7 @@ private fun VideoStripSeekHead(
     val playheadColor = Color.White
 
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(14.dp),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomStart,
     ) {
         val width = maxWidth
@@ -367,12 +339,14 @@ private fun VideoStripSeekHead(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(4.dp)
+                .align(Alignment.BottomStart)
                 .background(trackColor),
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(4.dp)
+                .align(Alignment.BottomStart)
                 .graphicsLayer {
                     val dur = durationMs()
                     val ratio = if (dur > 0) (currentPositionMs().toFloat() / dur).coerceIn(0f, 1f) else 0f
@@ -383,7 +357,7 @@ private fun VideoStripSeekHead(
         )
         Box(
             modifier = Modifier
-                .height(12.dp)
+                .fillMaxHeight()
                 .width(3.dp)
                 .graphicsLayer {
                     val dur = durationMs()

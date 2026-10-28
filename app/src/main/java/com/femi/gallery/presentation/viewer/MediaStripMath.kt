@@ -36,4 +36,14 @@ internal object MediaStripMath {
 
     /** Whether moving the pager from page [from] to page [to] should animate (otherwise it jumps). */
     fun shouldAnimate(from: Int, to: Int): Boolean = abs(to - from) <= MAX_ANIMATED_DISTANCE
+
+    /**
+     * Calculates the expanded filmstrip width (in dp) for a video based on its duration in milliseconds.
+     * Longer videos scale to a wider filmstrip.
+     */
+    fun calculateExpandedWidth(durationMs: Long): Float {
+        if (durationMs <= 0L) return 160f
+        val seconds = durationMs / 1000f
+        return (100f + seconds * 6f).coerceIn(120f, 8000f)
+    }
 }

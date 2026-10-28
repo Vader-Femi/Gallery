@@ -70,4 +70,14 @@ class MediaStripMathTest {
         val result = MediaStripMath.centeredIndex(indices, offsets, sizes, 0, 200)
         assertEquals(2, result)
     }
+
+    @Test
+    fun calculateExpandedWidthScalesWithDuration() {
+        val shortVid = MediaStripMath.calculateExpandedWidth(3000L)
+        val mediumVid = MediaStripMath.calculateExpandedWidth(60000L)
+        val longVid = MediaStripMath.calculateExpandedWidth(300000L)
+
+        assertTrue(shortVid < mediumVid)
+        assertTrue(mediumVid < longVid)
+    }
 }
