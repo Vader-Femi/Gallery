@@ -117,6 +117,7 @@
     <string name="viewer_seek">Nemi</string>
     <string name="viewer_close_seek_bar">Rufe mashaya neman</string>
     <string name="viewer_play">Murna</string>
+    <string name="player_error">Ba za a iya kunna wannan bidiyon ba.</string>
     <string name="viewer_pause">Tsaya</string>
     <string name="viewer_mute">Kashe sauti</string>
     <string name="viewer_unmute">Kunna sauti</string>

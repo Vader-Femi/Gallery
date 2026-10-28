@@ -117,6 +117,7 @@
     <string name="viewer_seek">Chọọ</string>
     <string name="viewer_close_seek_bar">Mechie ogwe ọchịchọ</string>
     <string name="viewer_play">Kpọọ</string>
+    <string name="player_error">Enweghị ike ịkọ vidiyo a.</string>
     <string name="viewer_pause">Kwụsị</string>
     <string name="viewer_mute">Mechie ụda</string>
     <string name="viewer_unmute">Mepee ụda</string>

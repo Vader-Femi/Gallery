@@ -36,9 +36,9 @@ import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.presentation.common.ImmersiveMode
 
 /**
- * Shows one photo or video that another app opened with "Open with" / "Review". The file may
+ * Shows one photo (zoomable) or video (the full player) that another app opened with "Open with" / "Review". The file may
  * not be in the library at all (a chat attachment, a download), so there is no swiping, only
- * zoom and playback, plus a button to open the whole gallery.
+ * zoom or playback, plus a button to open the whole gallery.
  */
 @Composable
 fun ExternalViewerScreen(
@@ -47,6 +47,20 @@ fun ExternalViewerScreen(
     onClose: () -> Unit,
     onOpenGallery: () -> Unit,
 ) {
+    // A video gets the full player (controls, sound, seeking); it needs nothing but the address.
+    if (isVideo) {
+        FullVideoPlayer(
+            uri = uri,
+            onClose = onClose,
+            trailing = {
+                TextButton(onClick = onOpenGallery) {
+                    Text(stringResource(R.string.external_open_gallery), color = Color.White)
+                }
+            },
+        )
+        return
+    }
+
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     ImmersiveMode(enabled = !chromeVisible)
 
@@ -75,11 +89,7 @@ fun ExternalViewerScreen(
     val contentColor = MaterialTheme.colorScheme.onSurface
 
     Box(modifier = Modifier.fillMaxSize().background(if (chromeVisible) MaterialTheme.colorScheme.background else Color.Black)) {
-        if (isVideo) {
-            VideoPage(item = item, isCurrent = true, onTap = { chromeVisible = !chromeVisible })
-        } else {
-            PhotoPage(item = item, isCurrent = true, onTap = { chromeVisible = !chromeVisible })
-        }
+        PhotoPage(item = item, isCurrent = true, onTap = { chromeVisible = !chromeVisible })
 
         AnimatedVisibility(
             visible = chromeVisible,

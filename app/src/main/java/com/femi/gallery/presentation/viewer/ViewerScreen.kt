@@ -43,7 +43,7 @@ import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.LinearScale
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.RestoreFromTrash
@@ -222,6 +222,15 @@ private fun ViewerContent(
             var durationMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
             var isStripExpanded by remember(activeVideoUri) { mutableStateOf(false) }
 
+            // The full-screen player (the Play action). It opens above the viewer and carries on from where the small one was.
+            var fullPlayerUri by rememberSaveable { mutableStateOf<String?>(null) }
+            var fullPlayerStartMs by rememberSaveable { mutableLongStateOf(0L) }
+            val playFull: (String) -> Unit = { uri ->
+                fullPlayerStartMs = currentPositionMs
+                activePlayer?.pause()
+                fullPlayerUri = uri
+            }
+
             DisposableEffect(activeVideoUri) {
                 if (activeVideoUri == null) {
                     activePlayer = null
@@ -367,11 +376,8 @@ private fun ViewerContent(
                                 viewModel.actions.deleteForever(listOf(ref))
                             },
                             if (current.isVideo) {
-                                ViewerAction(
-                                    icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
-                                    label = stringResource(if (isStripExpanded) R.string.viewer_close_seek_bar else R.string.viewer_seek),
-                                ) {
-                                    isStripExpanded = !isStripExpanded
+                                ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
+                                    playFull(current.uri)
                                 }
                             } else null,
                             ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
@@ -386,11 +392,8 @@ private fun ViewerContent(
                                 viewModel.actions.deleteLocked(listOf(ref))
                             },
                             if (current.isVideo) {
-                                ViewerAction(
-                                    icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
-                                    label = stringResource(if (isStripExpanded) R.string.viewer_close_seek_bar else R.string.viewer_seek),
-                                ) {
-                                    isStripExpanded = !isStripExpanded
+                                ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
+                                    playFull(current.uri)
                                 }
                             } else null,
                             ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
@@ -406,11 +409,8 @@ private fun ViewerContent(
                                 label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
                             ) { viewModel.actions.toggleFavorite(listOf(ref)) },
                             if (current.isVideo) {
-                                ViewerAction(
-                                    icon = if (isStripExpanded) Icons.Filled.Close else Icons.Outlined.LinearScale,
-                                    label = stringResource(if (isStripExpanded) R.string.viewer_close_seek_bar else R.string.viewer_seek),
-                                ) {
-                                    isStripExpanded = !isStripExpanded
+                                ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
+                                    playFull(current.uri)
                                 }
                             } else {
                                 ViewerAction(Icons.Outlined.Edit, stringResource(R.string.viewer_edit)) {
@@ -478,6 +478,17 @@ private fun ViewerContent(
                         ActionBar(actions = cachedActions)
                     }
                 }
+            }
+
+            fullPlayerUri?.let { uri ->
+                FullVideoPlayer(
+                    uri = uri,
+                    startPositionMs = fullPlayerStartMs,
+                    onClose = {
+                        fullPlayerUri = null
+                        chromeVisible = true // the player gives the system bars back, so the viewer shows its own bars too
+                    },
+                )
             }
         }
     }

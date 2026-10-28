@@ -117,6 +117,7 @@
     <string name="viewer_seek">Seek</string>
     <string name="viewer_close_seek_bar">Close seek bar</string>
     <string name="viewer_play">Play</string>
+    <string name="player_error">Can\'t play this video.</string>
     <string name="viewer_pause">Pause</string>
     <string name="viewer_mute">Mute</string>
     <string name="viewer_unmute">Unmute</string>
