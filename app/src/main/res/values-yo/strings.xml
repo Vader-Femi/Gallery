@@ -251,6 +251,10 @@
     <string name="settings_autoplay_videos_summary">Gbe fídíò tààrà ní gbogbo ìgbà tí o bá ṣí i</string>
     <string name="settings_mute_videos">Mú ohùn fídíò kúrò ní àtètèkọ́ṣe</string>
     <string name="settings_mute_videos_summary">Bẹ̀rẹ̀ sí gbé fídíò ní aláiṣẹ ohùn</string>
+    <string name="settings_background_scan">Máa ṣe àkọsílẹ̀ lẹ́yìn ẹ̀rọ</string>
+    <string name="settings_background_scan_summary">Ó ń tẹ̀síwájú láti kà ọ̀rọ̀, nǹkan, àwọ̀ àti ibi inú fọ́tò rẹ lẹ́yìn tí o bá jáde nínú ohun èlò náà, tí bátìrì kò bá kéré.</string>
+    <string name="settings_scan_charging">Nígbà tí a bá ń gba agbára nìkan</string>
+    <string name="settings_scan_charging_summary">Ó dúró de ẹ̀rọ agbára kí ó tó ṣe àkọsílẹ̀ lẹ́yìn ẹ̀rọ.</string>
     <string name="theme_system">Èdè ẹ̀rọ (System default)</string>
     <string name="theme_light">Imọlẹ̀</string>
     <string name="theme_dark">Òkùnkùn</string>

@@ -72,6 +72,16 @@ class TextIndexRepositoryImpl @Inject constructor(
         data object Failed : Outcome
     }
 
+    override val isRunning: Boolean get() = synchronized(lock) { job?.isActive == true }
+
+    override fun stopScan() {
+        synchronized(lock) {
+            job?.cancel()
+            job = null
+        }
+        _scan.update { it.copy(status = TextScanStatus.Idle) }
+    }
+
     override fun startScan() {
         if (!permissions.hasMediaAccess()) {
             Log.i(TAG, "Not scanning: no access to photos")

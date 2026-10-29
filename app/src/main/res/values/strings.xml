@@ -251,6 +251,10 @@
     <string name="settings_autoplay_videos_summary">Automatically play videos when opened</string>
     <string name="settings_mute_videos">Mute videos by default</string>
     <string name="settings_mute_videos_summary">Start video playback with sound muted</string>
+    <string name="settings_background_scan">Keep indexing in the background</string>
+    <string name="settings_background_scan_summary">Keeps reading text, objects, colours and places of your photos after you leave the app, when the battery is not low.</string>
+    <string name="settings_scan_charging">Only while charging</string>
+    <string name="settings_scan_charging_summary">Waits for the charger before indexing in the background.</string>
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

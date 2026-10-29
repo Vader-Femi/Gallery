@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import com.femi.gallery.core.lifecycle.AppForeground
 import com.femi.gallery.data.image.MediaThumbnailFetcher
 import com.femi.gallery.presentation.settings.ThemePreferences
 import dagger.hilt.android.HiltAndroidApp
@@ -14,6 +15,7 @@ class GalleryApplication : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        AppForeground.register(this)
         AppCompatDelegate.setDefaultNightMode(ThemePreferences.getThemeMode(this))
     }
 

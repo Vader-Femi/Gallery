@@ -57,6 +57,16 @@ class ColorIndexRepositoryImpl @Inject constructor(
         class Read(val entry: DetectedColor) : Outcome
     }
 
+    override val isRunning: Boolean get() = synchronized(lock) { job?.isActive == true }
+
+    override fun stopScan() {
+        synchronized(lock) {
+            job?.cancel()
+            job = null
+        }
+        _scan.update { it.copy(status = ColorScanStatus.Idle) }
+    }
+
     override fun startScan() {
         if (!permissions.hasMediaAccess()) return
         if (context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return

@@ -57,6 +57,16 @@ class LabelIndexRepositoryImpl @Inject constructor(
         class Read(val entry: DetectedLabel) : Outcome
     }
 
+    override val isRunning: Boolean get() = synchronized(lock) { job?.isActive == true }
+
+    override fun stopScan() {
+        synchronized(lock) {
+            job?.cancel()
+            job = null
+        }
+        _scan.update { it.copy(status = LabelScanStatus.Idle) }
+    }
+
     override fun startScan() {
         if (!permissions.hasMediaAccess()) return
         if (context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return

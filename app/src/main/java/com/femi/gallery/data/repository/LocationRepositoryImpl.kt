@@ -47,6 +47,16 @@ class LocationRepositoryImpl @Inject constructor(
     @Volatile
     private var completedGeneration = -1L
 
+    override val isRunning: Boolean get() = synchronized(lock) { job?.isActive == true }
+
+    override fun stopScan() {
+        synchronized(lock) {
+            job?.cancel()
+            job = null
+        }
+        _scan.update { it.copy(status = LocationScanStatus.Idle) }
+    }
+
     override fun startScan() {
         if (!permissions.hasMediaAccess()) {
             Log.i(TAG, "Not scanning: no access to photos")

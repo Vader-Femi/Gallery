@@ -251,6 +251,10 @@
     <string name="settings_autoplay_videos_summary">Make video start to play automatically as you open am</string>
     <string name="settings_mute_videos">Mute video by default</string>
     <string name="settings_mute_videos_summary">Make video start without sound</string>
+    <string name="settings_background_scan">Make e dey index for background</string>
+    <string name="settings_background_scan_summary">E go dey read text, things, colours and places for your photos after you comot for di app, if battery no low.</string>
+    <string name="settings_scan_charging">Only when charging</string>
+    <string name="settings_scan_charging_summary">E go wait for charger before e index for background.</string>
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

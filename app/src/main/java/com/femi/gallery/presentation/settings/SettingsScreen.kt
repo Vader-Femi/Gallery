@@ -17,9 +17,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Brightness6
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -47,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.femi.gallery.R
+import com.femi.gallery.data.work.BackgroundScans
 import com.femi.gallery.presentation.common.HugeTopAppBar
 
 private data class LanguageOption(
@@ -92,6 +96,8 @@ fun SettingsScreen(
 
     var autoplayEnabled by remember { mutableStateOf(ThemePreferences.getAutoPlayVideos(context)) }
     var muteEnabled by remember { mutableStateOf(ThemePreferences.getMuteVideos(context)) }
+    var backgroundScan by remember { mutableStateOf(ThemePreferences.getBackgroundScan(context)) }
+    var scanOnlyCharging by remember { mutableStateOf(ThemePreferences.getScanOnlyWhileCharging(context)) }
 
     val selectedLanguageName = stringResource(
         languageOptions.find { it.tag == selectedTag }?.nameRes ?: R.string.language_system
@@ -443,6 +449,90 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            // Library scans in the background
+            SettingSwitchCard(
+                icon = Icons.Outlined.Sync,
+                title = stringResource(R.string.settings_background_scan),
+                summary = stringResource(R.string.settings_background_scan_summary),
+                checked = backgroundScan,
+                onCheckedChange = {
+                    backgroundScan = it
+                    ThemePreferences.setBackgroundScan(context, it)
+                    BackgroundScans.update(context, settingsChanged = true)
+                },
+            )
+            if (backgroundScan) {
+                SettingSwitchCard(
+                    icon = Icons.Outlined.BatteryChargingFull,
+                    title = stringResource(R.string.settings_scan_charging),
+                    summary = stringResource(R.string.settings_scan_charging_summary),
+                    checked = scanOnlyCharging,
+                    onCheckedChange = {
+                        scanOnlyCharging = it
+                        ThemePreferences.setScanOnlyWhileCharging(context, it)
+                        BackgroundScans.update(context, settingsChanged = true)
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** A settings card with an icon, a title, a line of explanation and a switch; the whole card is tappable. */
+@Composable
+private fun SettingSwitchCard(
+    icon: ImageVector,
+    title: String,
+    summary: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCheckedChange(!checked) }
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.height(48.dp),
+            ) {
+                Box(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }

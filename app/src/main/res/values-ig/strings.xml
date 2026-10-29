@@ -251,6 +251,10 @@
     <string name="settings_autoplay_videos_summary">Kpọọ vidiyo na-akpaghị aka mgbe emepere ya</string>
     <string name="settings_mute_videos">Gbanyụọ ụda vidiyo na mbụ</string>
     <string name="settings_mute_videos_summary">Maliite ịkpọ vidiyo na-enweghị ụda</string>
+    <string name="settings_background_scan">Gaa n’ihu na-edepụta n’azụ</string>
+    <string name="settings_background_scan_summary">Na-aga n’ihu na-agụ ederede, ihe, agba na ebe foto gị mgbe ị hapụrụ ngwa ahụ, ma batrị adịghị ala.</string>
+    <string name="settings_scan_charging">Naanị mgbe a na-ebu ya</string>
+    <string name="settings_scan_charging_summary">Na-echere ihe nbu tupu ya edepụta n’azụ.</string>
     <string name="theme_system">Ndịdị sistemụ</string>
     <string name="theme_light">Ihe ọkụ</string>
     <string name="theme_dark">Gbara ọchịchịrị</string>

@@ -16,4 +16,10 @@ interface LocationRepository {
 
     /** Photos that have a place, newest first, as known right now. */
     suspend fun locatedMedia(): LocatedMedia
+
+    /** Whether a scan is running right now, including one that is still working out what there is to do. */
+    val isRunning: Boolean
+
+    /** Ends a running scan. What it has read and saved up to its last checkpoint is kept, and the next scan carries on from there. */
+    fun stopScan()
 }

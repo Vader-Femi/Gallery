@@ -62,6 +62,8 @@ dependencies {
     implementation(libs.hilt.android)
     // The index database: scan results and file fingerprints.
     implementation(libs.androidx.room.runtime)
+    // Keeps the library scans going when the app is closed.
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.paging.compose)
     implementation(libs.coil.compose)
