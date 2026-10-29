@@ -199,7 +199,7 @@ fun MenuBottomSheet(
                             label = stringResource(R.string.menu_settings),
                             onClick = { onItemClick(GalleryRoutes.SETTINGS) },
                         )
-                        
+
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
