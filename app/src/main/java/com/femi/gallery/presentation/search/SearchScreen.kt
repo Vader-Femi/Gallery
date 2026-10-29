@@ -144,11 +144,11 @@ fun SearchScreen(
                 when {
                     criteria.isEmpty -> SearchHelp(onSuggestion = viewModel::onQueryChange)
 
-                    !criteria.isEmpty && items.loadState.refresh is LoadState.Loading -> {
+                    items.itemCount == 0 && items.loadState.refresh is LoadState.Loading -> {
                         SearchLoadingIndicator()
                     }
 
-                    items.loadState.refresh is LoadState.NotLoading && items.itemCount == 0 -> {
+                    items.itemCount == 0 && items.loadState.refresh !is LoadState.Loading -> {
                         Text(
                             text = stringResource(R.string.search_no_results),
                             style = MaterialTheme.typography.bodyLarge,
