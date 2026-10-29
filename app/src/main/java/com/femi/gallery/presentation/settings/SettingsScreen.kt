@@ -1,5 +1,10 @@
 package com.femi.gallery.presentation.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +30,7 @@ import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -331,149 +337,154 @@ fun SettingsScreen(
             }
 
             // Expressive Auto-play Setting Card
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            autoplayEnabled = !autoplayEnabled
-                            ThemePreferences.setAutoPlayVideos(context, autoplayEnabled)
-                        }
-                        .padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.height(48.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.PlayArrow,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        }
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_autoplay_videos),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(R.string.settings_autoplay_videos_summary),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = autoplayEnabled,
-                        onCheckedChange = {
-                            autoplayEnabled = it
-                            ThemePreferences.setAutoPlayVideos(context, it)
-                        },
-                    )
-                }
-            }
-
-            // Expressive Mute by Default Setting Card
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            muteEnabled = !muteEnabled
-                            ThemePreferences.setMuteVideos(context, muteEnabled)
-                        }
-                        .padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.height(48.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.VolumeOff,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        }
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_mute_videos),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(R.string.settings_mute_videos_summary),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = muteEnabled,
-                        onCheckedChange = {
-                            muteEnabled = it
-                            ThemePreferences.setMuteVideos(context, it)
-                        },
-                    )
-                }
-            }
-
-            // Library scans in the background
+            // Expressive Auto-play Setting Card
             SettingSwitchCard(
-                icon = Icons.Outlined.Sync,
-                title = stringResource(R.string.settings_background_scan),
-                summary = stringResource(R.string.settings_background_scan_summary),
-                checked = backgroundScan,
+                icon = Icons.Outlined.PlayArrow,
+                title = stringResource(R.string.settings_autoplay_videos),
+                summary = stringResource(R.string.settings_autoplay_videos_summary),
+                checked = autoplayEnabled,
                 onCheckedChange = {
-                    backgroundScan = it
-                    ThemePreferences.setBackgroundScan(context, it)
-                    BackgroundScans.update(context, settingsChanged = true)
+                    autoplayEnabled = it
+                    ThemePreferences.setAutoPlayVideos(context, it)
                 },
             )
-            if (backgroundScan) {
-                SettingSwitchCard(
-                    icon = Icons.Outlined.BatteryChargingFull,
-                    title = stringResource(R.string.settings_scan_charging),
-                    summary = stringResource(R.string.settings_scan_charging_summary),
-                    checked = scanOnlyCharging,
-                    onCheckedChange = {
-                        scanOnlyCharging = it
-                        ThemePreferences.setScanOnlyWhileCharging(context, it)
-                        BackgroundScans.update(context, settingsChanged = true)
-                    },
-                )
+
+            // Expressive Mute by Default Setting Card
+            SettingSwitchCard(
+                icon = Icons.AutoMirrored.Outlined.VolumeOff,
+                title = stringResource(R.string.settings_mute_videos),
+                summary = stringResource(R.string.settings_mute_videos_summary),
+                checked = muteEnabled,
+                onCheckedChange = {
+                    muteEnabled = it
+                    ThemePreferences.setMuteVideos(context, it)
+                },
+            )
+
+            // Library scans in the background
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                backgroundScan = !backgroundScan
+                                ThemePreferences.setBackgroundScan(context, backgroundScan)
+                                BackgroundScans.update(context, settingsChanged = true)
+                            }
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.height(48.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Sync,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_background_scan),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = stringResource(R.string.settings_background_scan_summary),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = backgroundScan,
+                            onCheckedChange = {
+                                backgroundScan = it
+                                ThemePreferences.setBackgroundScan(context, it)
+                                BackgroundScans.update(context, settingsChanged = true)
+                            },
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = backgroundScan,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        Column {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        scanOnlyCharging = !scanOnlyCharging
+                                        ThemePreferences.setScanOnlyWhileCharging(context, scanOnlyCharging)
+                                        BackgroundScans.update(context, settingsChanged = true)
+                                    }
+                                    .padding(20.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.height(48.dp),
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(horizontal = 14.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.BatteryChargingFull,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_scan_charging),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = stringResource(R.string.settings_scan_charging_summary),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = scanOnlyCharging,
+                                    onCheckedChange = {
+                                        scanOnlyCharging = it
+                                        ThemePreferences.setScanOnlyWhileCharging(context, it)
+                                        BackgroundScans.update(context, settingsChanged = true)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
