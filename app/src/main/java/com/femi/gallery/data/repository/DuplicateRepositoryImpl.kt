@@ -24,6 +24,7 @@ class DuplicateRepositoryImpl @Inject constructor(
     override fun scan(): Flow<DuplicateScanState> = channelFlow {
         send(DuplicateScanState.Listing)
         val items = dataSource.loadAllItems()
+        hasher.forgetExcept(items.mapTo(HashSet()) { it.id }) // fingerprints of deleted files are of no use
         val groups = withContext(io) {
             DuplicateFinder(hasher).find(items) { trySend(DuplicateScanState.Comparing(it)) }
         }

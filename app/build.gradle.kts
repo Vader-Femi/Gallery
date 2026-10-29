@@ -5,6 +5,11 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+// Room writes the schema of every database version here; keep the files in version control so migrations can be checked.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
     namespace = "com.femi.gallery"
     compileSdk {
@@ -55,6 +60,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.hilt.android)
+    // The index database: scan results and file fingerprints.
+    implementation(libs.androidx.room.runtime)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.paging.compose)
     implementation(libs.coil.compose)
@@ -70,6 +77,7 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)
     ksp(libs.hilt.compiler)
+    ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

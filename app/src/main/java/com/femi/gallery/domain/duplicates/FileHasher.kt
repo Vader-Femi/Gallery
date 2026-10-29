@@ -12,4 +12,7 @@ interface FileHasher {
 
     /** A fingerprint of every byte of the file: equal fingerprints mean equal files. Null when unreadable. */
     suspend fun fullHash(item: MediaItem): String?
+
+    /** Forgets what was remembered about every file whose id is not in [ids] (the files that no longer exist). */
+    suspend fun forgetExcept(ids: Set<Long>) {}
 }

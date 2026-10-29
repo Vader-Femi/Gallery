@@ -2,6 +2,8 @@ package com.femi.gallery.data.duplicates
 
 import android.content.Context
 import android.net.Uri
+import com.femi.gallery.data.db.HashDao
+import com.femi.gallery.data.db.HashRow
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.duplicates.FileHasher
 import com.femi.gallery.domain.model.MediaItem
@@ -15,30 +17,35 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.security.MessageDigest
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * SHA-256 fingerprints of files read through their content address. Results are kept in memory for as
- * long as the app runs, so searching again after removing some copies does not read everything again.
- * A file is identified by its address, size and date added, so an edited file is read again.
+ * SHA-256 fingerprints of files read through their content address. They are kept in the index
+ * database, so searching again, even after the app was closed, does not read every file again. A
+ * fingerprint is only used while the file still has the size and date added it had when it was made,
+ * so an edited file is read again.
  */
 @Singleton
 class ContentFileHasher @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val io: CoroutineDispatcher,
+    private val dao: HashDao,
 ) : FileHasher {
-
-    private val remembered = ConcurrentHashMap<String, String>()
 
     override suspend fun partialHash(item: MediaItem): String? = hash(item, partial = true)
 
     override suspend fun fullHash(item: MediaItem): String? = hash(item, partial = false)
 
+    override suspend fun forgetExcept(ids: Set<Long>) = withContext(io) {
+        dao.deleteAll(dao.allIds().filter { it !in ids })
+    }
+
     private suspend fun hash(item: MediaItem, partial: Boolean): String? = withContext(io) {
-        val key = "${item.uri}|${item.sizeBytes}|${item.dateAddedMillis}|${if (partial) "p" else "f"}"
-        remembered[key]?.let { return@withContext it }
+        // What is remembered counts only if the file is still the one it was made from.
+        val remembered = dao.get(item.id)?.takeIf { it.size == item.sizeBytes && it.dateAdded == item.dateAddedMillis }
+        (if (partial) remembered?.partialHash else remembered?.fullHash)?.let { return@withContext it }
+
         val digest = MessageDigest.getInstance("SHA-256")
         try {
             val opened = context.contentResolver.openFileDescriptor(Uri.parse(item.uri), "r") ?: return@withContext null
@@ -53,7 +60,15 @@ class ContentFileHasher @Inject constructor(
             return@withContext null
         }
         val result = digest.digest().joinToString("") { "%02x".format(it) }
-        remembered[key] = result
+        dao.upsert(
+            HashRow(
+                id = item.id,
+                size = item.sizeBytes,
+                dateAdded = item.dateAddedMillis,
+                partialHash = if (partial) result else remembered?.partialHash,
+                fullHash = if (partial) remembered?.fullHash else result,
+            ),
+        )
         result
     }
 

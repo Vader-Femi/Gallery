@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12+ backup and device transfer. The Locked folder and the record of where photos were taken must never be uploaded to the cloud. -->
+<!-- Android 12+ backup and device transfer. The Locked folder, the record of where photos were taken, the text read from photos and the index database must never be uploaded to the cloud. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="locked/" />
         <exclude domain="file" path="locations.bin" />
         <exclude domain="file" path="texts.bin" />
+        <exclude domain="file" path="labels.bin" />
+        <exclude domain="file" path="colors.bin" />
+        <exclude domain="database" path="gallery.db" />
+        <exclude domain="database" path="gallery.db-wal" />
+        <exclude domain="database" path="gallery.db-shm" />
     </cloud-backup>
 </data-extraction-rules>
