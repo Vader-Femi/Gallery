@@ -28,9 +28,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +49,7 @@ fun MenuBottomSheet(
     onItemClick: (route: String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -166,27 +167,27 @@ fun MenuBottomSheet(
                         )
                         ExpressivePillButton(
                             modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.Lock,
-                            label = stringResource(R.string.menu_locked),
-                            onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.LOCKED)) },
+                            icon = Icons.Outlined.ContentCopy,
+                            label = stringResource(R.string.menu_duplicates),
+                            onClick = { onItemClick(GalleryRoutes.DUPLICATES) },
                         )
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        ExpressivePillButton(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.Lock,
+                            label = stringResource(R.string.menu_locked),
+                            onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.LOCKED)) },
+                        )
                         ExpressivePillButton(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Delete,
                             label = stringResource(R.string.menu_recycle_bin),
                             onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.TRASH)) },
                         )
-                        ExpressivePillButton(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.Settings,
-                            label = stringResource(R.string.menu_settings),
-                            onClick = { onItemClick(GalleryRoutes.SETTINGS) },
-                        )
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -194,10 +195,11 @@ fun MenuBottomSheet(
                     ) {
                         ExpressivePillButton(
                             modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.ContentCopy,
-                            label = stringResource(R.string.menu_duplicates),
-                            onClick = { onItemClick(GalleryRoutes.DUPLICATES) },
+                            icon = Icons.Outlined.Settings,
+                            label = stringResource(R.string.menu_settings),
+                            onClick = { onItemClick(GalleryRoutes.SETTINGS) },
                         )
+                        
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
