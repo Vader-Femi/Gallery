@@ -90,6 +90,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.ui.PlayerView
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems

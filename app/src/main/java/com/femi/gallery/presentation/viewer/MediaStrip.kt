@@ -140,14 +140,18 @@ internal fun MediaStrip(
             .collectLatest { pagerState.scrollToPage(it) }
     }
 
-    // Swiping the photos: the strip follows the current page as it changes.
+    // Swiping the photos: the strip follows the current page as it changes. Each run takes a number, and only
+    // the latest run clears [followingPager] when it ends, so a run that was cancelled by a newer page cannot
+    // clear the flag the newer run has just set (which would make the strip's own movement look like a finger).
+    val followRun = remember { IntArray(1) }
     LaunchedEffect(pagerState.currentPage) {
-        if (listState.isScrollInProgress) return@LaunchedEffect
+        if (listState.isScrollInProgress && !followingPager) return@LaunchedEffect // a finger is on the strip
+        val run = ++followRun[0]
         followingPager = true
         try {
             listState.animateScrollToItem(pagerState.currentPage)
         } finally {
-            followingPager = false
+            if (followRun[0] == run) followingPager = false
         }
     }
 
@@ -179,22 +183,19 @@ internal fun MediaStrip(
         val startPadding = ((maxWidth - firstWidth) / 2).coerceAtLeast(minSidePadding)
         val endPadding = ((maxWidth - lastWidth) / 2).coerceAtLeast(minSidePadding)
 
-        // Continuous scrolling of filmstrip while video plays in expanded mode
-        LaunchedEffect(listState, expandedPageIndex, isDragged, currentPositionMs?.invoke()) {
-            if (expandedPageIndex == null || isDragged || followingPager) return@LaunchedEffect
+        // While an expanded video plays, the filmstrip slides under the fixed cursor. The position is read in
+        // a flow, not while composing: reading it here would recompose this whole strip ten times a second.
+        LaunchedEffect(listState, expandedPageIndex, isDragged) {
             val expIdx = expandedPageIndex ?: return@LaunchedEffect
-            if (expIdx == pagerState.currentPage) {
-                val curMs = currentPositionMs?.invoke() ?: 0L
+            if (isDragged) return@LaunchedEffect
+            snapshotFlow { currentPositionMs?.invoke() ?: 0L }.collect { curMs ->
+                if (followingPager || expIdx != pagerState.currentPage) return@collect
                 val dur = durationMs?.invoke() ?: 0L
                 if (dur > 0L) {
                     val ratio = (curMs.toFloat() / dur).coerceIn(0f, 1f)
-                    val expandedWDp = MediaStripMath.calculateExpandedWidth(dur).dp
-                    val expandedWPx = with(density) { expandedWDp.toPx() }
-
-                    // Fixed: Since startPadding aligns the start edge perfectly with the center,
-                    // we just shift by the ratio of the total width.
-                    val targetOffsetPx = (ratio * expandedWPx).toInt()
-                    listState.scrollToItem(expIdx, targetOffsetPx)
+                    val expandedWPx = with(density) { MediaStripMath.calculateExpandedWidth(dur).dp.toPx() }
+                    // startPadding puts the start edge at the centre, so the playhead is the ratio of the width along.
+                    listState.scrollToItem(expIdx, (ratio * expandedWPx).toInt())
                 }
             }
         }
@@ -323,7 +324,7 @@ private fun StripItem(
     ) {
         if (item != null) {
             if (isVideo && isExpanded) {
-                val frameCount = (targetWidth.value / 36f).toInt().coerceAtLeast(3)
+                val frameCount = MediaStripMath.filmFrameCount(targetWidth.value)
                 Row(
                     modifier = Modifier
                         .fillMaxSize()

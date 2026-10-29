@@ -224,6 +224,16 @@
     <string name="menu_locked">An kulle</string>
     <string name="menu_recycle_bin">Kwandon shara</string>
     <string name="menu_settings">Saituna</string>
+    <string name="menu_duplicates">Kwafi iri ɗaya</string>
+    <string name="duplicates_title">Kwafi iri ɗaya</string>
+    <string name="duplicates_sampling">Ana kwatanta fayiloli (%1$d daga %2$d)</string>
+    <string name="duplicates_verifying">Ana tabbatar da daidaituwa (%1$d daga %2$d)</string>
+    <string name="duplicates_none">Ba a sami kwafi iri ɗaya ba</string>
+    <string name="duplicates_summary">Rukuni %1$d · za a iya ƙara sarari %2$s</string>
+    <string name="duplicates_hint">Taɓa hoto don zaɓar wanda za a ajiye. Sauran kwafin za su tafi kwandon shara kuma ana iya dawo da su.</string>
+    <string name="duplicates_copies">Kwafi %1$d · %2$s kowanne</string>
+    <string name="duplicates_keep">Ajiye</string>
+    <string name="duplicates_remove">Mayar da kwafi %1$d zuwa kwandon shara</string>
     <string name="menu_settings_coming_soon">Saitunan suna zuwa nan ba da jimawa ba</string>
 
     <string name="settings_language">Harshe</string>

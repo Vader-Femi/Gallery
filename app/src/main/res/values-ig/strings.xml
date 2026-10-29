@@ -224,6 +224,16 @@
     <string name="menu_locked">E kpochiri</string>
     <string name="menu_recycle_bin">Igbe mkpofu</string>
     <string name="menu_settings">Ntọala</string>
+    <string name="menu_duplicates">Ihe myirịta</string>
+    <string name="duplicates_title">Ihe myirịta</string>
+    <string name="duplicates_sampling">Na-eji faịlụ tụnyere (%1$d n’ime %2$d)</string>
+    <string name="duplicates_verifying">Na-ekwenye ihe dabara (%1$d n’ime %2$d)</string>
+    <string name="duplicates_none">Achọtaghị ihe myirịta</string>
+    <string name="duplicates_summary">Otu %1$d · enwere ike ịhapụ %2$s</string>
+    <string name="duplicates_hint">Pịa foto iji họrọ nke ị ga-edebe. Ndị ọzọ ga-aga n’ebe mkpofu ma enwere ike weghachite ha.</string>
+    <string name="duplicates_copies">Mbipụta %1$d · %2$s nke ọ bụla</string>
+    <string name="duplicates_keep">Debe</string>
+    <string name="duplicates_remove">Bufee mbipụta %1$d gaa n’ebe mkpofu</string>
     <string name="menu_settings_coming_soon">Ntọala na-abịa n\'oge adịghị anya</string>
 
     <string name="settings_language">Asụsụ</string>

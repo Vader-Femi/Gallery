@@ -224,6 +224,16 @@
     <string name="menu_locked">Tìpa</string>
     <string name="menu_recycle_bin">Àpótí ìdọ̀tí</string>
     <string name="menu_settings">Ètò</string>
+    <string name="menu_duplicates">Àwọn ẹ̀dà kan náà</string>
+    <string name="duplicates_title">Àwọn ẹ̀dà kan náà</string>
+    <string name="duplicates_sampling">À ń fi àwọn fáìlì wéra (%1$d nínú %2$d)</string>
+    <string name="duplicates_verifying">À ń jẹ́rìí sí àwọn tó jọra (%1$d nínú %2$d)</string>
+    <string name="duplicates_none">A kò rí ẹ̀dà kan náà</string>
+    <string name="duplicates_summary">Ẹgbẹ́ %1$d · a lè gba %2$s sílẹ̀</string>
+    <string name="duplicates_hint">Tẹ fọ́tò láti yan èyí tí o fẹ́ pamọ́. Àwọn ẹ̀dà yòókù yóò lọ sínú apẹ̀rẹ̀ ìdọ̀tí, o sì lè dá wọn padà.</string>
+    <string name="duplicates_copies">Ẹ̀dà %1$d · %2$s kọ̀ọ̀kan</string>
+    <string name="duplicates_keep">Pamọ́</string>
+    <string name="duplicates_remove">Gbé ẹ̀dà %1$d lọ sínú apẹ̀rẹ̀ ìdọ̀tí</string>
     <string name="menu_settings_coming_soon">Ètò yóò dé láìpẹ́</string>
 
     <string name="settings_language">Èdè</string>

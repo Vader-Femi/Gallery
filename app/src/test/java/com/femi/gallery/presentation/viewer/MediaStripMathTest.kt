@@ -80,4 +80,12 @@ class MediaStripMathTest {
         assertTrue(shortVid < mediumVid)
         assertTrue(mediumVid < longVid)
     }
+
+    @Test
+    fun filmFrameCountFollowsTheWidthButIsCapped() {
+        assertEquals(3, MediaStripMath.filmFrameCount(20f)) // at least a few tiles
+        assertEquals(10, MediaStripMath.filmFrameCount(360f)) // one per 36 dp
+        assertEquals(MediaStripMath.MAX_FILM_FRAMES, MediaStripMath.filmFrameCount(8000f)) // a long video does not get 200+ images
+        assertTrue(MediaStripMath.filmFrameCount(900f) <= MediaStripMath.filmFrameCount(1200f))
+    }
 }

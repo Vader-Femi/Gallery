@@ -46,4 +46,15 @@ internal object MediaStripMath {
         val seconds = durationMs / 1000f
         return (100f + seconds * 6f).coerceIn(120f, 8000f)
     }
+
+    /**
+     * How many picture tiles to lay along an expanded filmstrip [widthDp] wide. About one per 36 dp, but
+     * never more than [MAX_FILM_FRAMES]: every tile is a composable with an image, and a long video's strip
+     * can be thousands of dp wide, so the tiles get wider instead of more numerous.
+     */
+    fun filmFrameCount(widthDp: Float): Int = (widthDp / FILM_FRAME_DP).toInt().coerceIn(MIN_FILM_FRAMES, MAX_FILM_FRAMES)
+
+    private const val FILM_FRAME_DP = 36f
+    private const val MIN_FILM_FRAMES = 3
+    const val MAX_FILM_FRAMES = 40
 }

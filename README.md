@@ -59,6 +59,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Story title and cover**: rename a story and pick any photo or video as its cover from the story's menu (stored in `story_edits.bin`, private to the app). The edit follows the story when a trip grows by a few days; an "On this day" memory never takes over the title of a longer trip
 - [x] **Videos in stories**: a video count on the story card, and All / Pictures / Videos chips inside a story (shown when it has videos; the viewer opens exactly what the grid shows)
 - [x] **Slideshow from any album** (play button in the album's top bar; not offered for the recycle bin or the Locked folder), plus **shuffle** and **speed** (slow, normal, fast) buttons that appear while the slideshow is paused. Shuffle covers the whole album (a loading indicator shows while it is prepared) and keeps its order until you turn it off and on again
+- [x] **Duplicate finder** (Menu > Duplicates): finds photos and videos that are byte-for-byte the same, reading as little as possible (same size first, then three small pieces of each file, then the whole file only for the survivors). In each group the copy to keep is suggested (favorite, then a file under DCIM, then the earliest, then the shorter name); tap another to change it, and one button moves all other copies to the recycle bin through the normal system confirmation
 - [x] Cards with a cover from the middle of the event, a date title (`Sat, Oct 3`, `Oct 30 – Nov 2`, `Dec 30, 2025 – Jan 2, 2026`) and the number of photos and videos
 - [x] A story opens as a normal timeline (zoom, fast scroller, selection, viewer), covering exactly the days of the story
 - [x] **Slideshow** of a story's photos: tap to pause, swipe to skip, X to close
@@ -108,7 +109,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 ### Still to do
 
 **Next up**
-- [ ] **Map extras**: photo locations for videos, a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
+- [ ] **Map extras**: a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
 - [ ] **Slideshow music** (cannot be tested without a device), remembering the shuffle and speed choice between launches, a progress bar, videos in slideshows
 - [ ] **Editor extras**: draw, text and stickers, and offer to replace the original (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo in your own words** ("a dog running on a beach"): needs a CLIP-style image/text model (about 100 MB) that is not in the app yet; the plumbing (`ImageEmbedder`, `clip.bin`, cosine search) exists but is switched off, so nothing is scanned and no search is affected
@@ -116,7 +117,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Later**
 - [ ] More on-device ML: copy text from a photo, **people / face groups**, auto scene albums
 - [ ] Video editor: trim, speed and basic effects
-- [ ] Duplicate finder (perceptual hashing)
+- [ ] Find **similar** photos (not byte-identical: bursts, re-saved or resized copies) with perceptual hashing; exact duplicates are done
 - [ ] Motion photo playback, set as wallpaper
 - [ ] A local **Room index** — speeds up opening the app on huge libraries and will power search, stories and ML
 - [ ] Tiled full-resolution zoom for very large photos
@@ -125,6 +126,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
+- [ ] **Videos on the map**: read the location of videos (`MediaMetadataRetriever`, the ISO 6709 tag) and show them in the bubbles next to photos
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.
@@ -351,6 +353,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 55 | Smoother viewer video and strip | One reusable `ExoPlayer` for the whole viewer visit, prepared only after the pager has rested on a video for 250 ms (before, one was built and released for every video the pager passed, and a second one was built by the video page itself before the first was ready). The position clock only runs while playing and is read where it is shown, so it no longer recomposes the whole bottom area every 100 ms. Media strip items no longer change key when they load, and only the two items whose selection changes recompose when the page changes |
 | 56 | Full video player | New `FullVideoPlayer`: a full-screen player with the standard Media3 controls and sound, used for videos opened from other apps ("Open with"; before, that screen reused the viewer's video page, which has no controls, starts paused and needs a thumbnail and a known size, none of which an outside file has) and for the viewer's new **Play** action, which replaces the expanded seek bar button and carries on from the current position. Keeps its position across rotation and pauses when you leave the app. Tapping the selected video in the media strip still opens the expanded seek bar |
 | 57 | Map fling and animated zoom | The map coasts after a throw (velocity from a `VelocityTracker`, exponential decay; touching the map stops it; no throw after a pinch), double-tap and the new + / − buttons zoom smoothly about a point, and "show all" flies there (`MapViewport.between`, unit tested). `MapMotion` runs one movement at a time and always changes the viewport from its latest value |
+| 58 | Duplicate finder, strip review | New **Duplicates** screen (Menu). Pure `DuplicateFinder` (size, then pieces, then whole file; unreadable files left out; progress per phase) with a keep rule, 19 tests; `ContentFileHasher` (SHA-256, kept in memory so searching again is fast); trashing reuses `MediaSelectionController` and `WriteRequestHandler`. Review of the new video strip: the playback clock is read in a flow instead of while composing (it recomposed the strip every 100 ms), the expanded filmstrip has at most 40 tiles (it could compose 200+ images), following the pager is protected from a cancelled run clearing the flag of a newer one, and the viewer's player seeks to the nearest key frame so scrubbing is smooth |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

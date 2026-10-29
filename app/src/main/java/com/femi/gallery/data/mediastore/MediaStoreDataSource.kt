@@ -91,6 +91,16 @@ class MediaStoreDataSource @Inject constructor(
         if (area == null) order else order.retainIds(locationIndex.current().idsIn(area))
     }
 
+    /** Every photo and video in the library (not the recycle bin), in no particular order; used to look for duplicates. */
+    suspend fun loadAllItems(): List<MediaItem> = withContext(io) {
+        resolver.query(collectionUri, PROJECTION, queryArgs(), null)?.use { cursor ->
+            val columns = Columns(cursor)
+            val items = ArrayList<MediaItem>(cursor.count)
+            while (cursor.moveToNext()) items.add(cursor.toMediaItem(columns))
+            items
+        }.orEmpty()
+    }
+
     /** Id and last-modified time of every photo (not videos): what the location scan compares against. */
     suspend fun loadImageStamps(): MediaStamps = withContext(io) {
         val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATE_MODIFIED)

@@ -27,6 +27,7 @@ import com.femi.gallery.presentation.albums.AlbumScreen
 import com.femi.gallery.presentation.albums.AlbumViewModel
 import com.femi.gallery.presentation.albums.AlbumsScreen
 import com.femi.gallery.presentation.common.LocalAnimatedVisibilityScope
+import com.femi.gallery.presentation.duplicates.DuplicatesScreen
 import com.femi.gallery.presentation.editor.EditorScreen
 import com.femi.gallery.presentation.editor.EditorViewModel
 import com.femi.gallery.presentation.pictures.PicturesScreen
@@ -316,6 +317,9 @@ fun GalleryNavHost(
             arguments = listOf(navArgument(EditorViewModel.URI_ARG) { type = NavType.StringType }),
         ) {
             EditorScreen(onClose = { navController.popBackStack() })
+        }
+        composable(GalleryRoutes.DUPLICATES) {
+            DuplicatesScreen(onBack = { navController.popBackStack() })
         }
         composable(GalleryRoutes.SETTINGS) {
             SettingsScreen(
