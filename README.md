@@ -125,7 +125,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Find **similar** photos (not byte-identical: bursts, re-saved or resized copies) with perceptual hashing; exact duplicates are done
 - [ ] Motion photo playback, set as wallpaper
 - [ ] Tiled full-resolution zoom for very large photos
-- [ ] Remember zoom level and a small settings screen (DataStore); sort options; hide albums; delete empty albums
 - [ ] Small settings screen (DataStore); sort options; hide albums; delete empty albums *(zoom level remembered)*
 - [ ] Select a whole day by tapping its header; drag-to-select
 - [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
