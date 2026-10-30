@@ -256,9 +256,16 @@ fun TimelineGrid(
                 ) { gridIndex ->
                     if (layout.isHeader(gridIndex)) {
                         val section = layout.sections[layout.sectionIndexAt(gridIndex)]
+                        val allSectionSelected = if (selectionActive && section.count > 0) {
+                            (section.startIndex until section.startIndex + section.count).all { idx ->
+                                val id = items.peekOrNull(idx)?.id
+                                id != null && id in selectedIds
+                            }
+                        } else false
                         DayHeader(
                             text = labeler.headerLabel(section.epochDay, zoom.granularity),
                             selectionActive = selectionActive,
+                            allSelected = allSectionSelected,
                             onClick = if (selectionActive && onHeaderClick != null) {
                                 { onHeaderClick(section) }
                             } else null,
@@ -302,23 +309,32 @@ fun TimelineGrid(
 private fun DayHeader(
     text: String,
     selectionActive: Boolean = false,
+    allSelected: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = if (selectionActive && onClick != null) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        },
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .then(
                 if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    )
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleSmall,
+            color = if (selectionActive && onClick != null) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+        )
+        if (selectionActive && onClick != null) {
+            SelectionIndicator(selected = allSelected)
+        }
+    }
 }
 
 @Composable
