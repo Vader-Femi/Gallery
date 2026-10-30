@@ -279,4 +279,5 @@
     <string name="notification_channel_background_scan">Library Indexing</string>
     <string name="notification_background_scan_title">Indexing library</string>
     <string name="notification_background_scan_text">Indexing photos and videos for search</string>
+    <string name="notification_background_scan_progress">Indexing: %1$d of %2$d photos</string>
 </resources>

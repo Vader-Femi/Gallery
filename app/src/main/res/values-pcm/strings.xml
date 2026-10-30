@@ -279,4 +279,5 @@
     <string name="notification_channel_background_scan">Library Indexing</string>
     <string name="notification_background_scan_title">Dey index library</string>
     <string name="notification_background_scan_text">Dey index photos and videos for search</string>
+    <string name="notification_background_scan_progress">We dey index: %1$d for %2$d photos</string>
 </resources>
