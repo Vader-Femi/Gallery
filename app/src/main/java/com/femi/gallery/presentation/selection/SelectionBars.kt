@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -60,87 +59,76 @@ class SelectionAction(
     val onClick: () -> Unit,
 )
 
-/** Top "N selected" bar and bottom action bar shown while selecting photos with Expressive M3 styling and ease-in/ease-out animations. */
+/** Top selection header bar showing "Cancel", count selected, and "Select all". Designed to sit nicely in a Scaffold topBar or as an overlay. */
 @Composable
-fun BoxScope.SelectionBars(
-    active: Boolean = true,
+fun SelectionTopBar(
     count: Int,
-    actions: List<SelectionAction>,
     onClose: () -> Unit,
     onSelectAll: () -> Unit,
-    /** Less common actions, shown in a "More" menu at the end of the bar. */
-    moreActions: List<SelectionAction> = emptyList(),
+    modifier: Modifier = Modifier,
 ) {
-    AnimatedVisibility(
-        visible = active,
-        enter = slideInVertically(
-            initialOffsetY = { -it },
-            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-        ) + fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)),
-        exit = slideOutVertically(
-            targetOffsetY = { -it },
-            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
-        ) + fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)),
-        modifier = Modifier.align(Alignment.TopCenter),
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row (
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ){
-            Box(
+                .clip(RoundedCornerShape(32.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(horizontal = 3.dp)
+                    .wrapContentSize(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-
-                if (count != 0)
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 3.dp)
-                        .wrapContentSize(),
-                    verticalAlignment = Alignment.CenterVertically,
-
-                ) {
-                    IconButton(onClick = onClose) {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = stringResource(R.string.selection_cancel)
-                        )
-                    }
-
-                    Text(
-                        text = stringResource(
-                            R.string.selection_count,
-                            count
-                        ),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                IconButton(onClick = onClose) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.selection_cancel)
                     )
-
-                    Spacer(modifier = Modifier.width(12.dp))
                 }
+
+                Text(
+                    text = if (count == 0) "" else stringResource(R.string.selection_count, count),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
             }
+        }
 
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            ) {
-                TextButton(onClick = onSelectAll) {
-                    Text(
-                        stringResource(R.string.selection_select_all),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(32.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            TextButton(onClick = onSelectAll) {
+                Text(
+                    stringResource(R.string.selection_select_all),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
+}
 
+/** Bottom action bar shown while selecting photos with Expressive M3 styling and ease-in/ease-out animations. */
+@Composable
+fun BoxScope.SelectionBottomBar(
+    active: Boolean = true,
+    count: Int,
+    actions: List<SelectionAction>,
+    moreActions: List<SelectionAction> = emptyList(),
+    modifier: Modifier = Modifier,
+) {
     AnimatedVisibility(
         visible = active,
         enter = slideInVertically(
@@ -151,7 +139,7 @@ fun BoxScope.SelectionBars(
             targetOffsetY = { it },
             animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
         ) + fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)),
-        modifier = Modifier.align(Alignment.BottomCenter),
+        modifier = modifier.align(Alignment.BottomCenter),
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
@@ -178,6 +166,44 @@ fun BoxScope.SelectionBars(
             }
         }
     }
+}
+
+/** Top "N selected" bar and bottom action bar shown while selecting photos with Expressive M3 styling and ease-in/ease-out animations. */
+@Composable
+fun BoxScope.SelectionBars(
+    active: Boolean = true,
+    count: Int,
+    actions: List<SelectionAction>,
+    onClose: () -> Unit,
+    onSelectAll: () -> Unit,
+    /** Less common actions, shown in a "More" menu at the end of the bar. */
+    moreActions: List<SelectionAction> = emptyList(),
+) {
+    AnimatedVisibility(
+        visible = active,
+        enter = slideInVertically(
+            initialOffsetY = { -it },
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)),
+        exit = slideOutVertically(
+            targetOffsetY = { -it },
+            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
+        ) + fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)),
+        modifier = Modifier.align(Alignment.TopCenter),
+    ) {
+        SelectionTopBar(
+            count = count,
+            onClose = onClose,
+            onSelectAll = onSelectAll,
+        )
+    }
+
+    SelectionBottomBar(
+        active = active,
+        count = count,
+        actions = actions,
+        moreActions = moreActions,
+    )
 }
 
 @Composable

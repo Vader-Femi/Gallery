@@ -101,6 +101,19 @@ class MediaSelectionController(
 
     fun toggle(ref: MediaRef) = selection.toggle(ref)
 
+    /** Adds [refs] to the current selection (enters selection mode if needed). */
+    fun addAll(refs: List<MediaRef>) = selection.addAll(refs)
+
+    /** Sets the drag-selected range during drag selection, preserving [baseSelected]. */
+    fun setDragRange(
+        baseSelected: Map<Long, MediaRef>,
+        rangeRefs: List<MediaRef>,
+        deselect: Boolean = false
+    ) = selection.setDragRange(baseSelected, rangeRefs, deselect)
+
+    /** Removes all items whose ids are in [ids] from the selection. */
+    fun removeAll(ids: Set<Long>) = selection.removeAll(ids)
+
     fun clear() = selection.clear()
 
     fun selectAll() {
