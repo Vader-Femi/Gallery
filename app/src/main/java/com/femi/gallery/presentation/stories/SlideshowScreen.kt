@@ -1,5 +1,8 @@
 package com.femi.gallery.presentation.stories
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -7,10 +10,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +30,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -58,7 +63,7 @@ import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.ImmersiveMode
 import com.femi.gallery.presentation.settings.ThemePreferences
-import kotlinx.coroutines.delay
+
 import kotlin.random.Random
 
 /**
@@ -210,8 +215,7 @@ fun SlideshowScreen(
             onClick = onClose,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .systemBarsPadding()
-                .padding(4.dp),
+                .padding(top = 8.dp, start = 8.dp),
         ) {
             Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.slideshow_close), tint = Color.White)
         }
@@ -231,29 +235,51 @@ private fun SlidePager(
 ) {
     val context = LocalContext.current
     val pagerState = rememberPagerState { pageCount }
+    val progress = remember { Animatable(0f) }
 
-    HorizontalPager(
-        state = pagerState,
-        modifier = Modifier.fillMaxSize(),
-        beyondViewportPageCount = 1,
-    ) { page ->
-        val uri = uriAt(page)
-        if (uri != null) {
-            AsyncImage(
-                model = ImageRequest.Builder(context).data(uri).crossfade(true).build(),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
+    // Advance after each slide has been shown for a while, with animated progress indicator.
+    LaunchedEffect(playing, pagerState.settledPage, pageCount, speed) {
+        if (playing && pageCount > 1) {
+            progress.snapTo(0f)
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = speed.millis.toInt(),
+                    easing = LinearEasing
+                )
             )
+            val next = SlideshowOrder.pageAfter(pagerState.settledPage, pageCount)
+            if (next > pagerState.settledPage) pagerState.animateScrollToPage(next) else pagerState.scrollToPage(next)
+        } else {
+            progress.stop()
         }
     }
 
-    // Advance after each slide has been shown for a while; restarts whenever the page or the speed changes.
-    LaunchedEffect(playing, pagerState.settledPage, pageCount, speed) {
-        if (playing && pageCount > 1) {
-            delay(speed.millis)
-            val next = SlideshowOrder.pageAfter(pagerState.settledPage, pageCount)
-            if (next > pagerState.settledPage) pagerState.animateScrollToPage(next) else pagerState.scrollToPage(next)
+    Box(modifier = Modifier.fillMaxSize()) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 1,
+        ) { page ->
+            val uri = uriAt(page)
+            if (uri != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context).data(uri).crossfade(true).build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        if (pageCount > 1) {
+            LinearWavyProgressIndicator(
+                progress = { progress.value },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .align(Alignment.TopCenter),
+            )
         }
     }
 }
