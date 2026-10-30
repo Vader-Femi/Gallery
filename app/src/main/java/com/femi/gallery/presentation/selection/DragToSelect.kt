@@ -8,9 +8,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.toIntRect
@@ -19,6 +21,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * A pointer-input modifier that implements drag-to-select across grid cells.
@@ -38,51 +41,53 @@ fun Modifier.dragToSelect(
     onDragSelectRange: (startIndex: Int, endIndex: Int) -> Unit,
 ): Modifier = composed {
     val coroutineScope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
-    Modifier.pointerInput(gridState) {
+    Modifier.pointerInput(Unit) {
         val longPressTimeout = viewConfiguration.longPressTimeoutMillis
         val touchSlop = viewConfiguration.touchSlop
         val autoScrollThresholdPx = 60.dp.toPx()
 
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+
+            val initialMediaIndex = mediaIndexAtOffsetOrEdge(gridState, down.position, isHeader, mediaIndexAt)
+            if (initialMediaIndex < 0) {
+                return@awaitEachGesture
+            }
+
             var isLongPressed = false
-            var initialMediaIndex = -1
-            var currentMediaIndex = -1
-            var currentPointerPosition = down.position
 
-            var autoScrollJob: Job? = null
+            // Wait for long-press duration using withTimeoutOrNull so timer triggers even if finger is still
+            val longPressResult = withTimeoutOrNull(longPressTimeout) {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
 
-            val startUptime = down.uptimeMillis
-
-            while (true) {
-                val event = awaitPointerEvent(PointerEventPass.Initial)
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-
-                if (change.changedToUp()) {
-                    break
-                }
-
-                val distance = (change.position - down.position).getDistance()
-                if (distance > touchSlop) {
-                    break
-                }
-
-                if (change.uptimeMillis - startUptime >= longPressTimeout) {
-                    val initialGridIndex = gridIndexAtOffset(gridState, down.position)
-                    if (initialGridIndex >= 0 && !isHeader(initialGridIndex)) {
-                        val mediaIdx = mediaIndexAt(initialGridIndex)
-                        isLongPressed = true
-                        initialMediaIndex = mediaIdx
-                        currentMediaIndex = mediaIdx
-                        onLongPressStart(mediaIdx)
+                    if (change.changedToUp() || !change.pressed) {
+                        break
                     }
-                    break
+
+                    val distance = (change.position - down.position).getDistance()
+                    if (distance > touchSlop) {
+                        break
+                    }
                 }
             }
 
+            // If withTimeoutOrNull returned null, timeout expired without finger up or move past touch slop -> Long press detected!
+            if (longPressResult == null) {
+                isLongPressed = true
+            }
+
             if (isLongPressed) {
-                // Auto-scroll loop when finger drags near top/bottom edges
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onLongPressStart(initialMediaIndex)
+
+                var currentMediaIndex = initialMediaIndex
+                var currentPointerPosition = down.position
+                var autoScrollJob: Job? = null
+
                 fun updateAutoScroll(position: Offset) {
                     val viewportHeight = gridState.layoutInfo.viewportSize.height.toFloat()
                     val scrollSpeed: Float = when {
@@ -102,13 +107,10 @@ fun Modifier.dragToSelect(
                             autoScrollJob = coroutineScope.launch {
                                 while (isActive) {
                                     gridState.scrollBy(scrollSpeed)
-                                    val gridIndex = gridIndexAtOffset(gridState, currentPointerPosition)
-                                    if (gridIndex >= 0 && !isHeader(gridIndex)) {
-                                        val mediaIdx = mediaIndexAt(gridIndex)
-                                        if (mediaIdx != currentMediaIndex) {
-                                            currentMediaIndex = mediaIdx
-                                            onDragSelectRange(initialMediaIndex, mediaIdx)
-                                        }
+                                    val mediaIdx = mediaIndexAtOffsetOrEdge(gridState, currentPointerPosition, isHeader, mediaIndexAt)
+                                    if (mediaIdx >= 0 && mediaIdx != currentMediaIndex) {
+                                        currentMediaIndex = mediaIdx
+                                        onDragSelectRange(initialMediaIndex, mediaIdx)
                                     }
                                     delay(16.milliseconds) // ~60 FPS
                                 }
@@ -123,8 +125,11 @@ fun Modifier.dragToSelect(
                 try {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (change.changedToUp()) {
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                            ?: event.changes.firstOrNull { it.pressed }
+                            ?: break
+
+                        if (change.changedToUp() || !change.pressed) {
                             break
                         }
 
@@ -132,13 +137,10 @@ fun Modifier.dragToSelect(
                         currentPointerPosition = change.position
                         updateAutoScroll(change.position)
 
-                        val gridIndex = gridIndexAtOffset(gridState, change.position)
-                        if (gridIndex >= 0 && !isHeader(gridIndex)) {
-                            val mediaIdx = mediaIndexAt(gridIndex)
-                            if (mediaIdx != currentMediaIndex) {
-                                currentMediaIndex = mediaIdx
-                                onDragSelectRange(initialMediaIndex, mediaIdx)
-                            }
+                        val mediaIdx = mediaIndexAtOffsetOrEdge(gridState, change.position, isHeader, mediaIndexAt)
+                        if (mediaIdx >= 0 && mediaIdx != currentMediaIndex) {
+                            currentMediaIndex = mediaIdx
+                            onDragSelectRange(initialMediaIndex, mediaIdx)
                         }
                     }
                 } finally {
@@ -150,12 +152,48 @@ fun Modifier.dragToSelect(
 }
 
 /**
- * Finds the grid index of the visible item at [offset] relative to the grid's top-left,
- * or -1 if no item is hit.
+ * Finds the media index of the visible item at [offset].
+ * If [offset] is above or below the visible grid items (e.g. during auto-scroll),
+ * resolves to the first or last visible media item index.
  */
-private fun gridIndexAtOffset(gridState: LazyGridState, offset: Offset): Int {
+private fun mediaIndexAtOffsetOrEdge(
+    gridState: LazyGridState,
+    offset: Offset,
+    isHeader: (gridIndex: Int) -> Boolean,
+    mediaIndexAt: (gridIndex: Int) -> Int,
+): Int {
+    val visibleItems = gridState.layoutInfo.visibleItemsInfo
+    if (visibleItems.isEmpty()) return -1
+
     val rounded = offset.round()
-    return gridState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+    val hitItem = visibleItems.firstOrNull { item ->
         item.size.toIntRect().contains(rounded - item.offset)
-    }?.index ?: -1
+    }
+
+    if (hitItem != null) {
+        if (!isHeader(hitItem.index)) {
+            return mediaIndexAt(hitItem.index)
+        }
+        return -1
+    }
+
+    // Fallback for dragging slightly above or below visible bounds during auto-scroll
+    val minTop = visibleItems.minOf { it.offset.y }
+    val maxBottom = visibleItems.maxOf { it.offset.y + it.size.height }
+
+    if (rounded.y < minTop) {
+        val firstMediaItem = visibleItems.firstOrNull { !isHeader(it.index) }
+        if (firstMediaItem != null) {
+            return mediaIndexAt(firstMediaItem.index)
+        }
+    } else if (rounded.y > maxBottom) {
+        val lastMediaItem = visibleItems.lastOrNull { !isHeader(it.index) }
+        if (lastMediaItem != null) {
+            return mediaIndexAt(lastMediaItem.index)
+        }
+    }
+
+    return -1
 }
+
+

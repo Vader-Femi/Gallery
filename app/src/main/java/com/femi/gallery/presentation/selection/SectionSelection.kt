@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.selection
 
+import com.femi.gallery.domain.model.MediaRef
 import androidx.paging.compose.LazyPagingItems
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.TimelineSection
@@ -53,15 +54,18 @@ private inline fun toggleSectionSelection(
 }
 
 /**
- * Selects all loaded media items in the index range between [startIndex] and [endIndex] inclusive.
+ * Selects all loaded media items in the index range between [startIndex] and [endIndex] inclusive,
+ * preserving any previously selected items in [baseSelected] while dynamically updating the active drag range.
  */
 fun selectMediaRange(
     startIndex: Int,
     endIndex: Int,
     items: LazyPagingItems<MediaItem>,
     controller: MediaSelectionController,
+    baseSelected: Map<Long, MediaRef> = emptyMap(),
 ) {
-    selectMediaRange(startIndex, endIndex, items, controller::addAll)
+    val refs = getMediaRangeRefs(startIndex, endIndex, items)
+    controller.setDragRange(baseSelected, refs)
 }
 
 /**
@@ -72,21 +76,19 @@ fun selectMediaRange(
     endIndex: Int,
     items: LazyPagingItems<MediaItem>,
     manager: SelectionManager,
+    baseSelected: Map<Long, MediaRef> = emptyMap(),
 ) {
-    selectMediaRange(startIndex, endIndex, items, manager::addAll)
+    val refs = getMediaRangeRefs(startIndex, endIndex, items)
+    manager.setDragRange(baseSelected, refs)
 }
 
-private inline fun selectMediaRange(
+fun getMediaRangeRefs(
     startIndex: Int,
     endIndex: Int,
     items: LazyPagingItems<MediaItem>,
-    addAll: (List<com.femi.gallery.domain.model.MediaRef>) -> Unit,
-) {
+): List<MediaRef> {
     val low = max(0, min(startIndex, endIndex))
     val high = min(items.itemCount - 1, max(startIndex, endIndex))
-    if (low > high) return
-    val refs = (low..high).mapNotNull { i -> items.peek(i)?.toRef() }
-    if (refs.isNotEmpty()) {
-        addAll(refs)
-    }
+    if (low > high) return emptyList()
+    return (low..high).mapNotNull { i -> items.peek(i)?.toRef() }
 }

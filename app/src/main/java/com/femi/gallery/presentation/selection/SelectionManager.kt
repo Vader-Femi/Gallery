@@ -39,6 +39,12 @@ class SelectionManager {
         _state.update { it.copy(active = true, selected = it.selected + refs.associateBy { ref -> ref.id }) }
     }
 
+    /** Sets the selection state to [baseSelected] plus [rangeRefs]. */
+    fun setDragRange(baseSelected: Map<Long, MediaRef>, rangeRefs: List<MediaRef>) {
+        val newMap = baseSelected + rangeRefs.associateBy { it.id }
+        _state.update { it.copy(active = true, selected = newMap) }
+    }
+
     /** Removes every id in [ids] from the current selection. Stays in selection mode. */
     fun removeAll(ids: Set<Long>) {
         _state.update { it.copy(selected = it.selected - ids) }

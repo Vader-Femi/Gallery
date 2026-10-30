@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -41,14 +42,19 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.StoryFilter
 import com.femi.gallery.domain.model.StoryTitle
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HideBottomBarWhile
 import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.pictures.TimelineGrid
-import com.femi.gallery.presentation.selection.SelectionBars
+import com.femi.gallery.presentation.selection.SelectionBottomBar
 import com.femi.gallery.presentation.selection.SelectionHost
+import com.femi.gallery.presentation.selection.SelectionTopBar
 import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.libraryMoreActions
 import com.femi.gallery.presentation.selection.selectMediaRange
@@ -79,6 +85,7 @@ fun StoryScreen(
     val dateTitle = StoryTitles.range(viewModel.fromDay, viewModel.toDay)
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    var dragBaseSelection by remember { mutableStateOf<Map<Long, MediaRef>>(emptyMap()) }
 
     LifecycleResumeEffect(viewModel) {
         viewModel.onResumed()
@@ -96,7 +103,7 @@ fun StoryScreen(
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
-                if (!selectionState.active) {
+                Box(modifier = Modifier.fillMaxWidth()) {
                     HugeTopAppBar(
                         title = if (pickingCover) stringResource(R.string.story_pick_cover) else customTitle ?: dateTitle,
                         onBack = { if (pickingCover) pickingCover = false else onBack() },
@@ -136,7 +143,15 @@ fun StoryScreen(
                             }
                         },
                         scrollBehavior = scrollBehavior,
+                        modifier = if (selectionState.active) Modifier.graphicsLayer { alpha = 0f } else Modifier,
                     )
+                    if (selectionState.active) {
+                        SelectionTopBar(
+                            count = selectionState.count,
+                            onClose = viewModel.selection::clear,
+                            onSelectAll = viewModel.selection::selectAll,
+                        )
+                    }
                 }
             },
         ) { innerPadding ->
@@ -162,7 +177,12 @@ fun StoryScreen(
                             onMediaClick(mediaIndex, item.id, viewModel.query)
                         }
                     },
-                    onMediaLongClick = { item -> if (!pickingCover) viewModel.selection.begin(item.toRef()) },
+                    onMediaLongClick = { item ->
+                        if (!pickingCover) {
+                            dragBaseSelection = selectionState.selected
+                            viewModel.selection.begin(item.toRef())
+                        }
+                    },
                     onZoomIn = viewModel.timeline::zoomIn,
                     onZoomOut = viewModel.timeline::zoomOut,
                     modifier = Modifier
@@ -174,7 +194,7 @@ fun StoryScreen(
                         toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
                     },
                     onDragSelectRange = { start, end ->
-                        selectMediaRange(start, end, items, viewModel.selection)
+                        selectMediaRange(start, end, items, viewModel.selection, dragBaseSelection)
                     },
                     viewed = viewed,
                     onViewedConsumed = onViewedConsumed,
@@ -200,13 +220,11 @@ fun StoryScreen(
             )
         }
 
-        SelectionBars(
+        SelectionBottomBar(
             active = selectionState.active,
             count = selectionState.count,
             actions = libraryActions(context, selectionState, viewModel.selection),
             moreActions = libraryMoreActions(context, viewModel.selection),
-            onClose = viewModel.selection::clear,
-            onSelectAll = viewModel.selection::selectAll,
         )
     }
 }
