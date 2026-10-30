@@ -104,3 +104,91 @@ abstract class HashDao {
         ids.chunked(DELETE_CHUNK).forEach { delete(it) }
     }
 }
+
+/** The id and date of an item: all that is needed to lay out the timeline. */
+data class OrderRow(
+    val id: Long,
+    val dateMillis: Long,
+)
+
+/** One album as the database summarises it; the cover is the newest item. */
+data class AlbumRow(
+    val bucketId: Long,
+    val bucketName: String,
+    val relativePath: String,
+    val itemCount: Int,
+    val newestDate: Long,
+    val coverUri: String,
+)
+
+@Dao
+abstract class MediaDao {
+
+    /**
+     * Ids and dates of the matching items, newest first. A null [bucketId] or [type] means any; [favoritesOnly]
+     * is 1 to keep only favorites. The order is the same as the one the app has always used: date, then id.
+     */
+    @Query(
+        "SELECT id, dateMillis FROM media " +
+            "WHERE (:bucketId IS NULL OR bucketId = :bucketId) " +
+            "AND (:type IS NULL OR type = :type) " +
+            "AND (:favoritesOnly = 0 OR isFavorite = 1) " +
+            "ORDER BY dateMillis DESC, id DESC",
+    )
+    abstract suspend fun order(bucketId: Long?, type: Int?, favoritesOnly: Int): List<OrderRow>
+
+    /** Every album, with how many items it holds and its newest item as the cover (the bare columns come from that row). */
+    @Query(
+        "SELECT bucketId, bucketName, relativePath, COUNT(*) AS itemCount, MAX(dateMillis) AS newestDate, uri AS coverUri " +
+            "FROM media GROUP BY bucketId",
+    )
+    abstract suspend fun albums(): List<AlbumRow>
+
+    @Query("SELECT * FROM media WHERE id IN (:ids)")
+    abstract suspend fun byIds(ids: List<Long>): List<MediaRow>
+
+    @Query("SELECT * FROM media")
+    abstract suspend fun all(): List<MediaRow>
+
+    @Query("SELECT id FROM media")
+    abstract suspend fun allIds(): List<Long>
+
+    @Query("SELECT COUNT(*) FROM media")
+    abstract suspend fun count(): Int
+
+    @Upsert
+    abstract suspend fun upsert(rows: List<MediaRow>)
+
+    @Query("DELETE FROM media WHERE id IN (:ids)")
+    abstract suspend fun delete(ids: List<Long>)
+
+    @Query("DELETE FROM media")
+    abstract suspend fun deleteAll()
+
+    @Query("SELECT value FROM index_meta WHERE `key` = :key")
+    abstract suspend fun meta(key: String): Long?
+
+    @Upsert
+    abstract suspend fun putMeta(row: MetaRow)
+
+    /** Replaces the whole mirror and remembers the generation it matches, all or nothing. */
+    @Transaction
+    open suspend fun replaceAll(rows: List<MediaRow>, generation: Long) {
+        deleteAll()
+        rows.chunked(WRITE_CHUNK).forEach { upsert(it) }
+        putMeta(MetaRow(GENERATION, generation))
+    }
+
+    /** Brings the mirror up to date: new and changed rows written, gone rows deleted, and the generation remembered. */
+    @Transaction
+    open suspend fun apply(changed: List<MediaRow>, removedIds: List<Long>, generation: Long) {
+        changed.chunked(WRITE_CHUNK).forEach { upsert(it) }
+        removedIds.chunked(DELETE_CHUNK).forEach { delete(it) }
+        putMeta(MetaRow(GENERATION, generation))
+    }
+
+    companion object {
+        const val GENERATION = "mediastore_generation"
+        private const val WRITE_CHUNK = 500
+    }
+}

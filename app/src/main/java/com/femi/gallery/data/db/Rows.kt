@@ -1,6 +1,7 @@
 package com.femi.gallery.data.db
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /*
@@ -53,4 +54,44 @@ data class HashRow(
     val dateAdded: Long,
     val partialHash: String?,
     val fullHash: String?,
+)
+
+/**
+ * One photo or video of the library, as MediaStore described it when it was last copied. Together the rows
+ * are a local copy of the library (the "mirror"), which can be sorted, grouped and filtered by SQLite
+ * instead of being read from MediaStore row by row every time the app starts.
+ */
+@Entity(
+    tableName = "media",
+    indices = [
+        // The order everything is shown in: newest first, the higher id first among equals.
+        Index(value = ["dateMillis", "id"]),
+        Index(value = ["bucketId"]),
+    ],
+)
+data class MediaRow(
+    @PrimaryKey val id: Long,
+    val uri: String,
+    /** 0 for a photo, 1 for a video. */
+    val type: Int,
+    val displayName: String,
+    val mimeType: String,
+    /** The date it is shown under: when it was taken, else when it was added. */
+    val dateMillis: Long,
+    val dateAddedMillis: Long,
+    val width: Int,
+    val height: Int,
+    val sizeBytes: Long,
+    val durationMillis: Long,
+    val bucketId: Long,
+    val bucketName: String,
+    val relativePath: String,
+    val isFavorite: Boolean,
+)
+
+/** Small facts about the index itself, such as the MediaStore generation the mirror was last brought up to date at. */
+@Entity(tableName = "index_meta")
+data class MetaRow(
+    @PrimaryKey val key: String,
+    val value: Long,
 )

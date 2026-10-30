@@ -1,5 +1,6 @@
 package com.femi.gallery.data.db
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
@@ -12,9 +13,20 @@ import androidx.room.RoomDatabase
  * written to app/schemas and belongs in version control.
  */
 @Database(
-    entities = [TextRow::class, LabelRow::class, ColorRow::class, LocationRow::class, HashRow::class],
-    version = 1,
+    entities = [
+        TextRow::class,
+        LabelRow::class,
+        ColorRow::class,
+        LocationRow::class,
+        HashRow::class,
+        MediaRow::class,
+        MetaRow::class,
+    ],
+    version = 2,
     exportSchema = true,
+    // Version 2 added the tables of the library mirror and nothing else, which Room can migrate by itself
+    // (from the exported schema 1.json, which is why the schemas belong in version control).
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class GalleryDatabase : RoomDatabase() {
     abstract fun textDao(): TextDao
@@ -22,6 +34,7 @@ abstract class GalleryDatabase : RoomDatabase() {
     abstract fun colorDao(): ColorDao
     abstract fun locationDao(): LocationDao
     abstract fun hashDao(): HashDao
+    abstract fun mediaDao(): MediaDao
 
     companion object {
         const val FILE_NAME = "gallery.db"

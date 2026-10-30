@@ -38,6 +38,30 @@ object MediaOrdering {
     fun effectiveDateMillis(taken: Long, addedSeconds: Long): Long =
         if (taken > 0) taken else addedSeconds * 1000L
 
+    /**
+     * The items of [order] whose date falls inside any of [rangesSeconds] (epoch seconds, both ends included).
+     * An empty list of ranges keeps everything.
+     */
+    fun withinDateRanges(order: MediaOrder, rangesSeconds: List<LongRange>): MediaOrder {
+        if (rangesSeconds.isEmpty()) return order
+        val keep = BooleanArray(order.size) { i ->
+            val date = order.datesMillis[i]
+            rangesSeconds.any { date >= it.first * 1000L && date <= it.last * 1000L + 999L }
+        }
+        val count = keep.count { it }
+        val ids = LongArray(count)
+        val dates = LongArray(count)
+        var next = 0
+        for (i in 0 until order.size) {
+            if (keep[i]) {
+                ids[next] = order.ids[i]
+                dates[next] = order.datesMillis[i]
+                next++
+            }
+        }
+        return MediaOrder(ids, dates)
+    }
+
     /** Sorts the first [count] items newest first; ties go to the higher id so the order is stable. */
     fun newestFirst(ids: LongArray, datesMillis: LongArray, count: Int = ids.size): MediaOrder {
         val order = (0 until count).sortedWith(

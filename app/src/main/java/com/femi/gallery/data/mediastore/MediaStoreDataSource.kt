@@ -16,7 +16,9 @@ import com.femi.gallery.data.location.LocationIndex
 import com.femi.gallery.data.map.PhotoPlaceIndexHolder
 import com.femi.gallery.data.text.TextIndexHolder
 import com.femi.gallery.domain.repository.ImageEmbedder
+import com.femi.gallery.data.db.MediaMirror
 import com.femi.gallery.di.IoDispatcher
+import com.femi.gallery.domain.mirror.MirrorQuery
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.MediaItem
@@ -32,6 +34,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,6 +50,7 @@ class MediaStoreDataSource @Inject constructor(
     private val photoPlaceIndexHolder: PhotoPlaceIndexHolder,
     private val clipIndex: ClipIndexHolder,
     private val embedder: ImageEmbedder,
+    private val mirror: MediaMirror,
 ) {
     private val resolver: ContentResolver get() = context.contentResolver
 
@@ -70,6 +74,10 @@ class MediaStoreDataSource @Inject constructor(
      * is done here; only two numbers per item are read, which is cheap even for 50,000 photos.
      */
     suspend fun loadOrder(bucketId: Long? = null, search: SearchCriteria? = null): MediaOrder = withContext(io) {
+        // The local copy of the library answers what it can (see MirrorQuery); the rest is read from MediaStore.
+        MirrorQuery.from(bucketId, search)?.let { query ->
+            fromMirror { mirror.order(query) }?.let { return@withContext it }
+        }
         val projection = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.MediaColumns.DATE_TAKEN,
@@ -91,8 +99,70 @@ class MediaStoreDataSource @Inject constructor(
         if (area == null) order else order.retainIds(locationIndex.current().idsIn(area))
     }
 
+    /** [block] on the mirror once it is up to date, or null when it cannot answer (not copied yet, no access, any error). */
+    private suspend fun <T> fromMirror(block: suspend () -> T): T? = try {
+        if (mirror.fresh()) block() else null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+
+    /** Like [fromMirror], without checking MediaStore for changes first (for reading rows by id). */
+    private suspend fun <T> fromMirrorIfCopied(block: suspend () -> T): T? = try {
+        if (mirror.hasCopy()) block() else null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+
+    /** What the mirror needs from MediaStore: the items that changed after [generation] (in the volume's own numbering). */
+    suspend fun loadItemsChangedSince(generation: Long): List<MediaItem> = withContext(io) {
+        val args = Bundle().apply {
+            putString(
+                ContentResolver.QUERY_ARG_SQL_SELECTION,
+                "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?) AND ${MediaStore.MediaColumns.GENERATION_MODIFIED} > ?",
+            )
+            putStringArray(
+                ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS,
+                arrayOf(
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+                    generation.toString(),
+                ),
+            )
+        }
+        resolver.query(collectionUri, PROJECTION, args, null)?.use { cursor ->
+            val columns = Columns(cursor)
+            val items = ArrayList<MediaItem>(cursor.count)
+            while (cursor.moveToNext()) items.add(cursor.toMediaItem(columns))
+            items
+        }.orEmpty()
+    }
+
+    /** How many photos and videos MediaStore holds (not the recycle bin). */
+    suspend fun countItems(): Int = withContext(io) {
+        resolver.query(collectionUri, arrayOf(MediaStore.MediaColumns._ID), queryArgs(), null)?.use { it.count } ?: 0
+    }
+
+    /** The id of every photo and video MediaStore holds (not the recycle bin). */
+    suspend fun loadAllIds(): LongArray = withContext(io) {
+        resolver.query(collectionUri, arrayOf(MediaStore.MediaColumns._ID), queryArgs(), null)?.use { cursor ->
+            val ids = LongArray(cursor.count)
+            var i = 0
+            while (cursor.moveToNext() && i < ids.size) ids[i++] = cursor.getLong(0)
+            ids.copyOf(i)
+        } ?: LongArray(0)
+    }
+
     /** Every photo and video in the library (not the recycle bin), in no particular order; used to look for duplicates. */
     suspend fun loadAllItems(): List<MediaItem> = withContext(io) {
+        fromMirror { mirror.allItems() } ?: loadAllItemsFromMediaStore()
+    }
+
+    /** [loadAllItems], read from MediaStore itself (it is also what fills the mirror). */
+    suspend fun loadAllItemsFromMediaStore(): List<MediaItem> = withContext(io) {
         resolver.query(collectionUri, PROJECTION, queryArgs(), null)?.use { cursor ->
             val columns = Columns(cursor)
             val items = ArrayList<MediaItem>(cursor.count)
@@ -134,6 +204,22 @@ class MediaStoreDataSource @Inject constructor(
         search: SearchCriteria? = null,
     ): List<MediaItem> = withContext(io) {
         if (ids.isEmpty()) return@withContext emptyList()
+        // The ids usually come from an order the mirror made, so it holds their rows. A page load does not check
+        // MediaStore for changes first. If the mirror lacks any of the ids (it is behind, or the order came from
+        // MediaStore) the whole page is read from MediaStore, which is always right.
+        if (MirrorQuery.from(bucketId, search) != null) {
+            fromMirrorIfCopied { mirror.items(ids) }?.takeIf { it.size == ids.size }?.let { return@withContext it }
+        }
+        loadByIdsFromMediaStore(ids, bucketId, search)
+    }
+
+    /** [loadByIds] read from MediaStore itself. */
+    suspend fun loadByIdsFromMediaStore(
+        ids: LongArray,
+        bucketId: Long? = null,
+        search: SearchCriteria? = null,
+    ): List<MediaItem> = withContext(io) {
+        if (ids.isEmpty()) return@withContext emptyList()
         val byId = resolver.query(
             collectionUri,
             PROJECTION,
@@ -156,6 +242,7 @@ class MediaStoreDataSource @Inject constructor(
      * The Camera folder is pinned first, the rest are ordered by most recent activity.
      */
     suspend fun loadAlbums(): List<Album> = withContext(io) {
+        fromMirror { mirror.albums() }?.let { return@withContext it }
         val projection = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.Files.FileColumns.MEDIA_TYPE,

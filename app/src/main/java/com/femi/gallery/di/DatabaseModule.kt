@@ -7,6 +7,7 @@ import com.femi.gallery.data.db.GalleryDatabase
 import com.femi.gallery.data.db.HashDao
 import com.femi.gallery.data.db.LabelDao
 import com.femi.gallery.data.db.LocationDao
+import com.femi.gallery.data.db.MediaDao
 import com.femi.gallery.data.db.TextDao
 import dagger.Module
 import dagger.Provides
@@ -38,4 +39,7 @@ object DatabaseModule {
 
     @Provides
     fun provideHashDao(database: GalleryDatabase): HashDao = database.hashDao()
+
+    @Provides
+    fun provideMediaDao(database: GalleryDatabase): MediaDao = database.mediaDao()
 }
