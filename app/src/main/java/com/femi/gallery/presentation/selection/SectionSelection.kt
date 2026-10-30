@@ -38,7 +38,7 @@ private inline fun toggleSectionSelection(
     section: TimelineSection,
     items: LazyPagingItems<MediaItem>,
     selectedIds: Set<Long>,
-    addAll: (List<com.femi.gallery.domain.model.MediaRef>) -> Unit,
+    addAll: (List<MediaRef>) -> Unit,
     removeAll: (Set<Long>) -> Unit,
 ) {
     val refs = (section.startIndex until section.startIndex + section.count).mapNotNull { i ->
@@ -54,8 +54,8 @@ private inline fun toggleSectionSelection(
 }
 
 /**
- * Selects all loaded media items in the index range between [startIndex] and [endIndex] inclusive,
- * preserving any previously selected items in [baseSelected] while dynamically updating the active drag range.
+ * Modifies the media selection in the index range between [startIndex] and [endIndex] inclusive,
+ * preserving [baseSelected] while dynamically adding or removing range items.
  */
 fun selectMediaRange(
     startIndex: Int,
@@ -63,9 +63,10 @@ fun selectMediaRange(
     items: LazyPagingItems<MediaItem>,
     controller: MediaSelectionController,
     baseSelected: Map<Long, MediaRef> = emptyMap(),
+    deselect: Boolean = false,
 ) {
     val refs = getMediaRangeRefs(startIndex, endIndex, items)
-    controller.setDragRange(baseSelected, refs)
+    controller.setDragRange(baseSelected, refs, deselect)
 }
 
 /**
@@ -77,9 +78,10 @@ fun selectMediaRange(
     items: LazyPagingItems<MediaItem>,
     manager: SelectionManager,
     baseSelected: Map<Long, MediaRef> = emptyMap(),
+    deselect: Boolean = false,
 ) {
     val refs = getMediaRangeRefs(startIndex, endIndex, items)
-    manager.setDragRange(baseSelected, refs)
+    manager.setDragRange(baseSelected, refs, deselect)
 }
 
 fun getMediaRangeRefs(
