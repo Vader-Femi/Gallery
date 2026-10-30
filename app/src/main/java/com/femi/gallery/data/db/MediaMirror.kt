@@ -95,7 +95,7 @@ class MediaMirror @Inject constructor(
         if (ids.isEmpty()) return emptyList()
         val byId = HashMap<Long, MediaItem>(ids.size * 2)
         ids.asList().chunked(ID_CHUNK).forEach { chunk -> dao.byIds(chunk).forEach { byId[it.id] = it.toItem() } }
-        return ids.mapNotNull { byId[it] }
+        return ids.asList().mapNotNull { byId[it] }
     }
 
     suspend fun allItems(): List<MediaItem> = dao.all().map { it.toItem() }
@@ -141,7 +141,7 @@ class MediaMirror @Inject constructor(
             val reconciliation = MirrorSync.reconcile(store.loadAllIds(), mirrorIds)
             removed = reconciliation.toDelete
             if (reconciliation.missing.isNotEmpty()) {
-                changed += store.loadItemsByIdsFromMediaStore(reconciliation.missing).map { it.toRow() }
+                changed += store.loadByIdsFromMediaStore(reconciliation.missing).map { it.toRow() }
             }
         }
         dao.apply(changed, removed.toList(), generation)

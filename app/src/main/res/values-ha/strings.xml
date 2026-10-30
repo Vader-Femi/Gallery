@@ -252,7 +252,7 @@
     <string name="settings_mute_videos">Kashe murya bidiyo ta tsohuwa</string>
     <string name="settings_mute_videos_summary">Fara kunna bidiyo ba tare da murya ba</string>
     <string name="settings_background_scan">Ci gaba da yin rajista a bango</string>
-    <string name="settings_background_scan_summary">Yana ci gaba da karanta rubutu, abubuwa, launuka da wuraren hotunanka bayan ka bar manhajar, idan batir bai yi ƙasa ba.</string>
+    <string name="settings_background_scan_summary">Ci gaba da lissafin hotuna don bincike idan ya zama dole</string>
     <string name="settings_scan_charging">Sai lokacin caji kawai</string>
     <string name="settings_scan_charging_summary">Yana jira caja kafin ya yi rajista a bango.</string>
     <string name="theme_system">Tsarin waya</string>
