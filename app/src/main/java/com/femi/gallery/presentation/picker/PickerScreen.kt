@@ -30,6 +30,8 @@ import com.femi.gallery.domain.model.PickerFilter
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.pictures.TimelineGrid
+import com.femi.gallery.presentation.selection.selectMediaRange
+import com.femi.gallery.presentation.selection.toggleSectionSelection
 
 /**
  * Shown when another app asks for a photo or video ("Choose from Gallery"). Tapping a photo
@@ -94,6 +96,12 @@ fun PickerScreen(
             modifier = Modifier.weight(1f),
             selectionActive = allowMultiple,
             selectedIds = selectionState.ids,
+            onHeaderClick = if (allowMultiple) {
+                { section -> toggleSectionSelection(section, items, selectionState.ids, viewModel.selection) }
+            } else null,
+            onDragSelectRange = if (allowMultiple) {
+                { start, end -> selectMediaRange(start, end, items, viewModel.selection) }
+            } else null,
             emptyContent = { EmptyState(stringResource(R.string.picker_empty)) },
         )
     }
