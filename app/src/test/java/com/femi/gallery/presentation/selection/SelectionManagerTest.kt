@@ -46,4 +46,22 @@ class SelectionManagerTest {
         assertFalse(manager.state.value.active)
         assertEquals(0, manager.state.value.count)
     }
+
+    @Test
+    fun addAllAddsWithoutReplacingExisting() {
+        val manager = SelectionManager()
+        manager.begin(ref(1))
+        manager.addAll(listOf(ref(2), ref(3)))
+        assertTrue(manager.state.value.active)
+        assertEquals(setOf(1L, 2L, 3L), manager.state.value.ids)
+    }
+
+    @Test
+    fun removeAllRemovesSpecifiedIdsAndStaysActive() {
+        val manager = SelectionManager()
+        manager.addAll(listOf(ref(1), ref(2), ref(3), ref(4)))
+        manager.removeAll(setOf(2L, 4L))
+        assertTrue(manager.state.value.active)
+        assertEquals(setOf(1L, 3L), manager.state.value.ids)
+    }
 }

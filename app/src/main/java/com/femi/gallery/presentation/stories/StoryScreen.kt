@@ -51,6 +51,8 @@ import com.femi.gallery.presentation.selection.SelectionBars
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.libraryMoreActions
+import com.femi.gallery.presentation.selection.selectMediaRange
+import com.femi.gallery.presentation.selection.toggleSectionSelection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,6 +170,12 @@ fun StoryScreen(
                         .weight(1f),
                     selectionActive = selectionState.active,
                     selectedIds = selectionState.ids,
+                    onHeaderClick = { section ->
+                        toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
+                    },
+                    onDragSelectRange = { start, end ->
+                        selectMediaRange(start, end, items, viewModel.selection)
+                    },
                     viewed = viewed,
                     onViewedConsumed = onViewedConsumed,
                     emptyContent = { EmptyState(stringResource(R.string.story_empty)) },

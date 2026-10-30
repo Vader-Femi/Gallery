@@ -101,6 +101,12 @@ class MediaSelectionController(
 
     fun toggle(ref: MediaRef) = selection.toggle(ref)
 
+    /** Adds [refs] to the current selection (enters selection mode if needed). */
+    fun addAll(refs: List<MediaRef>) = selection.addAll(refs)
+
+    /** Removes all items whose ids are in [ids] from the selection. */
+    fun removeAll(ids: Set<Long>) = selection.removeAll(ids)
+
     fun clear() = selection.clear()
 
     fun selectAll() {

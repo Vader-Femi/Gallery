@@ -23,7 +23,10 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.LazyPagingItems
 import com.femi.gallery.R
+import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HideBottomBarWhile
@@ -33,6 +36,8 @@ import com.femi.gallery.presentation.selection.SelectionBars
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.libraryActions
 import com.femi.gallery.presentation.selection.libraryMoreActions
+import com.femi.gallery.presentation.selection.selectMediaRange
+import com.femi.gallery.presentation.selection.toggleSectionSelection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +98,12 @@ fun PicturesScreen(
                     .padding(top = innerPadding.calculateTopPadding()),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                onHeaderClick = { section ->
+                    toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
+                },
+                onDragSelectRange = { start, end ->
+                    selectMediaRange(start, end, items, viewModel.selection)
+                },
                 viewed = viewed,
                 onViewedConsumed = onViewedConsumed,
                 emptyContent = { EmptyState(stringResource(R.string.pictures_empty)) },

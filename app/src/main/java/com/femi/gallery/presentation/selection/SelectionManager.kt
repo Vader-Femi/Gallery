@@ -34,6 +34,16 @@ class SelectionManager {
         _state.update { it.copy(active = true, selected = refs.associateBy { ref -> ref.id }) }
     }
 
+    /** Adds [refs] to the current selection without removing what is already selected. */
+    fun addAll(refs: List<MediaRef>) {
+        _state.update { it.copy(active = true, selected = it.selected + refs.associateBy { ref -> ref.id }) }
+    }
+
+    /** Removes every id in [ids] from the current selection. Stays in selection mode. */
+    fun removeAll(ids: Set<Long>) {
+        _state.update { it.copy(selected = it.selected - ids) }
+    }
+
     fun clear() {
         _state.value = State()
     }

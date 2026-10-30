@@ -99,6 +99,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Selection and actions**
 - [x] Long-press to select, tap to toggle, **Select all**, Back to exit
+- [x] **Select a whole day** by tapping its header (toggles day selection)
+- [x] **Drag-to-select**: drag across thumbnails while selecting to toggle them
 - [x] **Share** several items at once, **favorite / unfavorite**, **move to trash**
 - [x] **More** menu: move to album, copy to album, lock
 
@@ -124,7 +126,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Motion photo playback, set as wallpaper
 - [ ] Tiled full-resolution zoom for very large photos
 - [ ] Remember zoom level and a small settings screen (DataStore); sort options; hide albums; delete empty albums
-- [ ] Select a whole day by tapping its header; drag-to-select
 - [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)

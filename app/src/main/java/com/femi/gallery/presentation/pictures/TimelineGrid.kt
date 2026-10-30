@@ -2,6 +2,7 @@ package com.femi.gallery.presentation.pictures
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import com.femi.gallery.presentation.common.pinchToChangeColumns
@@ -61,6 +62,7 @@ import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.presentation.common.GridThumbnails
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.common.gridSharedBounds
+import com.femi.gallery.presentation.selection.dragToSelect
 import com.femi.gallery.presentation.viewer.formatDuration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -93,6 +95,17 @@ fun TimelineGrid(
     topInset: Dp = 0.dp,
     selectionActive: Boolean = false,
     selectedIds: Set<Long> = emptySet(),
+    /**
+     * Called when a day/month/year header is tapped while selection is active.
+     * Receives the section's [TimelineSection] so the caller can select or deselect
+     * every item in that group.
+     */
+    onHeaderClick: ((section: TimelineSection) -> Unit)? = null,
+    /**
+     * Called when the user drags over a range of media items after a long-press.
+     * Receives (startIndex, endIndex) of the drag range.
+     */
+    onDragSelectRange: ((startIndex: Int, endIndex: Int) -> Unit)? = null,
     /** The photo the viewer ended on after the user came back; the grid scrolls to it. */
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
@@ -204,7 +217,22 @@ fun TimelineGrid(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(zoom.columns),
                 state = gridState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (onDragSelectRange != null) {
+                            Modifier.dragToSelect(
+                                gridState = gridState,
+                                isHeader = { layout.isHeader(it) },
+                                mediaIndexAt = { layout.mediaIndexAt(it) },
+                                onLongPressStart = { mediaIndex ->
+                                    val item = items.peekOrNull(mediaIndex)
+                                    if (item != null) onMediaLongClick(item)
+                                },
+                                onDragSelectRange = onDragSelectRange,
+                            )
+                        } else Modifier
+                    ),
                 contentPadding = PaddingValues(top = topInset, bottom = 150.dp),
                 horizontalArrangement = Arrangement.spacedBy(1.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp),
@@ -228,7 +256,13 @@ fun TimelineGrid(
                 ) { gridIndex ->
                     if (layout.isHeader(gridIndex)) {
                         val section = layout.sections[layout.sectionIndexAt(gridIndex)]
-                        DayHeader(text = labeler.headerLabel(section.epochDay, zoom.granularity))
+                        DayHeader(
+                            text = labeler.headerLabel(section.epochDay, zoom.granularity),
+                            selectionActive = selectionActive,
+                            onClick = if (selectionActive && onHeaderClick != null) {
+                                { onHeaderClick(section) }
+                            } else null,
+                        )
                     } else {
                         val mediaIndex = layout.mediaIndexAt(gridIndex)
                         val item = items.getOrNull(mediaIndex)
@@ -265,12 +299,24 @@ fun TimelineGrid(
 }
 
 @Composable
-private fun DayHeader(text: String) {
+private fun DayHeader(
+    text: String,
+    selectionActive: Boolean = false,
+    onClick: (() -> Unit)? = null,
+) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleSmall,
+        color = if (selectionActive && onClick != null) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
     )
 }
