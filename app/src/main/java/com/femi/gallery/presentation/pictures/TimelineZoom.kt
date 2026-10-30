@@ -1,8 +1,10 @@
 package com.femi.gallery.presentation.pictures
 
+import android.content.Context
 import com.femi.gallery.domain.model.TimelineGranularity
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
+import com.femi.gallery.presentation.settings.ThemePreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,15 +42,31 @@ enum class TimelineZoom(val granularity: TimelineGranularity, val columns: Int) 
 class TimelineZoomState(
     scope: CoroutineScope,
     daySections: Flow<List<TimelineSection>>,
+    context: Context? = null,
 ) {
-    private val _zoom = MutableStateFlow(TimelineZoom.Default)
+    private val appContext = context?.applicationContext
+    private val _zoom = MutableStateFlow(
+        appContext?.let { ThemePreferences.getTimelineZoom(it) } ?: TimelineZoom.Default
+    )
     val zoom: StateFlow<TimelineZoom> = _zoom.asStateFlow()
 
     val sections: StateFlow<List<TimelineSection>> =
         combine(daySections, _zoom) { days, zoom -> TimelineGrouper.regroup(days, zoom.granularity) }
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    fun zoomIn() = _zoom.update { it.zoomedIn() }
+    fun zoomIn() {
+        _zoom.update { current ->
+            val next = current.zoomedIn()
+            appContext?.let { ThemePreferences.setTimelineZoom(it, next) }
+            next
+        }
+    }
 
-    fun zoomOut() = _zoom.update { it.zoomedOut() }
+    fun zoomOut() {
+        _zoom.update { current ->
+            val next = current.zoomedOut()
+            appContext?.let { ThemePreferences.setTimelineZoom(it, next) }
+            next
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.pictures
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -14,11 +15,13 @@ import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 @HiltViewModel
 class PicturesViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
     selectionFactory: MediaSelectionControllerFactory,
@@ -28,7 +31,7 @@ class PicturesViewModel @Inject constructor(
     val media: Flow<PagingData<MediaItem>> = getPagedMedia().cachedIn(viewModelScope)
 
     /** Pinch-to-zoom level and the day/month/year sections that go with it. */
-    val timeline = TimelineZoomState(viewModelScope, observeTimeline())
+    val timeline = TimelineZoomState(viewModelScope, observeTimeline(), context)
 
     val selection = selectionFactory.create(
         scope = viewModelScope,

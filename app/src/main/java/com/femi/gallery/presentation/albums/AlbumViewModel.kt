@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.albums
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +21,7 @@ import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.presentation.pictures.TimelineZoomState
 import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,6 +35,7 @@ import javax.inject.Inject
 /** One album's photos, grouped and zoomable just like the Pictures tab. */
 @HiltViewModel
 class AlbumViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
@@ -50,7 +53,7 @@ class AlbumViewModel @Inject constructor(
     val media: Flow<PagingData<MediaItem>> =
         getPagedMedia(bucketId = bucketId).cachedIn(viewModelScope)
 
-    val timeline = TimelineZoomState(viewModelScope, observeTimeline(bucketId))
+    val timeline = TimelineZoomState(viewModelScope, observeTimeline(bucketId), context)
 
     /** Folder name, looked up once when the album is opened. */
     private val _title = MutableStateFlow("")

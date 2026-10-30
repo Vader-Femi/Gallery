@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.images
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -13,11 +14,13 @@ import com.femi.gallery.domain.usecase.RefreshMediaUseCase
 import com.femi.gallery.presentation.pictures.TimelineZoomState
 import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 @HiltViewModel
 class ImagesViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
     selectionFactory: MediaSelectionControllerFactory,
@@ -28,7 +31,7 @@ class ImagesViewModel @Inject constructor(
 
     val media: Flow<PagingData<MediaItem>> = getPagedMedia(search = criteria).cachedIn(viewModelScope)
 
-    val timeline = TimelineZoomState(viewModelScope, observeTimeline(search = criteria))
+    val timeline = TimelineZoomState(viewModelScope, observeTimeline(search = criteria), context)
 
     val selection = selectionFactory.create(
         scope = viewModelScope,

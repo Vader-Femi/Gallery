@@ -113,7 +113,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [ ] **Map extras**: a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
-- [ ] **Slideshow music** (cannot be tested without a device), remembering the shuffle and speed choice between launches, a progress bar, videos in slideshows
+- [ ] **Slideshow music** (cannot be tested without a device), a progress bar, videos in slideshows *(shuffle and speed choice between launches remembered)*
 - [ ] **Editor extras**: draw, text and stickers, and offer to replace the original (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo in your own words** ("a dog running on a beach"): needs a CLIP-style image/text model (about 100 MB) that is not in the app yet; the plumbing (`ImageEmbedder`, `clip.bin`, cosine search) exists but is switched off, so nothing is scanned and no search is affected
 
@@ -123,7 +123,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Find **similar** photos (not byte-identical: bursts, re-saved or resized copies) with perceptual hashing; exact duplicates are done
 - [ ] Motion photo playback, set as wallpaper
 - [ ] Tiled full-resolution zoom for very large photos
-- [ ] Remember zoom level and a small settings screen (DataStore); sort options; hide albums; delete empty albums
+- [ ] Small settings screen (DataStore); sort options; hide albums; delete empty albums *(zoom level remembered)*
 - [ ] Select a whole day by tapping its header; drag-to-select
 - [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
 - [ ] Tablet / landscape layouts
@@ -360,6 +360,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 60 | Background scans | `ScanWorker` (a `CoroutineWorker` that gets its dependencies through a Hilt entry point, so no custom worker factory or manifest change is needed) runs `BackgroundScanRunner`, which starts the four scans and waits for them (`ScanWaitPlan`, unit tested). `BackgroundScans` queues one job to run now and one daily, with battery-not-low (and charging, if chosen) as conditions. The four scan repositories gained `isRunning` and `stopScan()`. Two new switches in Settings. `AppForeground` tells the runner whether the app is on screen before it stops anything |
 | 61 | Room index, second half: the library mirror | Database version 2 (an `AutoMigration` from the exported schema 1.json adds the `media` and `index_meta` tables; commit the new `2.json`). `MediaMirror` copies the library and keeps it up to date (`MirrorSync` decides: import, update or nothing, and works out which items are gone; unit tested), `MirrorQuery` says which requests the copy can answer (tested), `MediaDao` sorts, groups and filters in SQL. `MediaStoreDataSource.loadOrder`, `loadAlbums`, `loadByIds` and `loadAllItems` ask the mirror first and fall back to MediaStore if it is not ready, cannot be read, or lacks any id of a page. Date ranges are applied to the sorted list in Kotlin (`MediaOrdering.withinDateRanges`, tested); album order is `AlbumSorting` (tested) |
 | 62 | Foreground scan notification, review fixes | Review of the foreground-service change (manifest, `setForeground` with `dataSync`, notification permission request and the checkpoint on cancellation all fine). Fixes: the progress text is a localized string with a real progress bar instead of English text in code; updates are throttled (`ProgressThrottle`, unit tested) instead of redrawn every second; after the system refuses a foreground start (Android 12+ only allows it while the app is visible, so a run started by the system in the background has no notification) the worker stops trying; `CancellationException` is no longer swallowed by the `setForeground` calls; tapping the notification brings the app back instead of restarting it |
+| 63 | Preferences persistence | Slideshow speed and shuffle choices, as well as the grid zoom level, are now remembered between launches using `ThemePreferences` |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

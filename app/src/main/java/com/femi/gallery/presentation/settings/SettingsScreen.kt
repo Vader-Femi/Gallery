@@ -159,7 +159,7 @@ fun SettingsScreen(
             // Expressive Language Setting Card
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -262,7 +262,7 @@ fun SettingsScreen(
             // Expressive Theme Setting Card
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -385,7 +385,7 @@ fun SettingsScreen(
             // Library scans in the background
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -446,7 +446,7 @@ fun SettingsScreen(
                         Column {
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 20.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
                             )
                             Row(
                                 modifier = Modifier
@@ -518,7 +518,7 @@ private fun SettingSwitchCard(
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
