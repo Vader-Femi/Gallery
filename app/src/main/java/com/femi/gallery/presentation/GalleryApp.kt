@@ -150,12 +150,14 @@ private fun GalleryScaffold() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                 ) { innerPadding ->
+                    val isFullScreen = route?.startsWith("slideshow") == true || route?.startsWith("editor") == true
+                    val topPadding = if (isFullScreen) 0.dp else innerPadding.calculateTopPadding()
                     GalleryNavHost(
                         navController = navController,
                         viewerSession = viewerSession,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = innerPadding.calculateTopPadding()),
+                            .padding(top = topPadding),
                     )
                 }
 
