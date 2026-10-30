@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -106,6 +107,8 @@ class TextIndexRepositoryImpl @Inject constructor(
             return
         }
         val startedAt = SystemClock.elapsedRealtime()
+        val results = ArrayList<DetectedText>()
+        var unsaved = 0
         try {
             val known = index.current().entries
             val stamps = dataSource.loadImageStamps()
@@ -118,10 +121,9 @@ class TextIndexRepositoryImpl @Inject constructor(
             val kept = known.filter { it.id in plan.keepIds }
             if (kept.size != known.size) checkpoint(kept) // forget deleted and changed photos
 
-            val results = ArrayList<DetectedText>(kept)
+            results.addAll(kept)
             var withText = kept.count { it.text.isNotEmpty() }
             var scanned = 0
-            var unsaved = 0
             var failedBatches = 0
             Log.i(TAG, "${stamps.size} photos, ${kept.size} already read, ${plan.toScan} to read")
             _scan.value = TextScanState(TextScanStatus.Scanning, 0, plan.toScan, withText)
@@ -168,6 +170,9 @@ class TextIndexRepositoryImpl @Inject constructor(
                     "$withText of ${results.size} contain text",
             )
         } catch (e: CancellationException) {
+            if (unsaved > 0) {
+                withContext(NonCancellable) { checkpoint(results) }
+            }
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "Text scan failed", e)

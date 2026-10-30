@@ -26,7 +26,14 @@ object MediaPermissions {
      * Everything we ask for in one request. ACCESS_MEDIA_LOCATION is optional: without it,
      * GPS data is stripped from EXIF, which only affects location-based features later.
      */
-    fun toRequest(): Array<String> = read() + Manifest.permission.ACCESS_MEDIA_LOCATION
+    fun toRequest(): Array<String> {
+        val base = read() + Manifest.permission.ACCESS_MEDIA_LOCATION
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            base + Manifest.permission.POST_NOTIFICATIONS
+        } else {
+            base
+        }
+    }
 }
 
 @Singleton

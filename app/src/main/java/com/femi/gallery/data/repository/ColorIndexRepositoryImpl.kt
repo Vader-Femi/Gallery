@@ -21,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -83,6 +85,8 @@ class ColorIndexRepositoryImpl @Inject constructor(
             return
         }
         val startedAt = SystemClock.elapsedRealtime()
+        val results = ArrayList<DetectedColor>()
+        var unsaved = 0
         try {
             val known = index.current().entries
             val stamps = dataSource.loadImageStamps()
@@ -95,10 +99,9 @@ class ColorIndexRepositoryImpl @Inject constructor(
             val kept = known.filter { it.id in plan.keepIds }
             if (kept.size != known.size) checkpoint(kept)
 
-            val results = ArrayList<DetectedColor>(kept)
+            results.addAll(kept)
             var withColor = kept.count { it.colors.isNotEmpty() }
             var scanned = 0
-            var unsaved = 0
             _scan.value = ColorScanState(ColorScanStatus.Scanning, 0, plan.toScan, withColor)
 
             var next = 0
@@ -133,6 +136,9 @@ class ColorIndexRepositoryImpl @Inject constructor(
             _scan.value = ColorScanState(ColorScanStatus.Idle, scanned, plan.toScan, withColor)
             Log.i(TAG, "Scanned colours for ${plan.toScan} photos in ${SystemClock.elapsedRealtime() - startedAt} ms")
         } catch (e: CancellationException) {
+            if (unsaved > 0) {
+                withContext(NonCancellable) { checkpoint(results) }
+            }
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "Color scan failed", e)

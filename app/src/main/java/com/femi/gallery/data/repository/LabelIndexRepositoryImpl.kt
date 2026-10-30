@@ -21,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -83,6 +85,8 @@ class LabelIndexRepositoryImpl @Inject constructor(
             return
         }
         val startedAt = SystemClock.elapsedRealtime()
+        val results = ArrayList<DetectedLabel>()
+        var unsaved = 0
         try {
             val known = index.current().entries
             val stamps = dataSource.loadImageStamps()
@@ -95,10 +99,9 @@ class LabelIndexRepositoryImpl @Inject constructor(
             val kept = known.filter { it.id in plan.keepIds }
             if (kept.size != known.size) checkpoint(kept)
 
-            val results = ArrayList<DetectedLabel>(kept)
+            results.addAll(kept)
             var withLabels = kept.count { it.labels.isNotEmpty() }
             var scanned = 0
-            var unsaved = 0
             _scan.value = LabelScanState(LabelScanStatus.Scanning, 0, plan.toScan, withLabels)
 
             var next = 0
@@ -133,6 +136,9 @@ class LabelIndexRepositoryImpl @Inject constructor(
             _scan.value = LabelScanState(LabelScanStatus.Idle, scanned, plan.toScan, withLabels)
             Log.i(TAG, "Scanned labels for ${plan.toScan} photos in ${SystemClock.elapsedRealtime() - startedAt} ms")
         } catch (e: CancellationException) {
+            if (unsaved > 0) {
+                withContext(NonCancellable) { checkpoint(results) }
+            }
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "Label scan failed", e)

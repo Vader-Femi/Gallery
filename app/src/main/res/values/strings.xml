@@ -275,4 +275,8 @@
     <string name="story_empty">No photos in this story</string>
     <string name="picker_empty">No items to choose</string>
     <string name="slideshow_empty">No photos to play</string>
+
+    <string name="notification_channel_background_scan">Library Indexing</string>
+    <string name="notification_background_scan_title">Indexing library</string>
+    <string name="notification_background_scan_text">Indexing photos and videos for search</string>
 </resources>

@@ -19,11 +19,13 @@ import com.femi.gallery.domain.repository.LocationStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -88,16 +90,17 @@ class LocationRepositoryImpl @Inject constructor(
             return
         }
         val startedAt = SystemClock.elapsedRealtime()
+        val results = ArrayList<LocationEntry>()
+        var unsaved = 0
         try {
             val known = index.current().entries
             val stamps = dataSource.loadImageStamps()
             val plan = LocationScanPlanner.plan(known, stamps.ids, stamps.modified)
             if (plan.keep.size != known.size) checkpoint(plan.keep) // forget deleted and changed photos
 
-            val results = ArrayList<LocationEntry>(plan.keep)
+            results.addAll(plan.keep)
             var placed = plan.keep.count { it.place != null }
             var scanned = 0
-            var unsaved = 0
             Log.i(TAG, "${stamps.size} photos, ${plan.keep.size} already known, ${plan.toScan} to read")
             _scan.value = LocationScanState(LocationScanStatus.Scanning, 0, plan.toScan, placed)
 
@@ -123,6 +126,9 @@ class LocationRepositoryImpl @Inject constructor(
                     "$placed of ${results.size} have a place",
             )
         } catch (e: CancellationException) {
+            if (unsaved > 0) {
+                withContext(NonCancellable) { checkpoint(results) }
+            }
             throw e
         } catch (e: LocationPermissionException) {
             Log.w(TAG, "Location in photos is not allowed; scan stopped", e)

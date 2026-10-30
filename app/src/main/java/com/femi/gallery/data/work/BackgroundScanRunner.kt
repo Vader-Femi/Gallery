@@ -33,7 +33,7 @@ class BackgroundScanRunner @Inject constructor(
         TimeUp,
     }
 
-    suspend fun run(limitMs: Long): Outcome {
+    suspend fun run(limitMs: Long, onProgress: suspend (scanned: Int, total: Int) -> Unit = { _, _ -> }): Outcome {
         locations.startScan()
         text.startScan()
         colors.startScan()
@@ -43,6 +43,13 @@ class BackgroundScanRunner @Inject constructor(
         try {
             while (true) {
                 val running = locations.isRunning || text.isRunning || colors.isRunning || labels.isRunning
+
+                val scanned = text.scan.value.scanned + colors.scan.value.scanned + labels.scan.value.scanned + locations.scan.value.scanned
+                val total = text.scan.value.total + colors.scan.value.total + labels.scan.value.total + locations.scan.value.total
+                if (total > 0) {
+                    onProgress(scanned, total)
+                }
+
                 when (ScanWaitPlan.next(running, SystemClock.elapsedRealtime() - startedAt, limitMs)) {
                     ScanWaitPlan.Step.Done -> return Outcome.Finished
                     ScanWaitPlan.Step.GiveUp -> {

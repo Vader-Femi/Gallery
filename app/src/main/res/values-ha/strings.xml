@@ -275,4 +275,8 @@
     <string name="story_empty">Babu hotuna a cikin wannan labarin</string>
     <string name="picker_empty">Babu abubuwan da za a zaɓa</string>
     <string name="slideshow_empty">Babu hotunan da za a kunna</string>
+
+    <string name="notification_channel_background_scan">Lissafin Ɗakunan Karatu</string>
+    <string name="notification_background_scan_title">Ana lissafta hotuna</string>
+    <string name="notification_background_scan_text">Ana lissafta hotuna da bidiyo don bincike</string>
 </resources>

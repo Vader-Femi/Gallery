@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.femi.gallery.core.perf.FrameMonitor
 import com.femi.gallery.presentation.GalleryApp
@@ -16,6 +17,10 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 // AppCompatActivity (subclass of FragmentActivity) because BiometricPrompt needs one and per-app language needs AppCompatDelegate.
 class MainActivity : AppCompatActivity() {
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
 
     /** Logs (tag "Frames") which screen drops frames and why; silent while the app is smooth. */
     private val frameMonitor by lazy { FrameMonitor(window) }
@@ -33,6 +38,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
         // Opened from the launcher, or by another app to view or pick photos.
         val launch = LaunchRequest.from(intent, this)
         setContent {

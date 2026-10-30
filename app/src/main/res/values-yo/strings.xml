@@ -275,4 +275,8 @@
     <string name="story_empty">Kò sí fọ́tò nínú ìtàn yìí</string>
     <string name="picker_empty">Kò sí ohun tí o lè yan</string>
     <string name="slideshow_empty">Kò sí fọ́tò láti fi hàn</string>
+
+    <string name="notification_channel_background_scan">Ìṣàkóso Laíbúrerì</string>
+    <string name="notification_background_scan_title">Àgbékalẹ̀ fọ́tò àti fídíò</string>
+    <string name="notification_background_scan_text">Àgbékalẹ̀ fọ́tò àti fídíò fún ìgbéṣe àwárí</string>
 </resources>

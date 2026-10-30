@@ -275,4 +275,8 @@
     <string name="story_empty">Enweghị foto n\'akụkọ a</string>
     <string name="picker_empty">Enweghị ihe ị ga-ahọrọ</string>
     <string name="slideshow_empty">Enweghị foto ịkpọ</string>
+
+    <string name="notification_channel_background_scan">Ndekọ Ọbá Akwụkwọ</string>
+    <string name="notification_background_scan_title">Na-edekọ ihe na gallery</string>
+    <string name="notification_background_scan_text">Na-edekọ foto na vidiyo maka ọchụchọ</string>
 </resources>

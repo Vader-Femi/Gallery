@@ -53,6 +53,12 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.femi.gallery.R
@@ -104,6 +110,21 @@ fun SettingsScreen(
     var muteEnabled by remember { mutableStateOf(ThemePreferences.getMuteVideos(context)) }
     var backgroundScan by remember { mutableStateOf(ThemePreferences.getBackgroundScan(context)) }
     var scanOnlyCharging by remember { mutableStateOf(ThemePreferences.getScanOnlyWhileCharging(context)) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    val toggleBackgroundScan: (Boolean) -> Unit = { enabled ->
+        backgroundScan = enabled
+        ThemePreferences.setBackgroundScan(context, enabled)
+        BackgroundScans.update(context, settingsChanged = true)
+        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     val selectedLanguageName = stringResource(
         languageOptions.find { it.tag == selectedTag }?.nameRes ?: R.string.language_system
@@ -373,9 +394,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                backgroundScan = !backgroundScan
-                                ThemePreferences.setBackgroundScan(context, backgroundScan)
-                                BackgroundScans.update(context, settingsChanged = true)
+                                toggleBackgroundScan(!backgroundScan)
                             }
                             .padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -414,9 +433,7 @@ fun SettingsScreen(
                         Switch(
                             checked = backgroundScan,
                             onCheckedChange = {
-                                backgroundScan = it
-                                ThemePreferences.setBackgroundScan(context, it)
-                                BackgroundScans.update(context, settingsChanged = true)
+                                toggleBackgroundScan(it)
                             },
                         )
                     }

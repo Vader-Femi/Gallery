@@ -21,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -74,6 +76,8 @@ class ClipIndexRepositoryImpl @Inject constructor(
             return
         }
         val startedAt = SystemClock.elapsedRealtime()
+        val results = ArrayList<DetectedEmbedding>()
+        var unsaved = 0
         try {
             val known = index.current().entries
             val stamps = dataSource.loadImageStamps()
@@ -86,10 +90,9 @@ class ClipIndexRepositoryImpl @Inject constructor(
             val kept = known.filter { it.id in plan.keepIds }
             if (kept.size != known.size) checkpoint(kept)
 
-            val results = ArrayList<DetectedEmbedding>(kept)
+            results.addAll(kept)
             var withEmbeddings = kept.count { it.embedding.isNotEmpty() }
             var scanned = 0
-            var unsaved = 0
             _scan.value = ClipScanState(ClipScanStatus.Scanning, 0, plan.toScan, withEmbeddings)
 
             var next = 0
@@ -124,6 +127,9 @@ class ClipIndexRepositoryImpl @Inject constructor(
             _scan.value = ClipScanState(ClipScanStatus.Idle, scanned, plan.toScan, withEmbeddings)
             Log.i(TAG, "Scanned embeddings for ${plan.toScan} photos in ${SystemClock.elapsedRealtime() - startedAt} ms")
         } catch (e: CancellationException) {
+            if (unsaved > 0) {
+                withContext(NonCancellable) { checkpoint(results) }
+            }
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "Clip scan failed", e)
