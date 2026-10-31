@@ -114,8 +114,14 @@ fun SelectionTopBar(
 
 /**
  * Bottom action bar shown while selecting photos.
- * Uses [HorizontalFloatingToolbar] for correct M3 Expressive shape, shadow and animated
- * show/hide, and delegates enter/exit animation specs to [MaterialTheme.motionScheme].
+ *
+ * Uses [HorizontalFloatingToolbar] for correct M3 Expressive shape, shadow, and enter/exit
+ * animation. The toolbar is wrapped in [AnimatedVisibility] so it actually hides when selection
+ * is inactive — [HorizontalFloatingToolbar.expanded] only controls leading/trailing slots, not
+ * the main [content] slot, so it cannot be used to show/hide the bar itself.
+ *
+ * [MoreMenu] is wrapped in a [Box] so its [DropdownMenu] has a well-defined anchor node and
+ * appears directly above the More button rather than at an arbitrary screen position.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -126,29 +132,42 @@ fun BoxScope.SelectionBottomBar(
     moreActions: List<SelectionAction> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
-    HorizontalFloatingToolbar(
-        expanded = active,
+    AnimatedVisibility(
+        visible = active,
+        enter = slideInVertically(
+            initialOffsetY = { it },
+            animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        ) + fadeIn(animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec()),
+        exit = slideOutVertically(
+            targetOffsetY = { it },
+            animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        ) + fadeOut(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()),
         modifier = modifier
             .align(Alignment.BottomCenter)
             .navigationBarsPadding()
             .padding(bottom = 16.dp),
     ) {
-        actions.forEach { action ->
-            IconButton(onClick = action.onClick, enabled = count > 0) {
-                Icon(
-                    action.icon,
-                    contentDescription = action.label,
-                    modifier = Modifier.size(22.dp),
-                )
+        HorizontalFloatingToolbar(
+            expanded = true,
+        ) {
+            actions.forEach { action ->
+                IconButton(onClick = action.onClick, enabled = count > 0) {
+                    Icon(
+                        action.icon,
+                        contentDescription = action.label,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
-        }
-        if (moreActions.isNotEmpty()) {
-            MoreMenu(moreActions, enabled = count > 0)
+            if (moreActions.isNotEmpty()) {
+                MoreMenu(moreActions, enabled = count > 0)
+            }
         }
     }
 }
 
 /** Top "N selected" bar and bottom action bar shown while selecting photos. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BoxScope.SelectionBars(
     active: Boolean = true,
@@ -187,26 +206,35 @@ fun BoxScope.SelectionBars(
     )
 }
 
+/**
+ * "More" overflow menu for the selection bottom bar.
+ *
+ * The [IconButton] and [DropdownMenu] are siblings inside a [Box] so that [DropdownMenu] has a
+ * well-defined parent layout node to anchor itself to. Without the [Box], [DropdownMenu] would
+ * anchor to the [HorizontalFloatingToolbar]'s container and appear at an unpredictable position.
+ */
 @Composable
 private fun MoreMenu(actions: List<SelectionAction>, enabled: Boolean) {
     var expanded by remember { mutableStateOf(false) }
-    IconButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.size(36.dp)) {
-        Icon(
-            Icons.Filled.MoreVert,
-            contentDescription = stringResource(R.string.action_more),
-            modifier = Modifier.size(22.dp),
-        )
-    }
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-        actions.forEach { action ->
-            DropdownMenuItem(
-                text = { Text(action.label) },
-                leadingIcon = { Icon(action.icon, contentDescription = null) },
-                onClick = {
-                    expanded = false
-                    action.onClick()
-                },
+    Box {
+        IconButton(onClick = { expanded = true }, enabled = enabled) {
+            Icon(
+                Icons.Filled.MoreVert,
+                contentDescription = stringResource(R.string.action_more),
+                modifier = Modifier.size(22.dp),
             )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            actions.forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(action.label) },
+                    leadingIcon = { Icon(action.icon, contentDescription = null) },
+                    onClick = {
+                        expanded = false
+                        action.onClick()
+                    },
+                )
+            }
         }
     }
 }
