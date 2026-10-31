@@ -86,6 +86,28 @@ abstract class LocationDao {
 }
 
 @Dao
+abstract class ClipDao {
+    @Query("SELECT * FROM scan_clip")
+    abstract suspend fun all(): List<ClipRow>
+
+    @Upsert
+    abstract suspend fun upsert(rows: List<ClipRow>)
+
+    @Query("DELETE FROM scan_clip WHERE id IN (:ids)")
+    abstract suspend fun delete(ids: List<Long>)
+
+    @Query("DELETE FROM scan_clip")
+    abstract suspend fun deleteAll()
+
+    @Transaction
+    open suspend fun apply(changed: List<ClipRow>, removedIds: List<Long>) {
+        // Embeddings are 512 bytes each; a smaller batch keeps one statement's data small.
+        changed.chunked(100).forEach { upsert(it) }
+        removedIds.chunked(DELETE_CHUNK).forEach { delete(it) }
+    }
+}
+
+@Dao
 abstract class HashDao {
     @Query("SELECT * FROM file_hash WHERE id = :id")
     abstract suspend fun get(id: Long): HashRow?

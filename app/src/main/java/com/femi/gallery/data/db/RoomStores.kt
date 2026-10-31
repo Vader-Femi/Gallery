@@ -2,6 +2,7 @@ package com.femi.gallery.data.db
 
 import android.content.Context
 import com.femi.gallery.di.IoDispatcher
+import com.femi.gallery.domain.clip.DetectedEmbedding
 import com.femi.gallery.domain.color.ColorCodec
 import com.femi.gallery.domain.color.DetectedColor
 import com.femi.gallery.domain.geo.GeoPoint
@@ -9,6 +10,7 @@ import com.femi.gallery.domain.geo.LocationCodec
 import com.femi.gallery.domain.geo.LocationEntry
 import com.femi.gallery.domain.label.DetectedLabel
 import com.femi.gallery.domain.label.LabelCodec
+import com.femi.gallery.domain.repository.ClipStore
 import com.femi.gallery.domain.repository.ColorStore
 import com.femi.gallery.domain.repository.LabelStore
 import com.femi.gallery.domain.repository.LocationStore
@@ -87,4 +89,27 @@ class RoomLocationStore @Inject constructor(
 
     override suspend fun load(): List<LocationEntry> = loadAll()
     override suspend fun save(entries: List<LocationEntry>) = saveAll(entries)
+}
+
+@Singleton
+class RoomClipStore @Inject constructor(
+    @param:ApplicationContext context: Context,
+    @param:IoDispatcher io: CoroutineDispatcher,
+    private val dao: ClipDao,
+) : DiffingStore<DetectedEmbedding>(
+    context,
+    io,
+    // The file the placeholder model used to write held made-up numbers, not worth importing: it is just deleted.
+    "clip.bin",
+    { null },
+),
+    ClipStore {
+
+    override fun idOf(entry: DetectedEmbedding) = entry.id
+    override suspend fun readAll() = dao.all().map { DetectedEmbedding(it.id, it.modified, it.embedding) }
+    override suspend fun write(changed: List<DetectedEmbedding>, removedIds: List<Long>) =
+        dao.apply(changed.map { ClipRow(it.id, it.modified, it.embedding) }, removedIds)
+
+    override suspend fun load(): List<DetectedEmbedding> = loadAll()
+    override suspend fun save(entries: List<DetectedEmbedding>) = saveAll(entries)
 }

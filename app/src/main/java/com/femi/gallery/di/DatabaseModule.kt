@@ -2,6 +2,7 @@ package com.femi.gallery.di
 
 import android.content.Context
 import androidx.room.Room
+import com.femi.gallery.data.db.ClipDao
 import com.femi.gallery.data.db.ColorDao
 import com.femi.gallery.data.db.GalleryDatabase
 import com.femi.gallery.data.db.HashDao
@@ -42,4 +43,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMediaDao(database: GalleryDatabase): MediaDao = database.mediaDao()
+
+    @Provides
+    fun provideClipDao(database: GalleryDatabase): ClipDao = database.clipDao()
 }

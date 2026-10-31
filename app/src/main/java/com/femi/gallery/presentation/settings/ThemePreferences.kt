@@ -16,6 +16,7 @@ object ThemePreferences {
     private const val KEY_SLIDESHOW_SPEED = "slideshow_speed"
     private const val KEY_SLIDESHOW_SHUFFLE = "slideshow_shuffle"
     private const val KEY_TIMELINE_ZOOM = "timeline_zoom"
+    private const val KEY_SEMANTIC_SEARCH = "semantic_search"
 
     fun getThemeMode(context: Context): Int {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -100,5 +101,16 @@ object ThemePreferences {
     fun setTimelineZoom(context: Context, zoom: TimelineZoom) {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
         prefs.edit { putString(KEY_TIMELINE_ZOOM, zoom.name) }
+    }
+
+    /** Whether a search may also match photos by what they show (when a model is installed). On unless turned off. */
+    fun getSemanticSearch(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_SEMANTIC_SEARCH, true)
+    }
+
+    fun setSemanticSearch(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_SEMANTIC_SEARCH, enabled) }
     }
 }

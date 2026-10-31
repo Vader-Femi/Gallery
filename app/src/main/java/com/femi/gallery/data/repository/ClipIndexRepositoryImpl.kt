@@ -9,6 +9,7 @@ import com.femi.gallery.core.permission.MediaPermissionChecker
 import com.femi.gallery.data.clip.ClipIndexHolder
 import com.femi.gallery.data.mediastore.MediaStoreDataSource
 import com.femi.gallery.di.ApplicationScope
+import com.femi.gallery.domain.clip.ClipQuantizer
 import com.femi.gallery.domain.clip.ClipScanState
 import com.femi.gallery.domain.clip.ClipScanStatus
 import com.femi.gallery.domain.clip.DetectedEmbedding
@@ -59,6 +60,16 @@ class ClipIndexRepositoryImpl @Inject constructor(
         class Read(val entry: DetectedEmbedding) : Outcome
     }
 
+    override val isRunning: Boolean get() = synchronized(lock) { job?.isActive == true }
+
+    override fun stopScan() {
+        synchronized(lock) {
+            job?.cancel()
+            job = null
+        }
+        _scan.update { it.copy(status = ClipScanStatus.Idle) }
+    }
+
     override fun startScan() {
         if (!embedder.isAvailable) return
         if (!permissions.hasMediaAccess()) return
@@ -103,7 +114,7 @@ class ClipIndexRepositoryImpl @Inject constructor(
                         .map { i ->
                             async(workers) {
                                 Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
-                                val emb = embedder.embed(plan.scanIds[i]) ?: FloatArray(0)
+                                val emb = embedder.embed(plan.scanIds[i])?.let(ClipQuantizer::quantize) ?: ByteArray(0)
                                 Outcome.Read(DetectedEmbedding(plan.scanIds[i], plan.scanModified[i], emb))
                             }
                         }

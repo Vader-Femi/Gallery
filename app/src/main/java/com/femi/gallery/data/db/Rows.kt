@@ -95,3 +95,11 @@ data class MetaRow(
     @PrimaryKey val key: String,
     val value: Long,
 )
+
+/** What the image model made of a photo: one byte per number, see `ClipQuantizer`. Empty means the photo could not be read. */
+@Entity(tableName = "scan_clip")
+data class ClipRow(
+    @PrimaryKey val id: Long,
+    val modified: Long,
+    val embedding: ByteArray,
+)

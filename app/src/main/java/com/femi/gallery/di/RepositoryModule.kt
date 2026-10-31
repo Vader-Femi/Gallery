@@ -1,6 +1,6 @@
 package com.femi.gallery.di
 
-import com.femi.gallery.data.clip.FileClipStore
+import com.femi.gallery.data.db.RoomClipStore
 import com.femi.gallery.data.db.RoomLabelStore
 import com.femi.gallery.data.db.RoomColorStore
 import com.femi.gallery.data.db.RoomTextStore
@@ -96,7 +96,7 @@ abstract class RepositoryModule {
     abstract fun bindLabelIndexRepository(impl: LabelIndexRepositoryImpl): LabelIndexRepository
 
     @Binds
-    abstract fun bindClipStore(impl: FileClipStore): ClipStore
+    abstract fun bindClipStore(impl: RoomClipStore): ClipStore
 
     @Binds
     abstract fun bindImageEmbedder(impl: UnavailableImageEmbedder): ImageEmbedder

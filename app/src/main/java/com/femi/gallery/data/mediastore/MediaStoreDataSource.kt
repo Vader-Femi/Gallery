@@ -9,13 +9,12 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import com.femi.gallery.data.clip.ClipIndexHolder
+import com.femi.gallery.data.clip.SemanticSearch
 import com.femi.gallery.data.color.ColorIndexHolder
 import com.femi.gallery.data.label.LabelIndexHolder
 import com.femi.gallery.data.location.LocationIndex
 import com.femi.gallery.data.map.PhotoPlaceIndexHolder
 import com.femi.gallery.data.text.TextIndexHolder
-import com.femi.gallery.domain.repository.ImageEmbedder
 import com.femi.gallery.data.db.MediaMirror
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.mirror.MirrorQuery
@@ -48,8 +47,7 @@ class MediaStoreDataSource @Inject constructor(
     private val colorIndex: ColorIndexHolder,
     private val labelIndex: LabelIndexHolder,
     private val photoPlaceIndexHolder: PhotoPlaceIndexHolder,
-    private val clipIndex: ClipIndexHolder,
-    private val embedder: ImageEmbedder,
+    private val semanticSearch: SemanticSearch,
     private val mirror: MediaMirror,
 ) {
     private val resolver: ContentResolver get() = context.contentResolver
@@ -520,13 +518,19 @@ class MediaStoreDataSource @Inject constructor(
         return ContentUris.withAppendedId(base, id)
     }
 
-    /** For each word typed in a search, matching photos by text, colour, object/scene labels or place name, and by description when an image/text model is available. */
+    /**
+     * For each word typed in a search, the matching photos: by name, album, text in the photo, colour, object and
+     * scene labels, or place name. On top of that, when an image/text model is installed, the whole search read as a
+     * description of a photo adds the photos that look like it. These are added to the matches of every word, so
+     * nothing that matched a word before stops matching.
+     */
     private suspend fun combinedMatches(search: SearchCriteria?): Map<String, Set<Long>> {
         val terms = search?.terms?.distinct().orEmpty()
         if (terms.isEmpty()) return emptyMap()
+        val described = semanticSearch.idsFor(terms)
         return terms.associateWith { term ->
-            val lexical = textIndex.idsMatching(term) + colorIndex.idsMatching(term) + labelIndex.idsMatching(term) + photoPlaceIndexHolder.idsMatching(term)
-            if (!embedder.isAvailable) lexical else lexical + clipIndex.idsMatching(embedder.embedText(term), term)
+            textIndex.idsMatching(term) + colorIndex.idsMatching(term) + labelIndex.idsMatching(term) +
+                photoPlaceIndexHolder.idsMatching(term) + described
         }
     }
 
