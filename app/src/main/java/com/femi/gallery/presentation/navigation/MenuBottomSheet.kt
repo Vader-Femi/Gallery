@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -28,10 +27,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,11 +46,10 @@ fun MenuBottomSheet(
     onItemClick: (route: String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
-
+    // Fix 8: Remove explicit rememberBottomSheetState(Hidden) so ModalBottomSheet uses its
+    // built-in PartiallyExpanded → Expanded M3 Expressive entrance animation.
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
         dragHandle = { BottomSheetDefaults.DragHandle() },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier,
@@ -217,9 +213,10 @@ private fun ExpressiveMenuCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Fix 5: MaterialTheme.shapes.extraLarge replaces hard-coded RoundedCornerShape(22.dp)
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(22.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 2.dp,
         modifier = modifier.height(100.dp),
@@ -263,9 +260,10 @@ private fun ExpressivePillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Fix 5: MaterialTheme.shapes.extraLarge replaces hard-coded RoundedCornerShape(28.dp)
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 2.dp,
         modifier = modifier.height(56.dp),

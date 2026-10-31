@@ -26,13 +26,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +40,8 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -165,22 +167,22 @@ fun MapScreen(
             )
         }
 
-        Surface(
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
-        ) {
-            Row(
-                Modifier.statusBarsPadding().padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.viewer_back))
-                }
+        // Fix 3: Replace raw Surface+Row header with TopAppBar for correct semantics and
+        // elevation handling. alpha tinting is preserved via containerColor.
+        @OptIn(ExperimentalMaterial3Api::class)
+        TopAppBar(
+            title = {
                 Text(
                     text = stringResource(R.string.map_title),
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f),
                 )
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.viewer_back))
+                }
+            },
+            actions = {
                 IconButton(
                     onClick = {
                         if (size.width > 0) {
@@ -192,8 +194,13 @@ fun MapScreen(
                 ) {
                     Icon(Icons.Outlined.Public, contentDescription = stringResource(R.string.map_show_all))
                 }
-            }
-        }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+            ),
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+        )
 
         if (viewport != null) {
             Column(
@@ -345,10 +352,11 @@ private fun ClusterBubble(
                 .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
         )
         if (cluster.count > 1) {
+            // Fix 12: CircleShape is the semantic token; equivalent to RoundedCornerShape(50)
             Surface(
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(50),
+                shape = CircleShape,
                 modifier = Modifier.align(Alignment.BottomEnd),
             ) {
                 Text(
@@ -394,9 +402,10 @@ private fun MapStatus(scan: LocationScanState, showEmpty: Boolean, onPermissionR
 
 @Composable
 private fun StatusCard(content: @Composable () -> Unit) {
+    // Fix 5: MaterialTheme.shapes.medium replaces hard-coded RoundedCornerShape(16.dp)
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         tonalElevation = 3.dp,
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }

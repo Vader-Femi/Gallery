@@ -17,22 +17,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Brightness6
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -156,9 +155,10 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            // Expressive Language Setting Card
+            // Fix 5: MaterialTheme.shapes.large replaces hard-coded RoundedCornerShape(24.dp)
+            // Language Setting Card
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth(),
@@ -169,99 +169,36 @@ fun SettingsScreen(
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Language,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
+                    SettingCardHeader(
+                        icon = Icons.Outlined.Language,
+                        title = stringResource(R.string.settings_language),
+                        summary = stringResource(R.string.settings_language_summary),
+                    )
+                    // Fix 9: ExposedDropdownMenuBox replaces OutlinedTextField + overlay-Box hack.
+                    // Correct accessibility semantics (role = combobox), no click intercept needed.
+                    SettingDropdown(
+                        selectedName = selectedLanguageName,
+                        expanded = languageExpanded,
+                        onExpandedChange = { languageExpanded = it },
+                        items = languageOptions.map { stringResource(it.nameRes) },
+                        onItemSelected = { index ->
+                            val option = languageOptions[index]
+                            selectedTag = option.tag
+                            languageExpanded = false
+                            val locales = if (option.tag.isEmpty()) {
+                                LocaleListCompat.getEmptyLocaleList()
+                            } else {
+                                LocaleListCompat.forLanguageTags(option.tag)
                             }
-                        }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_language),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.settings_language_summary),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    // Material Expressive Dropdown for Language
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        OutlinedTextField(
-                            value = selectedLanguageName,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                IconButton(onClick = { languageExpanded = !languageExpanded }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = null,
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { languageExpanded = !languageExpanded },
-                        )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable { languageExpanded = !languageExpanded }
-                        ) {}
-
-                        DropdownMenu(
-                            expanded = languageExpanded,
-                            onDismissRequest = { languageExpanded = false },
-                        ) {
-                            languageOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(option.nameRes)) },
-                                    onClick = {
-                                        selectedTag = option.tag
-                                        languageExpanded = false
-                                        val locales = if (option.tag.isEmpty()) {
-                                            LocaleListCompat.getEmptyLocaleList()
-                                        } else {
-                                            LocaleListCompat.forLanguageTags(option.tag)
-                                        }
-                                        AppCompatDelegate.setApplicationLocales(locales)
-                                    },
-                                )
-                            }
-                        }
-                    }
+                            AppCompatDelegate.setApplicationLocales(locales)
+                        },
+                    )
                 }
             }
 
-            // Expressive Theme Setting Card
+            // Theme Setting Card
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth(),
@@ -272,93 +209,27 @@ fun SettingsScreen(
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Brightness6,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
-                        }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_theme),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.settings_theme_summary),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    // Material Expressive Dropdown for Theme
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        OutlinedTextField(
-                            value = selectedThemeName,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                IconButton(onClick = { themeExpanded = !themeExpanded }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = null,
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { themeExpanded = !themeExpanded },
-                        )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable { themeExpanded = !themeExpanded }
-                        ) {}
-
-                        DropdownMenu(
-                            expanded = themeExpanded,
-                            onDismissRequest = { themeExpanded = false },
-                        ) {
-                            themeOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(option.nameRes)) },
-                                    onClick = {
-                                        currentThemeMode = option.mode
-                                        themeExpanded = false
-                                        ThemePreferences.setThemeMode(context, option.mode)
-                                    },
-                                )
-                            }
-                        }
-                    }
+                    SettingCardHeader(
+                        icon = Icons.Outlined.Brightness6,
+                        title = stringResource(R.string.settings_theme),
+                        summary = stringResource(R.string.settings_theme_summary),
+                    )
+                    SettingDropdown(
+                        selectedName = selectedThemeName,
+                        expanded = themeExpanded,
+                        onExpandedChange = { themeExpanded = it },
+                        items = themeOptions.map { stringResource(it.nameRes) },
+                        onItemSelected = { index ->
+                            val option = themeOptions[index]
+                            currentThemeMode = option.mode
+                            themeExpanded = false
+                            ThemePreferences.setThemeMode(context, option.mode)
+                        },
+                    )
                 }
             }
 
-            // Expressive Auto-play Setting Card
-            // Expressive Auto-play Setting Card
+            // Auto-play Setting Card
             SettingSwitchCard(
                 icon = Icons.Outlined.PlayArrow,
                 title = stringResource(R.string.settings_autoplay_videos),
@@ -370,7 +241,7 @@ fun SettingsScreen(
                 },
             )
 
-            // Expressive Mute by Default Setting Card
+            // Mute by Default Setting Card
             SettingSwitchCard(
                 icon = Icons.AutoMirrored.Outlined.VolumeOff,
                 title = stringResource(R.string.settings_mute_videos),
@@ -384,7 +255,7 @@ fun SettingsScreen(
 
             // Library scans in the background
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth(),
@@ -393,48 +264,20 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                toggleBackgroundScan(!backgroundScan)
-                            }
+                            .clickable { toggleBackgroundScan(!backgroundScan) }
                             .padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Sync,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_background_scan),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.settings_background_scan_summary),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        SettingCardHeader(
+                            icon = Icons.Outlined.Sync,
+                            title = stringResource(R.string.settings_background_scan),
+                            summary = stringResource(R.string.settings_background_scan_summary),
+                            modifier = Modifier.weight(1f),
+                        )
                         Switch(
                             checked = backgroundScan,
-                            onCheckedChange = {
-                                toggleBackgroundScan(it)
-                            },
+                            onCheckedChange = { toggleBackgroundScan(it) },
                         )
                     }
 
@@ -460,36 +303,12 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                             ) {
-                                Surface(
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.height(48.dp),
-                                ) {
-                                    Box(
-                                        modifier = Modifier.padding(horizontal = 14.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.BatteryChargingFull,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                    }
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_scan_charging),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = stringResource(R.string.settings_scan_charging_summary),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                SettingCardHeader(
+                                    icon = Icons.Outlined.BatteryChargingFull,
+                                    title = stringResource(R.string.settings_scan_charging),
+                                    summary = stringResource(R.string.settings_scan_charging_summary),
+                                    modifier = Modifier.weight(1f),
+                                )
                                 Switch(
                                     checked = scanOnlyCharging,
                                     onCheckedChange = {
@@ -507,6 +326,95 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * Fix 9: ExposedDropdownMenuBox-based picker replacing the old OutlinedTextField + overlay Box hack.
+ * [ExposedDropdownMenu] is a scope extension on [ExposedDropdownMenuBoxScope], so it must be called
+ * directly inside the [ExposedDropdownMenuBox] content lambda (not nested inside other lambdas).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingDropdown(
+    selectedName: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    items: List<String>,
+    onItemSelected: (index: Int) -> Unit,
+) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+    ) {
+        OutlinedTextField(
+            value = selectedName,
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+        ) {
+            items.forEachIndexed { index, name ->
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    onClick = { onItemSelected(index) },
+                )
+            }
+        }
+    }
+}
+
+/** Icon + title + summary row reused inside setting cards. */
+@Composable
+private fun SettingCardHeader(
+    icon: ImageVector,
+    title: String,
+    summary: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        // Fix 5: MaterialTheme.shapes.medium replaces hard-coded RoundedCornerShape(14.dp)
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.height(48.dp),
+        ) {
+            Box(
+                modifier = Modifier.padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 /** A settings card with an icon, a title, a line of explanation and a switch; the whole card is tappable. */
 @Composable
 private fun SettingSwitchCard(
@@ -516,8 +424,9 @@ private fun SettingSwitchCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    // Fix 5: MaterialTheme.shapes.large replaces hard-coded RoundedCornerShape(24.dp)
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth(),
@@ -530,36 +439,12 @@ private fun SettingSwitchCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.height(48.dp),
-            ) {
-                Box(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            SettingCardHeader(
+                icon = icon,
+                title = title,
+                summary = summary,
+                modifier = Modifier.weight(1f),
+            )
             Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }

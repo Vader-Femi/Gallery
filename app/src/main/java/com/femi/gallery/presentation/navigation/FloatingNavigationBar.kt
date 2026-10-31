@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -25,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,20 +63,14 @@ fun FloatingNavigationBar(
         isVisible = true
     }
 
+    // Fix 2: Delegate enter animation specs to motionScheme so the nav bar inherits
+    // the M3 Expressive motion token rather than a hand-coded spring.
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        ) + slideInVertically(
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            ),
-            initialOffsetY = { it }
-        ),
+        enter = slideInVertically(
+            initialOffsetY = { it },
+            animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        ) + fadeIn(animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec()),
         modifier = modifier,
     ) {
         Row(
