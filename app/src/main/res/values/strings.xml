@@ -285,4 +285,26 @@
     <string name="notification_background_scan_title">Indexing library</string>
     <string name="notification_background_scan_text">Indexing photos and videos for search</string>
     <string name="notification_background_scan_progress">Indexing: %1$d of %2$d photos</string>
+
+    <!-- Groups -->
+    <string name="settings_group_general">General</string>
+    <string name="settings_group_albums">Albums &amp; Folders</string>
+    <string name="settings_group_video">Video Playback</string>
+    <string name="settings_group_indexing">Search &amp; Indexing</string>
+
+    <string name="settings_album_sort">Album sort order</string>
+    <string name="settings_album_sort_summary">Choose how albums are ordered in the Albums tab</string>
+    <string name="settings_album_sort_recency">Most recent</string>
+    <string name="settings_album_sort_name">Name</string>
+    <string name="settings_album_sort_count">Item count</string>
+
+    <string name="settings_hide_albums">Hide albums</string>
+    <string name="settings_hide_albums_summary">Choose which albums to hide from the Albums tab</string>
+    <string name="settings_hide_albums_dialog_title">Select albums to hide</string>
+
+    <string name="settings_delete_empty_albums">Delete empty albums</string>
+    <string name="settings_delete_empty_albums_summary">Find and delete empty folders in your storage</string>
+    <string name="settings_delete_empty_albums_deleted">Deleted %1$d empty albums.</string>
+    <string name="settings_delete_empty_albums_none">No empty albums found.</string>
 </resources>
+
