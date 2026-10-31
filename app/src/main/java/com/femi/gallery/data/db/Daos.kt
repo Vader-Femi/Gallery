@@ -131,6 +131,7 @@ abstract class HashDao {
 data class OrderRow(
     val id: Long,
     val dateMillis: Long,
+    val type: Int,
 )
 
 /** One album as the database summarises it; the cover is the newest item. */
@@ -151,7 +152,7 @@ abstract class MediaDao {
      * is 1 to keep only favorites. The order is the same as the one the app has always used: date, then id.
      */
     @Query(
-        "SELECT id, dateMillis FROM media " +
+        "SELECT id, dateMillis, type FROM media " +
             "WHERE (:bucketId IS NULL OR bucketId = :bucketId) " +
             "AND (:type IS NULL OR type = :type) " +
             "AND (:favoritesOnly = 0 OR isFavorite = 1) " +

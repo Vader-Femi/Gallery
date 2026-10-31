@@ -80,17 +80,24 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.MediaColumns._ID,
             MediaStore.MediaColumns.DATE_TAKEN,
             MediaStore.MediaColumns.DATE_ADDED,
+            MediaStore.Files.FileColumns.MEDIA_TYPE,
         )
         val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search)), null)?.use { cursor ->
             val ids = LongArray(cursor.count)
             val dates = LongArray(cursor.count)
+            val videos = BooleanArray(cursor.count)
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val takenColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN)
+            val addedColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+            val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
             var i = 0
             while (cursor.moveToNext() && i < ids.size) {
-                ids[i] = cursor.getLong(0)
-                dates[i] = MediaOrdering.effectiveDateMillis(taken = cursor.getLong(1), addedSeconds = cursor.getLong(2))
+                ids[i] = cursor.getLong(idColumn)
+                dates[i] = MediaOrdering.effectiveDateMillis(taken = cursor.getLong(takenColumn), addedSeconds = cursor.getLong(addedColumn))
+                videos[i] = cursor.getInt(typeColumn) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
                 i++
             }
-            MediaOrdering.newestFirst(ids, dates, i)
+            MediaOrdering.newestFirst(ids, dates, videos, i)
         } ?: MediaOrder.Empty
         // Where a photo was taken is not in MediaStore, so an area is applied here, from the scan results.
         val area = search?.area

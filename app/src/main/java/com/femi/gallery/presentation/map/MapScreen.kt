@@ -331,7 +331,7 @@ private fun ClusterBubble(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cover = remember(cluster.coverId) { coverUri(cluster.coverId) }
+    val cover = remember(cluster.coverId, cluster.coverUri) { cluster.coverUri.ifEmpty { coverUri(cluster.coverId) } }
     val sharedModifier = if (shared) Modifier.gridSharedBounds(cluster.coverId) else Modifier
     Box(modifier.size(BubbleSize).then(sharedModifier).clickable(onClick = onClick)) {
         AsyncImage(

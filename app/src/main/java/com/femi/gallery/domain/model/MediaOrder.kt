@@ -4,6 +4,7 @@ package com.femi.gallery.domain.model
 class MediaOrder(
     val ids: LongArray,
     val datesMillis: LongArray,
+    val isVideos: BooleanArray = BooleanArray(ids.size),
 ) {
     val size: Int get() = ids.size
 
@@ -13,19 +14,21 @@ class MediaOrder(
         for (id in ids) if (id in allowed) kept++
         val keptIds = LongArray(kept)
         val keptDates = LongArray(kept)
+        val keptVideos = BooleanArray(kept)
         var next = 0
         for (i in ids.indices) {
             if (ids[i] in allowed) {
                 keptIds[next] = ids[i]
                 keptDates[next] = datesMillis[i]
+                keptVideos[next] = isVideos[i]
                 next++
             }
         }
-        return MediaOrder(keptIds, keptDates)
+        return MediaOrder(keptIds, keptDates, keptVideos)
     }
 
     companion object {
-        val Empty = MediaOrder(LongArray(0), LongArray(0))
+        val Empty = MediaOrder(LongArray(0), LongArray(0), BooleanArray(0))
     }
 }
 
@@ -51,15 +54,17 @@ object MediaOrdering {
         val count = keep.count { it }
         val ids = LongArray(count)
         val dates = LongArray(count)
+        val videos = BooleanArray(count)
         var next = 0
         for (i in 0 until order.size) {
             if (keep[i]) {
                 ids[next] = order.ids[i]
                 dates[next] = order.datesMillis[i]
+                videos[next] = order.isVideos[i]
                 next++
             }
         }
-        return MediaOrder(ids, dates)
+        return MediaOrder(ids, dates, videos)
     }
 
     /** Sorts the first [count] items newest first; ties go to the higher id so the order is stable. */
@@ -70,6 +75,18 @@ object MediaOrdering {
         return MediaOrder(
             ids = LongArray(count) { ids[order[it]] },
             datesMillis = LongArray(count) { datesMillis[order[it]] },
+        )
+    }
+
+    /** Sorts the first [count] items newest first; ties go to the higher id so the order is stable. */
+    fun newestFirst(ids: LongArray, datesMillis: LongArray, isVideos: BooleanArray, count: Int = ids.size): MediaOrder {
+        val order = (0 until count).sortedWith(
+            compareByDescending<Int> { datesMillis[it] }.thenByDescending { ids[it] },
+        )
+        return MediaOrder(
+            ids = LongArray(count) { ids[order[it]] },
+            datesMillis = LongArray(count) { datesMillis[order[it]] },
+            isVideos = BooleanArray(count) { isVideos[order[it]] },
         )
     }
 }

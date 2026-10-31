@@ -80,6 +80,7 @@ class MediaMirror @Inject constructor(
         val order = MediaOrder(
             ids = LongArray(rows.size) { rows[it].id },
             datesMillis = LongArray(rows.size) { rows[it].dateMillis },
+            isVideos = BooleanArray(rows.size) { rows[it].type == 1 },
         )
         return MediaOrdering.withinDateRanges(order, query.dateRanges)
     }

@@ -1,12 +1,12 @@
 package com.femi.gallery.domain.geo
 
 /**
- * Groups photos that would overlap on screen. The map is cut into square cells of [DEFAULT_CELL_PIXELS]
- * pixels at the current zoom, and the photos in one cell form one cluster. Zooming in makes cells
+ * Groups items that would overlap on screen. The map is cut into square cells of [DEFAULT_CELL_PIXELS]
+ * pixels at the current zoom, and the items in one cell form one cluster. Zooming in makes cells
  * cover less ground, so clusters split apart.
  *
- * Cells never overlap, so the box of a cluster contains none of the photos of another cluster:
- * searching a cluster's [GeoCluster.box] finds exactly [GeoCluster.count] photos.
+ * Cells never overlap, so the box of a cluster contains none of the items of another cluster:
+ * searching a cluster's [GeoCluster.box] finds exactly [GeoCluster.count] items.
  */
 object MapClusterer {
     const val DEFAULT_CELL_PIXELS = 72.0
@@ -21,7 +21,7 @@ object MapClusterer {
     }
 
     /**
-     * The clusters at [zoom], largest first. Only photos inside [within] are considered when it is
+     * The clusters at [zoom], largest first. Only items inside [within] are considered when it is
      * given (pass the visible area, grown by a margin, to keep this cheap while panning).
      */
     fun cluster(
@@ -58,6 +58,7 @@ object MapClusterer {
                     count = cell.count,
                     box = GeoBox(cell.south, cell.west, cell.north, cell.east),
                     coverId = media.ids[cell.coverIndex],
+                    coverUri = media.coverUris.getOrElse(cell.coverIndex) { "" },
                 )
             }
             .sortedWith(compareByDescending<GeoCluster> { it.count }.thenBy { it.coverId })

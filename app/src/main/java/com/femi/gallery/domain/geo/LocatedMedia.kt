@@ -3,8 +3,8 @@ package com.femi.gallery.domain.geo
 import com.femi.gallery.domain.model.MediaOrder
 
 /**
- * The photos that have a known place, as parallel arrays (a library can hold tens of thousands, so
- * this avoids an object per photo). Entry `i` is the photo [ids]`[i]`, taken at
+ * The items that have a known place, as parallel arrays (a library can hold tens of thousands, so
+ * this avoids an object per photo). Entry `i` is the item [ids]`[i]`, taken at
  * ([latitudes]`[i]`, [longitudes]`[i]`) at [dates]`[i]` (epoch seconds, used to pick the newest).
  */
 class LocatedMedia(
@@ -12,6 +12,7 @@ class LocatedMedia(
     val latitudes: DoubleArray,
     val longitudes: DoubleArray,
     val dates: LongArray,
+    val coverUris: Array<String> = Array(ids.size) { "" },
 ) {
     init {
         require(latitudes.size == ids.size && longitudes.size == ids.size && dates.size == ids.size) {
@@ -25,7 +26,7 @@ class LocatedMedia(
     internal val xs: DoubleArray = DoubleArray(size) { Mercator.x(longitudes[it]) }
     internal val ys: DoubleArray = DoubleArray(size) { Mercator.y(latitudes[it]) }
 
-    /** The smallest box around all the photos, or null when there are none. */
+    /** The smallest box around all the items, or null when there are none. */
     fun boundingBox(): GeoBox? {
         if (size == 0) return null
         var south = Double.MAX_VALUE
@@ -41,7 +42,7 @@ class LocatedMedia(
         return GeoBox(south, west, north, east)
     }
 
-    /** The ids of the photos taken inside [box]. */
+    /** The ids of the items taken inside [box]. */
     fun idsIn(box: GeoBox): Set<Long> {
         val result = HashSet<Long>()
         for (i in 0 until size) {
@@ -51,14 +52,21 @@ class LocatedMedia(
     }
 
     companion object {
-        val Empty = LocatedMedia(LongArray(0), DoubleArray(0), DoubleArray(0), LongArray(0))
+        val Empty = LocatedMedia(LongArray(0), DoubleArray(0), DoubleArray(0), LongArray(0), emptyArray())
 
-        /** The photos of [order] (newest first) that have a place in [index], with their dates. */
-        fun from(order: MediaOrder, index: PlaceIndex): LocatedMedia {
+        /** The items of [order] (newest first) that have a place in [index], with their dates and URIs. */
+        fun from(
+            order: MediaOrder,
+            index: PlaceIndex,
+            coverUriResolver: (Long, Boolean) -> String = { id, isVideo ->
+                "content://media/external/${if (isVideo) "video" else "images"}/media/$id"
+            },
+        ): LocatedMedia {
             val ids = LongArray(order.size)
             val latitudes = DoubleArray(order.size)
             val longitudes = DoubleArray(order.size)
             val dates = LongArray(order.size)
+            val uris = arrayOfNulls<String>(order.size)
             var count = 0
             for (i in 0 until order.size) {
                 val place = index.placeOf(order.ids[i]) ?: continue
@@ -66,6 +74,7 @@ class LocatedMedia(
                 latitudes[count] = place.latitude
                 longitudes[count] = place.longitude
                 dates[count] = order.datesMillis[i] / 1000
+                uris[count] = coverUriResolver(order.ids[i], order.isVideos[i])
                 count++
             }
             return LocatedMedia(
@@ -73,18 +82,20 @@ class LocatedMedia(
                 latitudes.copyOf(count),
                 longitudes.copyOf(count),
                 dates.copyOf(count),
+                Array(count) { uris[it]!! },
             )
         }
     }
 }
 
-/** A group of photos that are close together at the current zoom level. */
+/** A group of items that are close together at the current zoom level. */
 data class GeoCluster(
     val latitude: Double,
     val longitude: Double,
     val count: Int,
-    /** The smallest box around the group; searching it finds exactly these photos. */
+    /** The smallest box around the group; searching it finds exactly these items. */
     val box: GeoBox,
-    /** The newest photo of the group, shown as the cover. */
+    /** The newest item of the group, shown as the cover. */
     val coverId: Long,
+    val coverUri: String = "",
 )
