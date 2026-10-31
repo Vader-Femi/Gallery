@@ -123,6 +123,7 @@
     <string name="viewer_pause">Pause</string>
     <string name="viewer_mute">Mute</string>
     <string name="viewer_unmute">Unmute</string>
+    <string name="action_set_as_wallpaper">Set as wallpaper</string>
 
     <string name="external_open_gallery">Open Gallery</string>
     <string name="picker_title_any">Choose a photo or video</string>
@@ -137,6 +138,10 @@
         <item quantity="other">%d photos and videos</item>
     </plurals>
     <string name="story_slideshow">Play slideshow</string>
+    <string name="sort_albums">Sort albums</string>
+    <string name="sort_recency">Most recent</string>
+    <string name="sort_name">Name (A-Z)</string>
+    <string name="sort_count">Item count</string>
     <string name="story_pick_cover">Choose cover picture</string>
     <string name="story_change_cover">Change cover</string>
     <string name="story_reset_cover">Use automatic cover</string>

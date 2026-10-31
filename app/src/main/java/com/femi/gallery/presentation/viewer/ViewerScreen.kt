@@ -42,11 +42,13 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PlayCircle
+import android.app.WallpaperManager
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -415,6 +417,11 @@ private fun ViewerContent(
                                     onEdit(current.uri)
                                 }
                             },
+                            if (!current.isVideo) {
+                                ViewerAction(Icons.Outlined.Wallpaper, stringResource(R.string.action_set_as_wallpaper)) {
+                                    setWallpaper(context, current)
+                                }
+                            } else null,
                             ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
                                 viewModel.actions.trash(listOf(ref))
                             },
@@ -482,7 +489,13 @@ private fun ViewerContent(
         }
     }
 
-    details?.let { DetailsSheet(details = it, onDismiss = viewModel::hideDetails) }
+    details?.let {
+        DetailsSheet(
+            details = it,
+            onDismiss = viewModel::hideDetails,
+            onSetWallpaper = if (!it.item.isVideo) { { setWallpaper(context, it.item) } } else null,
+        )
+    }
 }
 
 @Composable
@@ -799,6 +812,29 @@ private fun shareMedia(context: Context, item: MediaItem) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(send, null))
+}
+
+private fun setWallpaper(context: Context, item: MediaItem) {
+    val uri = Uri.parse(item.uri)
+    val mime = item.mimeType.ifEmpty { "image/*" }
+    val intent = Intent(WallpaperManager.ACTION_CROP_AND_SET_WALLPAPER).apply {
+        setDataAndType(uri, mime)
+        putExtra("mimeType", mime)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        val fallback = Intent(Intent.ACTION_ATTACH_DATA).apply {
+            setDataAndType(uri, mime)
+            putExtra("mimeType", mime)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            context.startActivity(Intent.createChooser(fallback, context.getString(R.string.action_set_as_wallpaper)))
+        } catch (_: Exception) {
+        }
+    }
 }
 
 internal fun LazyPagingItems<MediaItem>.peekOrNull(index: Int): MediaItem? =

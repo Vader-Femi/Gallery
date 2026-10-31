@@ -123,6 +123,7 @@
     <string name="viewer_pause">Kwụsị</string>
     <string name="viewer_mute">Mechie ụda</string>
     <string name="viewer_unmute">Mepee ụda</string>
+    <string name="action_set_as_wallpaper">Seta dị ka wallpaper</string>
 
     <string name="external_open_gallery">Mepee Gallery</string>
     <string name="picker_title_any">Họrọ foto ma ọ bụ vidiyo</string>
@@ -137,6 +138,10 @@
         <item quantity="other">foto na vidiyo %d</item>
     </plurals>
     <string name="story_slideshow">Kpọọ slideshow</string>
+    <string name="sort_albums">Hazie abọm</string>
+    <string name="sort_recency">Nke kacha ọhụrụ</string>
+    <string name="sort_name">Aha (A-Z)</string>
+    <string name="sort_count">Ọnụ ọgụgụ ihe</string>
     <string name="story_pick_cover">Họrọ foto kpuchie</string>
     <string name="story_change_cover">Gbanwee foto kpuchie</string>
     <string name="story_reset_cover">Jiri foto kpuchie nke onwe ya</string>

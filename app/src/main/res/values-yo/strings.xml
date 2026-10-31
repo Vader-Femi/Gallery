@@ -123,6 +123,7 @@
     <string name="viewer_pause">Dúró</string>
     <string name="viewer_mute">Pa ohùn rẹ́</string>
     <string name="viewer_unmute">Ṣí ohùn</string>
+    <string name="action_set_as_wallpaper">Yàn gẹ́gẹ́ bí wallpaper</string>
 
     <string name="external_open_gallery">Ṣí Gallery</string>
     <string name="picker_title_any">Yan fọ́tò tàbí fídíò kan</string>
@@ -137,6 +138,10 @@
         <item quantity="other">fọ́tò àti fídíò %d</item>
     </plurals>
     <string name="story_slideshow">Kpọ̀ àwọn fọ́tò báyìí</string>
+    <string name="sort_albums">Tò àwọn àbọ̀m</string>
+    <string name="sort_recency">TUNTUN jùlọ</string>
+    <string name="sort_name">Orúkọ (A-Z)</string>
+    <string name="sort_count">Iye àwọn ohun</string>
     <string name="story_pick_cover">Yan fọ́tò ìbòrí</string>
     <string name="story_change_cover">Yí fọ́tò ìbòrí padà</string>
     <string name="story_reset_cover">Lo ìbòrí àdánidá</string>

@@ -5,6 +5,7 @@ data class MediaRef(
     val id: Long,
     val uri: String,
     val isFavorite: Boolean,
+    val isVideo: Boolean = uri.contains("/video/"),
 )
 
-fun MediaItem.toRef() = MediaRef(id = id, uri = uri, isFavorite = isFavorite)
+fun MediaItem.toRef() = MediaRef(id = id, uri = uri, isFavorite = isFavorite, isVideo = isVideo)

@@ -9,6 +9,7 @@ import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -22,8 +23,8 @@ class AlbumsViewModel @Inject constructor(
     /** Runs album actions (rename) with their system confirmations; there is no selection on this screen. */
     val actions = selectionFactory.create(scope = viewModelScope, bucketId = null)
 
-
     val albums: StateFlow<List<Album>> = observeAlbums()
+        .map { list -> list.filter { it.itemCount > 0 || it.bucketId < 0 } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun onResumed() = refreshMedia()

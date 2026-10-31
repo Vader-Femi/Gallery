@@ -7,7 +7,6 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.femi.gallery.di.DefaultDispatcher
 import com.femi.gallery.domain.model.MediaItem
-import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.model.SlideshowOrder
 import com.femi.gallery.domain.search.SearchQueryParser
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
@@ -23,7 +22,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-/** The photos of whatever the query describes (a story, a place) or of one album, without videos. */
+data class SlideshowItem(
+    val uri: String,
+    val isVideo: Boolean,
+)
+
+/** The photos and videos of whatever the query describes (a story, a place) or of one album. */
 @HiltViewModel
 class SlideshowViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -34,7 +38,6 @@ class SlideshowViewModel @Inject constructor(
 
     private val criteria = SearchQueryParser
         .parse(savedStateHandle.get<String>(QUERY_ARG).orEmpty())
-        .copy(mediaType = MediaType.Image)
 
     private val bucketId: Long? = savedStateHandle.get<Long>(BUCKET_ARG)?.takeIf { it != NO_BUCKET }
 
@@ -42,16 +45,16 @@ class SlideshowViewModel @Inject constructor(
     val media: Flow<PagingData<MediaItem>> =
         getPagedMedia(bucketId = bucketId, search = criteria).cachedIn(viewModelScope)
 
-    private val _shuffled = MutableStateFlow<List<String>?>(null)
+    private val _shuffled = MutableStateFlow<List<SlideshowItem>?>(null)
 
     /**
-     * Every photo in a random order, ready to play; null while it is being prepared and while the
+     * Every item in a random order, ready to play; null while it is being prepared and while the
      * slideshow is not shuffled. A shuffled show needs the whole list up front: asking the paged list
      * for random positions would find most of them not loaded yet and show black slides.
      */
-    val shuffled: StateFlow<List<String>?> = _shuffled.asStateFlow()
+    val shuffled: StateFlow<List<SlideshowItem>?> = _shuffled.asStateFlow()
 
-    private var allUris: List<String>? = null
+    private var allItems: List<SlideshowItem>? = null
     private var shuffleJob: Job? = null
 
     /** Prepares a shuffled show for [seed] (the same seed gives the same order). */
@@ -59,10 +62,12 @@ class SlideshowViewModel @Inject constructor(
         shuffleJob?.cancel()
         _shuffled.value = null
         shuffleJob = viewModelScope.launch {
-            val uris = allUris ?: getAllMediaRefs(bucketId = bucketId, search = criteria).map { it.uri }.also { allUris = it }
+            val items = allItems ?: getAllMediaRefs(bucketId = bucketId, search = criteria)
+                .map { SlideshowItem(it.uri, it.isVideo) }
+                .also { allItems = it }
             _shuffled.value = withContext(default) {
-                val order = SlideshowOrder.shuffled(uris.size, seed)
-                List(uris.size) { uris[order[it]] }
+                val order = SlideshowOrder.shuffled(items.size, seed)
+                List(items.size) { items[order[it]] }
             }
         }
     }

@@ -10,6 +10,7 @@ data class Album(
     /** content:// URI of the newest item, used as the album cover. */
     val coverUri: String,
     val itemCount: Int,
+    val newestDate: Long = 0L,
 )
 
 /**

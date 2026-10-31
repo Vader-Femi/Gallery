@@ -169,10 +169,10 @@ class MediaStoreDataSource @Inject constructor(
         }.orEmpty()
     }
 
-    /** Id and last-modified time of every photo (not videos): what the location scan compares against. */
+    /** Id and last-modified time of every photo and video: what background scans compare against. */
     suspend fun loadImageStamps(): MediaStamps = withContext(io) {
         val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATE_MODIFIED)
-        val args = queryArgs(search = SearchCriteria(mediaType = MediaType.Image))
+        val args = queryArgs(search = SearchCriteria())
         resolver.query(collectionUri, projection, args, null)?.use { cursor ->
             val ids = LongArray(cursor.count)
             val modified = LongArray(cursor.count)
@@ -286,7 +286,6 @@ class MediaStoreDataSource @Inject constructor(
             }
 
             albumsMap.values
-                .sortedByDescending { it.newestDate }
                 .map { builder ->
                     Album(
                         bucketId = builder.bucketId,
@@ -294,6 +293,7 @@ class MediaStoreDataSource @Inject constructor(
                         relativePath = builder.relativePath,
                         coverUri = builder.coverUri,
                         itemCount = builder.itemCount,
+                        newestDate = builder.newestDate,
                     )
                 }
                 .sortedByDescending { it.relativePath == CAMERA_PATH } // stable: keeps recency order otherwise

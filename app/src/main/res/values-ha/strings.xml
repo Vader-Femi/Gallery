@@ -123,6 +123,7 @@
     <string name="viewer_pause">Tsaya</string>
     <string name="viewer_mute">Kashe sauti</string>
     <string name="viewer_unmute">Kunna sauti</string>
+    <string name="action_set_as_wallpaper">Saita a matsayin fuskar bangare</string>
 
     <string name="external_open_gallery">Buɗe Hotuna</string>
     <string name="picker_title_any">Zaɓi hoto ko bidiyo</string>
@@ -137,6 +138,10 @@
         <item quantity="other">hotuna da bidiyoyi %d</item>
     </plurals>
     <string name="story_slideshow">Kunna nunin hotuna</string>
+    <string name="sort_albums">Raba albam</string>
+    <string name="sort_recency">Mafi kusa</string>
+    <string name="sort_name">Suna (A-Z)</string>
+    <string name="sort_count">Adadin abubuwa</string>
     <string name="story_pick_cover">Zaɓi hoton bangon labari</string>
     <string name="story_change_cover">Canja hoton bango</string>
     <string name="story_reset_cover">Yi amfani da hoton bango na atomatik</string>

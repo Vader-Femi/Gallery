@@ -9,9 +9,15 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -29,7 +35,11 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailsSheet(details: MediaDetails, onDismiss: () -> Unit) {
+fun DetailsSheet(
+    details: MediaDetails,
+    onDismiss: () -> Unit,
+    onSetWallpaper: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     val item = details.item
     val formatter = remember {
@@ -81,6 +91,20 @@ fun DetailsSheet(details: MediaDetails, onDismiss: () -> Unit) {
                     stringResource(R.string.details_location),
                     String.format(Locale.US, "%.5f, %.5f", details.latitude, details.longitude),
                 )
+            }
+            if (!item.isVideo && onSetWallpaper != null) {
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = {
+                        onSetWallpaper()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Wallpaper, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_set_as_wallpaper))
+                }
             }
             Spacer(Modifier.height(24.dp))
         }

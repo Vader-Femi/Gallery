@@ -3,6 +3,7 @@ package com.femi.gallery.presentation.settings
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
+import com.femi.gallery.domain.mirror.AlbumSortOption
 import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.presentation.pictures.TimelineZoom
 
@@ -112,5 +113,16 @@ object ThemePreferences {
     fun setSemanticSearch(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
         prefs.edit { putBoolean(KEY_SEMANTIC_SEARCH, enabled) }
+    }
+
+    fun getAlbumSortOption(context: Context): AlbumSortOption {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        val name = prefs.getString("album_sort_option", null)
+        return name?.let { runCatching { AlbumSortOption.valueOf(it) }.getOrNull() } ?: AlbumSortOption.Recency
+    }
+
+    fun setAlbumSortOption(context: Context, option: AlbumSortOption) {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putString("album_sort_option", option.name) }
     }
 }

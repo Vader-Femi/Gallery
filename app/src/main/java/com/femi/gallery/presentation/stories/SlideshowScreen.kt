@@ -1,5 +1,10 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:Suppress("OPT_IN_USAGE_FUTURE_ERROR")
+
 package com.femi.gallery.presentation.stories
 
+import android.view.LayoutInflater
+import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -24,16 +29,19 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -49,8 +57,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
@@ -62,7 +77,9 @@ import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.ImmersiveMode
 import com.femi.gallery.presentation.settings.ThemePreferences
+import kotlinx.coroutines.delay
 import kotlin.random.Random
+import androidx.media3.common.MediaItem as PlayerMediaItem
 
 /**
  * Plays photos one after another (a story, a place or an album). Tap to pause or resume, swipe to
@@ -72,7 +89,8 @@ import kotlin.random.Random
  * different: the whole list is loaded and shuffled first (with a loading indicator), then played from
  * memory, because random positions in a paged list are mostly not loaded yet and would show black slides.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun SlideshowScreen(
     onClose: () -> Unit,
@@ -112,14 +130,14 @@ fun SlideshowScreen(
         val isLoaded = items.loadState.refresh is LoadState.NotLoading
         val preparing = shuffle && shuffledUris == null
         when {
-            preparing -> LoadingIndicator(modifier = Modifier.align(Alignment.Center))
+            preparing -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
 
             shuffle -> {
-                val uris = shuffledUris.orEmpty()
-                if (uris.isEmpty()) {
+                val shuffledItems = shuffledUris.orEmpty()
+                if (shuffledItems.isEmpty()) {
                     EmptyState(text = stringResource(R.string.slideshow_empty), textColor = Color.White.copy(alpha = 0.8f))
                 } else {
-                    SlidePager(pageCount = uris.size, playing = playing, speed = speed, uriAt = { uris.getOrNull(it) })
+                    SlidePager(pageCount = shuffledItems.size, playing = playing, speed = speed, itemAt = { shuffledItems.getOrNull(it) })
                 }
             }
 
@@ -127,7 +145,12 @@ fun SlideshowScreen(
                 EmptyState(text = stringResource(R.string.slideshow_empty), textColor = Color.White.copy(alpha = 0.8f))
 
             items.itemCount > 0 ->
-                SlidePager(pageCount = items.itemCount, playing = playing, speed = speed, uriAt = { items[it]?.uri })
+                SlidePager(
+                    pageCount = items.itemCount,
+                    playing = playing,
+                    speed = speed,
+                    itemAt = { items[it]?.let { item -> SlideshowItem(item.uri, item.isVideo) } },
+                )
         }
 
         if (!playing && !preparing) {
@@ -221,23 +244,41 @@ fun SlideshowScreen(
 }
 
 /**
- * [pageCount] pictures, swiped or advanced on a timer. [uriAt] gives the picture of a page, or null
- * while it is not available. It starts again from the first picture after the last.
+ * [pageCount] items (photos and videos), swiped or advanced on a timer. [itemAt] gives the item of a page, or null
+ * while it is not available. It starts again from the first item after the last.
  */
+@OptIn(UnstableApi::class)
 @Composable
 private fun SlidePager(
     pageCount: Int,
     playing: Boolean,
     speed: SlideshowSpeed,
-    uriAt: (Int) -> String?,
+    itemAt: (Int) -> SlideshowItem?,
 ) {
     val context = LocalContext.current
     val pagerState = rememberPagerState { pageCount }
     val progress = remember { Animatable(0f) }
+    var videoEnded by remember { mutableStateOf(false) }
 
-    // Advance after each slide has been shown for a while, with animated progress indicator.
-    LaunchedEffect(playing, pagerState.settledPage, pageCount, speed) {
-        if (playing && pageCount > 1) {
+    val settledItem = itemAt(pagerState.settledPage)
+
+    LaunchedEffect(pagerState.settledPage, settledItem?.uri) {
+        videoEnded = false
+    }
+
+    // Advance after each slide has been shown for a while (or video ends), with animated progress indicator.
+    LaunchedEffect(playing, pagerState.settledPage, pageCount, speed, settledItem?.isVideo, videoEnded) {
+        if (!playing || pageCount <= 1) {
+            progress.stop()
+            return@LaunchedEffect
+        }
+
+        if (settledItem?.isVideo == true) {
+            if (videoEnded) {
+                val next = SlideshowOrder.pageAfter(pagerState.settledPage, pageCount)
+                if (next > pagerState.settledPage) pagerState.animateScrollToPage(next) else pagerState.scrollToPage(next)
+            }
+        } else {
             progress.snapTo(0f)
             progress.animateTo(
                 targetValue = 1f,
@@ -248,8 +289,6 @@ private fun SlidePager(
             )
             val next = SlideshowOrder.pageAfter(pagerState.settledPage, pageCount)
             if (next > pagerState.settledPage) pagerState.animateScrollToPage(next) else pagerState.scrollToPage(next)
-        } else {
-            progress.stop()
         }
     }
 
@@ -259,14 +298,31 @@ private fun SlidePager(
             modifier = Modifier.fillMaxSize(),
             beyondViewportPageCount = 1,
         ) { page ->
-            val uri = uriAt(page)
-            if (uri != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context).data(uri).crossfade(true).build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                )
+            val item = itemAt(page)
+            if (item != null) {
+                if (item.isVideo) {
+                    val isCurrent = pagerState.settledPage == page
+                    SlideshowVideoPlayer(
+                        uri = item.uri,
+                        isCurrent = isCurrent,
+                        playing = playing && isCurrent,
+                        onProgress = { pos, dur ->
+                            if (isCurrent && dur > 0) {
+                                progress.snapTo((pos.toFloat() / dur.toFloat()).coerceIn(0f, 1f))
+                            }
+                        },
+                        onEnded = {
+                            if (isCurrent) videoEnded = true
+                        },
+                    )
+                } else {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context).data(item.uri).crossfade(true).build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
 
@@ -280,4 +336,79 @@ private fun SlidePager(
             )
         }
     }
+}
+
+@OptIn(UnstableApi::class)
+@Composable
+private fun SlideshowVideoPlayer(
+    uri: String,
+    isCurrent: Boolean,
+    playing: Boolean,
+    onProgress: suspend (pos: Long, dur: Long) -> Unit,
+    onEnded: () -> Unit,
+) {
+    val context = LocalContext.current
+    val player = remember(uri) {
+        ExoPlayer.Builder(context).build().apply {
+            setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
+            setMediaItem(PlayerMediaItem.fromUri(uri))
+            prepare()
+        }
+    }
+
+    DisposableEffect(player) {
+        onDispose {
+            player.release()
+        }
+    }
+
+    LaunchedEffect(playing, isCurrent) {
+        if (isCurrent && playing) {
+            player.play()
+        } else {
+            player.pause()
+        }
+    }
+
+    DisposableEffect(player, isCurrent) {
+        if (!isCurrent) return@DisposableEffect onDispose {}
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_ENDED) {
+                    onEnded()
+                }
+            }
+            override fun onPlayerError(error: PlaybackException) {
+                onEnded()
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+
+    LaunchedEffect(player, playing, isCurrent) {
+        if (!isCurrent) return@LaunchedEffect
+        while (true) {
+            val dur = player.duration.coerceAtLeast(0L)
+            val pos = player.currentPosition.coerceAtLeast(0L)
+            onProgress(pos, dur)
+            if (!playing) break
+            delay(100L)
+        }
+    }
+
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { ctx ->
+            (LayoutInflater.from(ctx).inflate(R.layout.viewer_player_view, null, false) as PlayerView).apply {
+                useController = false
+                this.player = player
+            }
+        },
+        update = {
+            it.useController = false
+            it.player = player
+        },
+        onRelease = { it.player = null }
+    )
 }
