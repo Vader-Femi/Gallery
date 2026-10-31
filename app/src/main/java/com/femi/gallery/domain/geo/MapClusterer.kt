@@ -52,13 +52,16 @@ object MapClusterer {
         }
         return cells.values
             .map { cell ->
+                val coverId = media.ids[cell.coverIndex]
+                val isVideo = media.isVideos[cell.coverIndex]
+                val coverUri = "content://media/external/${if (isVideo) "video" else "images"}/media/$coverId"
                 GeoCluster(
                     latitude = cell.sumLatitude / cell.count,
                     longitude = cell.sumLongitude / cell.count,
                     count = cell.count,
                     box = GeoBox(cell.south, cell.west, cell.north, cell.east),
-                    coverId = media.ids[cell.coverIndex],
-                    coverUri = media.coverUris.getOrElse(cell.coverIndex) { "" },
+                    coverId = coverId,
+                    coverUri = coverUri,
                 )
             }
             .sortedWith(compareByDescending<GeoCluster> { it.count }.thenBy { it.coverId })

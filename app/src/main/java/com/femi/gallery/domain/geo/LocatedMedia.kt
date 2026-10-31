@@ -12,10 +12,10 @@ class LocatedMedia(
     val latitudes: DoubleArray,
     val longitudes: DoubleArray,
     val dates: LongArray,
-    val coverUris: Array<String> = Array(ids.size) { "" },
+    val isVideos: BooleanArray = BooleanArray(ids.size),
 ) {
     init {
-        require(latitudes.size == ids.size && longitudes.size == ids.size && dates.size == ids.size) {
+        require(latitudes.size == ids.size && longitudes.size == ids.size && dates.size == ids.size && isVideos.size == ids.size) {
             "Arrays must have the same size"
         }
     }
@@ -52,21 +52,18 @@ class LocatedMedia(
     }
 
     companion object {
-        val Empty = LocatedMedia(LongArray(0), DoubleArray(0), DoubleArray(0), LongArray(0), emptyArray())
+        val Empty = LocatedMedia(LongArray(0), DoubleArray(0), DoubleArray(0), LongArray(0), BooleanArray(0))
 
-        /** The items of [order] (newest first) that have a place in [index], with their dates and URIs. */
+        /** The items of [order] (newest first) that have a place in [index], with their dates and video flags. */
         fun from(
             order: MediaOrder,
             index: PlaceIndex,
-            coverUriResolver: (Long, Boolean) -> String = { id, isVideo ->
-                "content://media/external/${if (isVideo) "video" else "images"}/media/$id"
-            },
         ): LocatedMedia {
             val ids = LongArray(order.size)
             val latitudes = DoubleArray(order.size)
             val longitudes = DoubleArray(order.size)
             val dates = LongArray(order.size)
-            val uris = arrayOfNulls<String>(order.size)
+            val isVideos = BooleanArray(order.size)
             var count = 0
             for (i in 0 until order.size) {
                 val place = index.placeOf(order.ids[i]) ?: continue
@@ -74,7 +71,7 @@ class LocatedMedia(
                 latitudes[count] = place.latitude
                 longitudes[count] = place.longitude
                 dates[count] = order.datesMillis[i] / 1000
-                uris[count] = coverUriResolver(order.ids[i], order.isVideos[i])
+                isVideos[count] = order.isVideos[i]
                 count++
             }
             return LocatedMedia(
@@ -82,7 +79,7 @@ class LocatedMedia(
                 latitudes.copyOf(count),
                 longitudes.copyOf(count),
                 dates.copyOf(count),
-                Array(count) { uris[it]!! },
+                isVideos.copyOf(count),
             )
         }
     }
@@ -97,5 +94,5 @@ data class GeoCluster(
     val box: GeoBox,
     /** The newest item of the group, shown as the cover. */
     val coverId: Long,
-    val coverUri: String = "",
+    val coverUri: String,
 )

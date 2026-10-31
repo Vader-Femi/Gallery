@@ -331,7 +331,7 @@ private fun ClusterBubble(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cover = remember(cluster.coverId, cluster.coverUri) { cluster.coverUri.ifEmpty { coverUri(cluster.coverId) } }
+    val cover = remember(cluster.coverId, cluster.coverUri) { cluster.coverUri }
     val sharedModifier = if (shared) Modifier.gridSharedBounds(cluster.coverId) else Modifier
     Box(modifier.size(BubbleSize).then(sharedModifier).clickable(onClick = onClick)) {
         AsyncImage(
@@ -360,9 +360,6 @@ private fun ClusterBubble(
         }
     }
 }
-
-private fun coverUri(id: Long): String =
-    ContentUris.withAppendedId(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL), id).toString()
 
 private fun shortCount(count: Int): String = when {
     count < 1_000 -> count.toString()
