@@ -127,8 +127,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Find **similar** photos (not byte-identical: bursts, re-saved or resized copies) with perceptual hashing; exact duplicates are done
 - [ ] Motion photo playback, *(set as wallpaper added)*
 - [ ] Tiled full-resolution zoom for very large photos
-- [ ] Small settings screen (DataStore); hide albums; sort options; delete empty albums *(zoom level remembered)*
-- [ ] Select a whole day by tapping its header; drag-to-select
+- [x] Small settings screen (DataStore); hide albums; sort options; delete empty albums *(zoom level remembered)*
 - [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)

@@ -1,11 +1,15 @@
 package com.femi.gallery.presentation.settings
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import com.femi.gallery.domain.mirror.AlbumSortOption
 import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.presentation.pictures.TimelineZoom
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 
 object ThemePreferences {
     private const val PREF_NAME = "gallery_settings_prefs"
@@ -18,6 +22,7 @@ object ThemePreferences {
     private const val KEY_SLIDESHOW_SHUFFLE = "slideshow_shuffle"
     private const val KEY_TIMELINE_ZOOM = "timeline_zoom"
     private const val KEY_SEMANTIC_SEARCH = "semantic_search"
+    private const val KEY_HIDDEN_ALBUMS = "hidden_albums"
 
     fun getThemeMode(context: Context): Int {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -124,5 +129,39 @@ object ThemePreferences {
     fun setAlbumSortOption(context: Context, option: AlbumSortOption) {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
         prefs.edit { putString("album_sort_option", option.name) }
+    }
+
+    fun getAlbumSortOptionFlow(context: Context): Flow<AlbumSortOption> = callbackFlow {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "album_sort_option") {
+                trySend(getAlbumSortOption(context))
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        trySend(getAlbumSortOption(context))
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    fun getHiddenAlbums(context: Context): Set<Long> {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return prefs.getStringSet(KEY_HIDDEN_ALBUMS, emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
+    }
+
+    fun setHiddenAlbums(context: Context, hiddenIds: Set<Long>) {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putStringSet(KEY_HIDDEN_ALBUMS, hiddenIds.map { it.toString() }.toSet()) }
+    }
+
+    fun getHiddenAlbumsFlow(context: Context): Flow<Set<Long>> = callbackFlow {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == KEY_HIDDEN_ALBUMS) {
+                trySend(getHiddenAlbums(context))
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        trySend(getHiddenAlbums(context))
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 }
