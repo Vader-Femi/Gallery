@@ -119,6 +119,12 @@ object ThemePreferences {
         name?.let { runCatching { AlbumSortOption.valueOf(it) }.getOrNull() } ?: AlbumSortOption.Recency
     }
 
+    fun getAlbumSortOptionFlow(context: Context): Flow<AlbumSortOption> =
+        context.dataStore.data.map { prefs ->
+            val name = prefs[KEY_ALBUM_SORT]
+            name?.let { runCatching { AlbumSortOption.valueOf(it) }.getOrNull() } ?: AlbumSortOption.Recency
+        }
+
     fun setAlbumSortOption(context: Context, option: AlbumSortOption) = runBlocking {
         context.dataStore.edit { it[KEY_ALBUM_SORT] = option.name }
     }
@@ -127,6 +133,12 @@ object ThemePreferences {
         val strings = context.dataStore.data.map { it[KEY_HIDDEN_ALBUMS] ?: emptySet() }.first()
         strings.mapNotNull { it.toLongOrNull() }.toSet()
     }
+
+    fun getHiddenAlbumsFlow(context: Context): Flow<Set<Long>> =
+        context.dataStore.data.map { prefs ->
+            val strings = prefs[KEY_HIDDEN_ALBUMS] ?: emptySet()
+            strings.mapNotNull { it.toLongOrNull() }.toSet()
+        }
 
     fun setHiddenAlbums(context: Context, hiddenIds: Set<Long>) = runBlocking {
         context.dataStore.edit { it[KEY_HIDDEN_ALBUMS] = hiddenIds.map { id -> id.toString() }.toSet() }
