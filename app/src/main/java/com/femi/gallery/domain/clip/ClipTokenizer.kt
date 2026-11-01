@@ -76,8 +76,8 @@ class ClipTokenizer(mergesText: String) {
         var t = Normalizer.normalize(text, Normalizer.Form.NFC)
         t = repairLikeFtfy(t)
         repeat(2) { t = unescapeHtml(t) }
-        // (?U): like Python, any Unicode whitespace (a non-breaking space, for instance) counts, not only ASCII ones.
-        return t.trim().replace(Regex("(?U)\\s+"), " ").trim().lowercase()
+        // Regex pattern matches any Unicode whitespace character
+        return t.trim().replace(Regex("\\p{Z}+"), " ").trim().lowercase()
     }
 
     /** The few repairs of the `ftfy` library that matter for typed text: curly quotes, ligatures and full-width letters. */
