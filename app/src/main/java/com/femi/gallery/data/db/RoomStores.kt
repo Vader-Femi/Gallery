@@ -112,4 +112,11 @@ class RoomClipStore @Inject constructor(
 
     override suspend fun load(): List<DetectedEmbedding> = loadAll()
     override suspend fun save(entries: List<DetectedEmbedding>) = saveAll(entries)
+
+    override suspend fun modelSignature(): Long? = dao.meta(SIGNATURE_KEY)
+    override suspend fun setModelSignature(value: Long) = dao.putMeta(MetaRow(SIGNATURE_KEY, value))
+
+    private companion object {
+        const val SIGNATURE_KEY = "clip_model_signature"
+    }
 }

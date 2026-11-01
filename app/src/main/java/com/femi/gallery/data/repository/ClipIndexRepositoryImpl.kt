@@ -80,7 +80,18 @@ class ClipIndexRepositoryImpl @Inject constructor(
         }
     }
 
+    /** The numbers another model made mean nothing to this one: forget them so that every photo is read again. */
+    private suspend fun discardEmbeddingsOfAnotherModel() {
+        val signature = embedder.signature
+        if (store.modelSignature() == signature) return
+        store.save(emptyList())
+        index.publish(emptyList())
+        store.setModelSignature(signature)
+        completedGeneration = -1L
+    }
+
     private suspend fun runScan() {
+        discardEmbeddingsOfAnotherModel()
         val generation = dataSource.generation()
         if (generation == completedGeneration) {
             _scan.update { it.copy(status = ClipScanStatus.Idle) }
@@ -89,6 +100,7 @@ class ClipIndexRepositoryImpl @Inject constructor(
         val startedAt = SystemClock.elapsedRealtime()
         val results = ArrayList<DetectedEmbedding>()
         var unsaved = 0
+        var aborted = false
         try {
             val known = index.current().entries
             val stamps = dataSource.loadImageStamps()
@@ -120,6 +132,13 @@ class ClipIndexRepositoryImpl @Inject constructor(
                         }
                         .awaitAll()
                 }
+                // If the model has failed (it cannot be opened, the files were removed), the photos of this batch are not
+                // "unreadable", they just were not read: record nothing and stop; the next scan carries on from here.
+                if (!embedder.isAvailable) {
+                    Log.w(TAG, "The model is no longer usable; stopping the scan")
+                    aborted = true
+                    break
+                }
                 val read = outcomes.map { it.entry }
                 results.addAll(read)
                 withEmbeddings += read.count { it.embedding.isNotEmpty() }
@@ -134,7 +153,7 @@ class ClipIndexRepositoryImpl @Inject constructor(
             }
             if (unsaved > 0) checkpoint(results)
 
-            completedGeneration = generation
+            if (!aborted) completedGeneration = generation
             _scan.value = ClipScanState(ClipScanStatus.Idle, scanned, plan.toScan, withEmbeddings)
             Log.i(TAG, "Scanned embeddings for ${plan.toScan} photos in ${SystemClock.elapsedRealtime() - startedAt} ms")
         } catch (e: CancellationException) {

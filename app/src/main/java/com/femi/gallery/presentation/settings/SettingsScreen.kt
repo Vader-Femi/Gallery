@@ -503,6 +503,8 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            ClipModelCard()
         }
     }
 }

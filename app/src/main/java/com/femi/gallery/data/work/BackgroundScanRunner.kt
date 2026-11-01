@@ -2,6 +2,7 @@ package com.femi.gallery.data.work
 
 import android.os.SystemClock
 import com.femi.gallery.core.lifecycle.AppForeground
+import com.femi.gallery.domain.repository.ClipIndexRepository
 import com.femi.gallery.domain.repository.ColorIndexRepository
 import com.femi.gallery.domain.repository.LabelIndexRepository
 import com.femi.gallery.domain.repository.LocationRepository
@@ -13,7 +14,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Runs the library scans (places, text, colours, labels) for a background job and waits for them. The
+ * Runs the library scans (places, text, colours, labels, and what photos show) for a background job and waits for them. The
  * scans themselves live in the app and keep their own progress; this only starts them, which does
  * nothing for a scan that is already running or has nothing new to read, and keeps the job alive for as
  * long as they work.
@@ -24,6 +25,7 @@ class BackgroundScanRunner @Inject constructor(
     private val text: TextIndexRepository,
     private val colors: ColorIndexRepository,
     private val labels: LabelIndexRepository,
+    private val clip: ClipIndexRepository,
 ) {
     enum class Outcome {
         /** Every scan finished. */
@@ -38,14 +40,16 @@ class BackgroundScanRunner @Inject constructor(
         text.startScan()
         colors.startScan()
         labels.startScan()
+        clip.startScan()
 
         val startedAt = SystemClock.elapsedRealtime()
         try {
             while (true) {
-                val running = locations.isRunning || text.isRunning || colors.isRunning || labels.isRunning
+                val running = locations.isRunning || text.isRunning || colors.isRunning || labels.isRunning || clip.isRunning
 
-                val scanned = text.scan.value.scanned + colors.scan.value.scanned + labels.scan.value.scanned + locations.scan.value.scanned
-                val total = text.scan.value.total + colors.scan.value.total + labels.scan.value.total + locations.scan.value.total
+                val scanned = text.scan.value.scanned + colors.scan.value.scanned + labels.scan.value.scanned + locations.scan.value.scanned +
+                    clip.scan.value.scanned
+                val total = text.scan.value.total + colors.scan.value.total + labels.scan.value.total + locations.scan.value.total + clip.scan.value.total
                 if (total > 0) {
                     onProgress(scanned, total)
                 }
@@ -73,6 +77,7 @@ class BackgroundScanRunner @Inject constructor(
         text.stopScan()
         colors.stopScan()
         labels.stopScan()
+        clip.stopScan()
     }
 
     private companion object {

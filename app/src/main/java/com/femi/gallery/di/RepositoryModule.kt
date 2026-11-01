@@ -5,7 +5,8 @@ import com.femi.gallery.data.db.RoomLabelStore
 import com.femi.gallery.data.db.RoomColorStore
 import com.femi.gallery.data.db.RoomTextStore
 import com.femi.gallery.data.db.RoomLocationStore
-import com.femi.gallery.data.clip.UnavailableImageEmbedder
+import com.femi.gallery.data.clip.ClipModelManagerImpl
+import com.femi.gallery.data.clip.OnnxClipEmbedder
 import com.femi.gallery.data.duplicates.ContentFileHasher
 import com.femi.gallery.data.repository.DuplicateRepositoryImpl
 import com.femi.gallery.data.story.FileStoryEditStore
@@ -27,6 +28,7 @@ import com.femi.gallery.domain.repository.ColorStore
 import com.femi.gallery.domain.repository.DuplicateRepository
 import com.femi.gallery.domain.repository.StoryEditStore
 import com.femi.gallery.domain.repository.EditRepository
+import com.femi.gallery.domain.repository.ClipModelManager
 import com.femi.gallery.domain.repository.ImageEmbedder
 import com.femi.gallery.domain.repository.ImageLabeller
 import com.femi.gallery.domain.repository.LabelIndexRepository
@@ -99,7 +101,10 @@ abstract class RepositoryModule {
     abstract fun bindClipStore(impl: RoomClipStore): ClipStore
 
     @Binds
-    abstract fun bindImageEmbedder(impl: UnavailableImageEmbedder): ImageEmbedder
+    abstract fun bindImageEmbedder(impl: OnnxClipEmbedder): ImageEmbedder
+
+    @Binds
+    abstract fun bindClipModelManager(impl: ClipModelManagerImpl): ClipModelManager
 
     @Binds
     abstract fun bindClipIndexRepository(impl: ClipIndexRepositoryImpl): ClipIndexRepository

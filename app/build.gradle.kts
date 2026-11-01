@@ -64,6 +64,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     // Keeps the library scans going when the app is closed.
     implementation(libs.androidx.work.runtime.ktx)
+    // Runs the image and text models of describe-a-photo on the phone (the model files are installed by the person).
+    implementation(libs.onnxruntime.android)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.paging.compose)
     implementation(libs.coil.compose)

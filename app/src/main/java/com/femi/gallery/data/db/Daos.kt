@@ -99,6 +99,12 @@ abstract class ClipDao {
     @Query("DELETE FROM scan_clip")
     abstract suspend fun deleteAll()
 
+    @Query("SELECT value FROM index_meta WHERE `key` = :key")
+    abstract suspend fun meta(key: String): Long?
+
+    @Upsert
+    abstract suspend fun putMeta(row: MetaRow)
+
     @Transaction
     open suspend fun apply(changed: List<ClipRow>, removedIds: List<Long>) {
         // Embeddings are 512 bytes each; a smaller batch keeps one statement's data small.
