@@ -19,19 +19,17 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
-import androidx.compose.ui.unit.sp
 import com.femi.gallery.R
 
 /**
  * A prominent, large top app bar used across screens to give titles room and improve
- * one-handed reachability, matching One UI / Material 3 large header design.
- * Text size shrinks smoothly as the bar collapses when scrolled to the top.
+ * one-handed reachability, matching Material 3 Expressive large header design.
+ *
+ * Fix 10: Removed manual font-size lerp. [LargeTopAppBar] already collapses from
+ * headlineMedium → titleLarge via its built-in scroll behaviour; the manual lerp was
+ * fighting that logic and producing a non-standard result.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,19 +44,13 @@ fun HugeTopAppBar(
         scrolledContainerColor = MaterialTheme.colorScheme.surface,
     ),
 ) {
-    val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
-    var fontSize = lerp(start = 32.sp, stop = 28.sp, fraction = collapsedFraction)
-    if (onBack != null) fontSize = lerp(start = 32.sp, stop = 22.sp, fraction = collapsedFraction)
-    val fontWeight = if (collapsedFraction > 0.5f) FontWeight.SemiBold else FontWeight.Bold
-
     LargeTopAppBar(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = fontSize,
-                    fontWeight = fontWeight,
-                ),
+                // Let LargeTopAppBar drive style via Typography tokens (headlineMedium
+                // when expanded, titleLarge when collapsed) — no manual interpolation needed.
+                style = MaterialTheme.typography.headlineMedium,
                 maxLines = if (onBack != null) 2 else 1,
                 overflow = TextOverflow.Ellipsis,
             )

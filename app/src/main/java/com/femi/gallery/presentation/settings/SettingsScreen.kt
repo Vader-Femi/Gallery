@@ -16,31 +16,39 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Brightness6
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,13 +64,18 @@ import androidx.compose.ui.text.font.FontWeight
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.femi.gallery.R
 import com.femi.gallery.data.work.BackgroundScans
+import com.femi.gallery.domain.mirror.AlbumSortOption
 import com.femi.gallery.presentation.common.HugeTopAppBar
 
 private data class LanguageOption(
@@ -90,11 +103,23 @@ private val themeOptions = listOf(
     ThemeOption(AppCompatDelegate.MODE_NIGHT_YES, R.string.theme_dark),
 )
 
+private data class SortOption(
+    val option: AlbumSortOption,
+    val nameRes: Int,
+)
+
+private val sortOptions = listOf(
+    SortOption(AlbumSortOption.Recency, R.string.settings_album_sort_recency),
+    SortOption(AlbumSortOption.Name, R.string.settings_album_sort_name),
+    SortOption(AlbumSortOption.Count, R.string.settings_album_sort_count),
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val currentLocales = AppCompatDelegate.getApplicationLocales()
@@ -110,6 +135,13 @@ fun SettingsScreen(
     var muteEnabled by remember { mutableStateOf(ThemePreferences.getMuteVideos(context)) }
     var backgroundScan by remember { mutableStateOf(ThemePreferences.getBackgroundScan(context)) }
     var scanOnlyCharging by remember { mutableStateOf(ThemePreferences.getScanOnlyWhileCharging(context)) }
+
+    var currentSortOption by remember { mutableStateOf(ThemePreferences.getAlbumSortOption(context)) }
+    var sortExpanded by remember { mutableStateOf(false) }
+
+    val albums by viewModel.albums.collectAsStateWithLifecycle()
+    var showHideAlbumsDialog by remember { mutableStateOf(false) }
+    var hiddenAlbums by remember { mutableStateOf(ThemePreferences.getHiddenAlbums(context)) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -134,6 +166,23 @@ fun SettingsScreen(
         themeOptions.find { it.mode == currentThemeMode }?.nameRes ?: R.string.theme_system
     )
 
+    val selectedSortName = stringResource(
+        sortOptions.find { it.option == currentSortOption }?.nameRes ?: R.string.settings_album_sort_recency
+    )
+
+    val deletedCount by viewModel.deletedEmptyAlbumsCount.collectAsStateWithLifecycle()
+    LaunchedEffect(deletedCount) {
+        deletedCount?.let { count ->
+            val message = if (count > 0) {
+                context.getString(R.string.settings_delete_empty_albums_deleted, count)
+            } else {
+                context.getString(R.string.settings_delete_empty_albums_none)
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            viewModel.clearDeletedCount()
+        }
+    }
+
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -156,348 +205,230 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            // Expressive Language Setting Card
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Row(
+            SettingsGroup(title = stringResource(R.string.settings_group_general)) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Language Setting Card
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 2.dp,
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Language,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
-                        }
                         Column(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            Text(
-                                text = stringResource(R.string.settings_language),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
+                            SettingCardHeader(
+                                icon = Icons.Outlined.Language,
+                                title = stringResource(R.string.settings_language),
+                                summary = stringResource(R.string.settings_language_summary),
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.settings_language_summary),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            SettingDropdown(
+                                selectedName = selectedLanguageName,
+                                expanded = languageExpanded,
+                                onExpandedChange = { languageExpanded = it },
+                                items = languageOptions.map { stringResource(it.nameRes) },
+                                onItemSelected = { index ->
+                                    val option = languageOptions[index]
+                                    selectedTag = option.tag
+                                    languageExpanded = false
+                                    val locales = if (option.tag.isEmpty()) {
+                                        LocaleListCompat.getEmptyLocaleList()
+                                    } else {
+                                        LocaleListCompat.forLanguageTags(option.tag)
+                                    }
+                                    AppCompatDelegate.setApplicationLocales(locales)
+                                },
                             )
                         }
                     }
 
-                    // Material Expressive Dropdown for Language
-                    Box(
+                    // Theme Setting Card
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 2.dp,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        OutlinedTextField(
-                            value = selectedLanguageName,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                IconButton(onClick = { languageExpanded = !languageExpanded }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = null,
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(16.dp),
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { languageExpanded = !languageExpanded },
-                        )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable { languageExpanded = !languageExpanded }
-                        ) {}
-
-                        DropdownMenu(
-                            expanded = languageExpanded,
-                            onDismissRequest = { languageExpanded = false },
+                                .padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            languageOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(option.nameRes)) },
-                                    onClick = {
-                                        selectedTag = option.tag
-                                        languageExpanded = false
-                                        val locales = if (option.tag.isEmpty()) {
-                                            LocaleListCompat.getEmptyLocaleList()
-                                        } else {
-                                            LocaleListCompat.forLanguageTags(option.tag)
-                                        }
-                                        AppCompatDelegate.setApplicationLocales(locales)
-                                    },
-                                )
-                            }
+                            SettingCardHeader(
+                                icon = Icons.Outlined.Brightness6,
+                                title = stringResource(R.string.settings_theme),
+                                summary = stringResource(R.string.settings_theme_summary),
+                            )
+                            SettingDropdown(
+                                selectedName = selectedThemeName,
+                                expanded = themeExpanded,
+                                onExpandedChange = { themeExpanded = it },
+                                items = themeOptions.map { stringResource(it.nameRes) },
+                                onItemSelected = { index ->
+                                    val option = themeOptions[index]
+                                    currentThemeMode = option.mode
+                                    themeExpanded = false
+                                    ThemePreferences.setThemeMode(context, option.mode)
+                                },
+                            )
                         }
                     }
                 }
             }
 
-            // Expressive Theme Setting Card
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Row(
+            SettingsGroup(title = stringResource(R.string.settings_group_albums)) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Sort Setting Card
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 2.dp,
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Brightness6,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
-                        }
                         Column(
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_theme),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.settings_theme_summary),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    // Material Expressive Dropdown for Theme
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        OutlinedTextField(
-                            value = selectedThemeName,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                IconButton(onClick = { themeExpanded = !themeExpanded }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = null,
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { themeExpanded = !themeExpanded },
-                        )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable { themeExpanded = !themeExpanded }
-                        ) {}
-
-                        DropdownMenu(
-                            expanded = themeExpanded,
-                            onDismissRequest = { themeExpanded = false },
+                                .padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            themeOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(option.nameRes)) },
-                                    onClick = {
-                                        currentThemeMode = option.mode
-                                        themeExpanded = false
-                                        ThemePreferences.setThemeMode(context, option.mode)
-                                    },
-                                )
-                            }
+                            SettingCardHeader(
+                                icon = Icons.AutoMirrored.Outlined.Sort,
+                                title = stringResource(R.string.settings_album_sort),
+                                summary = stringResource(R.string.settings_album_sort_summary),
+                            )
+                            SettingDropdown(
+                                selectedName = selectedSortName,
+                                expanded = sortExpanded,
+                                onExpandedChange = { sortExpanded = it },
+                                items = sortOptions.map { stringResource(it.nameRes) },
+                                onItemSelected = { index ->
+                                    val option = sortOptions[index]
+                                    currentSortOption = option.option
+                                    sortExpanded = false
+                                    ThemePreferences.setAlbumSortOption(context, option.option)
+                                },
+                            )
                         }
                     }
+
+                    // Hide Albums Card
+                    SettingActionCard(
+                        icon = Icons.Outlined.FolderOff,
+                        title = stringResource(R.string.settings_hide_albums),
+                        summary = stringResource(R.string.settings_hide_albums_summary),
+                        onClick = { showHideAlbumsDialog = true },
+                    )
+
+                    // Delete Empty Albums Card
+                    SettingActionCard(
+                        icon = Icons.Outlined.DeleteOutline,
+                        title = stringResource(R.string.settings_delete_empty_albums),
+                        summary = stringResource(R.string.settings_delete_empty_albums_summary),
+                        onClick = { viewModel.deleteEmptyAlbums() },
+                    )
                 }
             }
 
-            // Expressive Auto-play Setting Card
-            // Expressive Auto-play Setting Card
-            SettingSwitchCard(
-                icon = Icons.Outlined.PlayArrow,
-                title = stringResource(R.string.settings_autoplay_videos),
-                summary = stringResource(R.string.settings_autoplay_videos_summary),
-                checked = autoplayEnabled,
-                onCheckedChange = {
-                    autoplayEnabled = it
-                    ThemePreferences.setAutoPlayVideos(context, it)
-                },
-            )
+            SettingsGroup(title = stringResource(R.string.settings_group_video)) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Auto-play Setting Card
+                    SettingSwitchCard(
+                        icon = Icons.Outlined.PlayArrow,
+                        title = stringResource(R.string.settings_autoplay_videos),
+                        summary = stringResource(R.string.settings_autoplay_videos_summary),
+                        checked = autoplayEnabled,
+                        onCheckedChange = {
+                            autoplayEnabled = it
+                            ThemePreferences.setAutoPlayVideos(context, it)
+                        },
+                    )
 
-            // Expressive Mute by Default Setting Card
-            SettingSwitchCard(
-                icon = Icons.AutoMirrored.Outlined.VolumeOff,
-                title = stringResource(R.string.settings_mute_videos),
-                summary = stringResource(R.string.settings_mute_videos_summary),
-                checked = muteEnabled,
-                onCheckedChange = {
-                    muteEnabled = it
-                    ThemePreferences.setMuteVideos(context, it)
-                },
-            )
+                    // Mute by Default Setting Card
+                    SettingSwitchCard(
+                        icon = Icons.AutoMirrored.Outlined.VolumeOff,
+                        title = stringResource(R.string.settings_mute_videos),
+                        summary = stringResource(R.string.settings_mute_videos_summary),
+                        checked = muteEnabled,
+                        onCheckedChange = {
+                            muteEnabled = it
+                            ThemePreferences.setMuteVideos(context, it)
+                        },
+                    )
+                }
+            }
 
-            // Library scans in the background
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                toggleBackgroundScan(!backgroundScan)
-                            }
-                            .padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            SettingsGroup(title = stringResource(R.string.settings_group_indexing)) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Library scans in the background
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 2.dp,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Sync,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_background_scan),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.settings_background_scan_summary),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = backgroundScan,
-                            onCheckedChange = {
-                                toggleBackgroundScan(it)
-                            },
-                        )
-                    }
-
-                    AnimatedVisibility(
-                        visible = backgroundScan,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
-                    ) {
-                        Column {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 20.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
-                            )
+                        Column(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        scanOnlyCharging = !scanOnlyCharging
-                                        ThemePreferences.setScanOnlyWhileCharging(context, scanOnlyCharging)
-                                        BackgroundScans.update(context, settingsChanged = true)
-                                    }
+                                    .clickable { toggleBackgroundScan(!backgroundScan) }
                                     .padding(20.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                             ) {
-                                Surface(
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.height(48.dp),
-                                ) {
-                                    Box(
-                                        modifier = Modifier.padding(horizontal = 14.dp),
-                                        contentAlignment = Alignment.Center,
+                                SettingCardHeader(
+                                    icon = Icons.Outlined.Sync,
+                                    title = stringResource(R.string.settings_background_scan),
+                                    summary = stringResource(R.string.settings_background_scan_summary),
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Switch(
+                                    checked = backgroundScan,
+                                    onCheckedChange = { toggleBackgroundScan(it) },
+                                )
+                            }
+
+                            AnimatedVisibility(
+                                visible = backgroundScan,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut(),
+                            ) {
+                                Column {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 20.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                scanOnlyCharging = !scanOnlyCharging
+                                                ThemePreferences.setScanOnlyWhileCharging(context, scanOnlyCharging)
+                                                BackgroundScans.update(context, settingsChanged = true)
+                                            }
+                                            .padding(20.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.BatteryChargingFull,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        SettingCardHeader(
+                                            icon = Icons.Outlined.BatteryChargingFull,
+                                            title = stringResource(R.string.settings_scan_charging),
+                                            summary = stringResource(R.string.settings_scan_charging_summary),
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        Switch(
+                                            checked = scanOnlyCharging,
+                                            onCheckedChange = {
+                                                scanOnlyCharging = it
+                                                ThemePreferences.setScanOnlyWhileCharging(context, it)
+                                                BackgroundScans.update(context, settingsChanged = true)
+                                            },
                                         )
                                     }
                                 }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_scan_charging),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = stringResource(R.string.settings_scan_charging_summary),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = scanOnlyCharging,
-                                    onCheckedChange = {
-                                        scanOnlyCharging = it
-                                        ThemePreferences.setScanOnlyWhileCharging(context, it)
-                                        BackgroundScans.update(context, settingsChanged = true)
-                                    },
-                                )
                             }
                         }
                     }
@@ -506,10 +437,135 @@ fun SettingsScreen(
 
             ClipModelCard()
         }
+
+        if (showHideAlbumsDialog) {
+            AlertDialog(
+                onDismissRequest = { showHideAlbumsDialog = false },
+                title = { Text(stringResource(R.string.settings_hide_albums_dialog_title)) },
+                text = {
+                    LazyColumn {
+                        items(albums, key = { it.bucketId }) { album ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val newHidden = hiddenAlbums.toMutableSet()
+                                        if (newHidden.contains(album.bucketId)) {
+                                            newHidden.remove(album.bucketId)
+                                        } else {
+                                            newHidden.add(album.bucketId)
+                                        }
+                                        hiddenAlbums = newHidden
+                                        ThemePreferences.setHiddenAlbums(context, newHidden)
+                                    }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = hiddenAlbums.contains(album.bucketId),
+                                    onCheckedChange = null
+                                )
+                                Text(
+                                    text = album.name,
+                                    modifier = Modifier.padding(start = 16.dp),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showHideAlbumsDialog = false }) {
+                        Text(stringResource(android.R.string.ok))
+                    }
+                }
+            )
+        }
     }
 }
 
-/** A settings card with an icon, a title, a line of explanation and a switch; the whole card is tappable. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingDropdown(
+    selectedName: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    items: List<String>,
+    onItemSelected: (index: Int) -> Unit,
+) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+    ) {
+        OutlinedTextField(
+            value = selectedName,
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+        ) {
+            items.forEachIndexed { index, name ->
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    onClick = { onItemSelected(index) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingCardHeader(
+    icon: ImageVector,
+    title: String,
+    summary: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.height(48.dp),
+        ) {
+            Box(
+                modifier = Modifier.padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Composable
 private fun SettingSwitchCard(
     icon: ImageVector,
@@ -519,7 +575,7 @@ private fun SettingSwitchCard(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth(),
@@ -532,37 +588,41 @@ private fun SettingSwitchCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.height(48.dp),
-            ) {
-                Box(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            SettingCardHeader(
+                icon = icon,
+                title = title,
+                summary = summary,
+                modifier = Modifier.weight(1f),
+            )
             Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
+    }
+}
+
+@Composable
+private fun SettingActionCard(
+    icon: ImageVector,
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            SettingCardHeader(
+                icon = icon,
+                title = title,
+                summary = summary,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

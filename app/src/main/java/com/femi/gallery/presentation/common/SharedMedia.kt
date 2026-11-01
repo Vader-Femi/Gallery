@@ -117,6 +117,22 @@ fun Modifier.gridSharedBounds(mediaId: Long): Modifier {
     }
 }
 
+/**
+ * Keeps this UI element (such as the viewer's top bar or action bar) rendered above shared elements
+ * during an active shared-bounds transition, so transitioning photos don't render over it before
+ * dropping under it once the transition ends.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun Modifier.renderAboveSharedElements(zIndex: Float = 1f): Modifier {
+    val transitionScope = LocalSharedTransitionScope.current ?: return this
+    return with(transitionScope) {
+        this@renderAboveSharedElements.renderInSharedTransitionScopeOverlay(
+            zIndexInOverlay = zIndex,
+        )
+    }
+}
+
 /** A visibility scope that is just a transition: shared bounds only need its state, not an animation. */
 private class PhotoVisibilityScope(override val transition: Transition<EnterExitState>) : AnimatedVisibilityScope {
     override fun Modifier.animateEnterExit(

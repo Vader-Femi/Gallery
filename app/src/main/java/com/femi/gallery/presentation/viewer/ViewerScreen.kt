@@ -108,6 +108,7 @@ import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.GridThumbnails
 import com.femi.gallery.presentation.common.findActivity
 import com.femi.gallery.presentation.common.mediaSharedBounds
+import com.femi.gallery.presentation.common.renderAboveSharedElements
 import com.femi.gallery.presentation.common.rememberTransitionSettled
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.SelectionHost
@@ -354,7 +355,10 @@ private fun ViewerContent(
                 visible = chromeVisible && current != null,
                 enter = fadeIn(),
                 exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopStart).graphicsLayer { alpha = drag.chromeAlpha },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .renderAboveSharedElements(zIndex = 1f)
+                    .graphicsLayer { alpha = drag.chromeAlpha },
             ) {
                 if (current != null) TopBar(item = current, onBack = onBack)
             }
@@ -363,7 +367,10 @@ private fun ViewerContent(
                 visible = chromeVisible && current != null,
                 enter = fadeIn(),
                 exit = fadeOut(),
-                modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = drag.chromeAlpha },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .renderAboveSharedElements(zIndex = 1f)
+                    .graphicsLayer { alpha = drag.chromeAlpha },
             ) {
                 if (current != null) {
                     val ref = current.toRef()

@@ -28,10 +28,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,11 +47,10 @@ fun MenuBottomSheet(
     onItemClick: (route: String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
-
+    // Fix 8: Remove explicit rememberBottomSheetState(Hidden) so ModalBottomSheet uses its
+    // built-in PartiallyExpanded → Expanded M3 Expressive entrance animation.
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
         dragHandle = { BottomSheetDefaults.DragHandle() },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier,
@@ -86,16 +83,27 @@ fun MenuBottomSheet(
                     )
                 }
                 Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(42.dp),
+                    onClick = { onItemClick(GalleryRoutes.SETTINGS) },
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.height(40.dp),
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         Icon(
-                            imageVector = Icons.Outlined.AutoStories,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(22.dp),
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = stringResource(R.string.menu_settings),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.menu_settings),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                     }
                 }
@@ -189,19 +197,6 @@ fun MenuBottomSheet(
                             onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.TRASH)) },
                         )
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        ExpressivePillButton(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.Settings,
-                            label = stringResource(R.string.menu_settings),
-                            onClick = { onItemClick(GalleryRoutes.SETTINGS) },
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
                 }
             }
 
@@ -217,9 +212,10 @@ private fun ExpressiveMenuCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Fix 5: MaterialTheme.shapes.extraLarge replaces hard-coded RoundedCornerShape(22.dp)
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(22.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 2.dp,
         modifier = modifier.height(100.dp),
@@ -263,9 +259,10 @@ private fun ExpressivePillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Fix 5: MaterialTheme.shapes.extraLarge replaces hard-coded RoundedCornerShape(28.dp)
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 2.dp,
         modifier = modifier.height(56.dp),
