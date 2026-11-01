@@ -261,9 +261,17 @@
     <string name="settings_scan_charging">Sai lokacin caji kawai</string>
     <string name="settings_scan_charging_summary">Yana jira caja kafin ya yi rajista a bango.</string>
     <string name="clip_title">Bayyana hoto</string>
-    <string name="clip_summary">Nemo hotuna bisa abin da suke nunawa, kamar “kare a bakin teku”. Yana buƙatar fayilolin samfuri biyu (duba README). Ana kwafa su a wannan wayar sau ɗaya kuma ba a aika komai ko\'ina.</string>
+    <string name="clip_summary">Nemo hotuna ta abin da suka nuna, kamar \"kare a bakin teku\".</string>
     <string name="clip_choose_image">Zaɓi samfurin hoto</string>
     <string name="clip_choose_text">Zaɓi samfurin rubutu</string>
+    <string name="clip_replace_image">Canza tsarin hoto</string>
+    <string name="clip_replace_text">Canza tsarin rubutu</string>
+    <string name="clip_info_title">Waɗanne tsari za a yi amfani da su?</string>
+    <string name="clip_info_body">Kana buƙatar fayilolin tsari guda biyu (Tsarin Hoto da Tsarin Rubutu) a tsarin ONNX (.onnx). Dole ne duka tsare-tsaren su fitar da girman sakamako ɗaya, kuma tsarin rubutun dole ne ya yarda da alamomin IDs. Tsarin CLIP ViT-B/32 na yau da kullun suna aiki sosai.\nTsarin asali da aka yi amfani da su anan sune:\n- vision_model_quantized.onnx don hoto\n- text_model_quantized.onnx don rubutu\n
+        •Yana amfani da tsarin hoto don duba kowane hoto a dakin karatunka sannan ya ƙirƙiri lissafin lissafi (embedding) don shi.
+        •Sannan yana amfani da Tsarin Rubutu don fassara kalmar bincikenka zuwa sakamako, kwatanta shi da sakamakon hotonka, sannan ya daidaita bincikenka!
+    </string>
+    <string name="clip_info_close">Na gane</string>
     <string name="clip_status_none">Babu samfurin da aka sanya</string>
     <string name="clip_status_partial">Ɗaya daga cikin samfuran biyu har yanzu bai cika ba</string>
     <string name="clip_status_ready">A shirye: ana karanta hotuna a bango</string>

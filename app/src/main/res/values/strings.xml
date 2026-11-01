@@ -261,9 +261,17 @@
     <string name="settings_scan_charging">Only while charging</string>
     <string name="settings_scan_charging_summary">Waits for the charger before indexing in the background.</string>
     <string name="clip_title">Describe a photo</string>
-    <string name="clip_summary">Find photos by what they show, such as “a dog on a beach”. It needs two model files (see the README). They are copied onto this phone once and nothing is ever sent anywhere.</string>
+    <string name="clip_summary">Find photos by what they show, such as “a dog on a beach”.</string>
     <string name="clip_choose_image">Choose image model</string>
     <string name="clip_choose_text">Choose text model</string>
+    <string name="clip_replace_image">Replace image model</string>
+    <string name="clip_replace_text">Replace text model</string>
+    <string name="clip_info_title">Which models to use?</string>
+    <string name="clip_info_body">You need two model files (an Image Model and a Text Model) in ONNX format (.onnx). Both models must output the same embedding size, and the text model must accept token IDs. Standard CLIP ViT-B/32 models work perfectly.\nThe default models used here were:\n- vision_model_quantized.onnx for image\n- text_model_quantized.onnx for text\n
+        •It uses the image model to look at every photo in your library and generates a mathematical fingerprint (embedding) for it.
+        •It then uses the Text Model to translate your search phrase into an embedding, compare it to your photo embeddings, and match your search!
+    </string>
+    <string name="clip_info_close">Got it</string>
     <string name="clip_status_none">No models installed</string>
     <string name="clip_status_partial">One of the two models is still missing</string>
     <string name="clip_status_ready">Ready: photos are being read in the background</string>

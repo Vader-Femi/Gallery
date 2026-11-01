@@ -261,9 +261,17 @@
     <string name="settings_scan_charging">Only when charging</string>
     <string name="settings_scan_charging_summary">E go wait for charger before e index for background.</string>
     <string name="clip_title">Describe photo</string>
-    <string name="clip_summary">Find photos by wetin dem show, like “dog for beach”. E need two model files (check di README). Dem go copy dem enter dis phone one time and nothing go ever commot go anywhere.</string>
+    <string name="clip_summary">Find pictures by wetin dey inside, like \"dog for beach\".</string>
     <string name="clip_choose_image">Choose image model</string>
     <string name="clip_choose_text">Choose text model</string>
+    <string name="clip_replace_image">Change picture model</string>
+    <string name="clip_replace_text">Change text model</string>
+    <string name="clip_info_title">Which models we go use?</string>
+    <string name="clip_info_body">You need two model files (Picture Model and Text Model) inside ONNX format (.onnx). Di two models must bring out di exact same size, and di text model must take token IDs. Normal CLIP ViT-B/32 models dey work perfectly.\nDi default models wey we use for here na:\n- vision_model_quantized.onnx for picture\n- text_model_quantized.onnx for text\n
+        •E dey use di picture model look all di pictures inside your library con generate strong fingerprint (embedding) for am.
+        •E go con use di Text Model change your search word to embedding, compare am to your picture embeddings, con match your search!
+    </string>
+    <string name="clip_info_close">I don get am</string>
     <string name="clip_status_none">No model dey</string>
     <string name="clip_status_partial">One of di two models still dey miss</string>
     <string name="clip_status_ready">Ready: we dey read photos for background</string>

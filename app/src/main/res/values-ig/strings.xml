@@ -261,9 +261,17 @@
     <string name="settings_scan_charging">Naanị mgbe a na-ebu ya</string>
     <string name="settings_scan_charging_summary">Na-echere ihe nbu tupu ya edepụta n’azụ.</string>
     <string name="clip_title">Kọwaa foto</string>
-    <string name="clip_summary">Chọta foto site n’ihe ha na-egosi, dị ka “nkịta n’akụkụ osimiri”. Ọ chọrọ faịlụ ụdị abụọ (lee README). A na-eṅomi ha n’ekwentị a otu ugboro, a naghị ezipụ ihe ọ bụla n’ebe ọ bụla.</string>
+    <string name="clip_summary">Chọọ foto site na ihe ha na-egosi, dị ka \"nkịta n\'ụsọ osimiri\".</string>
     <string name="clip_choose_image">Họrọ ụdị foto</string>
     <string name="clip_choose_text">Họrọ ụdị ederede</string>
+    <string name="clip_replace_image">Dochie ụdị foto</string>
+    <string name="clip_replace_text">Dochie ụdị ederede</string>
+    <string name="clip_info_title">Kedu ụdị ị ga-eji?</string>
+    <string name="clip_info_body">Ị chọrọ faịlụ ụdị abụọ (Ụdị Foto na Ụdị Ederede) na usoro ONNX (.onnx). Ụdị abụọ ahụ ga-enwerịrị otu nha nsonaazụ, na ụdị ederede ga-anabata IDs. Ụdị CLIP ViT-B/32 na-arụ ọrụ nke ọma.\nỤdị ndabara ejiri ebe a bụ:\n- vision_model_quantized.onnx maka foto\n- text_model_quantized.onnx maka ederede\n
+        •Ọ na-eji ụdị foto ahụ elele foto ọ bụla n\'ọbá akwụkwọ gị wee mepụta mgbakọ na mwepụ (embedding) maka ya.
+        •Ọ na-ejizi Ụdị Ederede sụgharịa nkebiokwu ọchụchọ gị gaa na nsonaazụ, jiri ya tụnyere nsonaazụ foto gị, wee kwekọọ ọchụchọ gị!
+    </string>
+    <string name="clip_info_close">Aghọtala m</string>
     <string name="clip_status_none">Ọ nweghị ụdị edebere</string>
     <string name="clip_status_partial">Otu n’ime ụdị abụọ ahụ ka na-efu</string>
     <string name="clip_status_ready">Dị njikere: a na-agụ foto n’azụ</string>

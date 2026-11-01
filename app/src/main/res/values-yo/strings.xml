@@ -261,9 +261,17 @@
     <string name="settings_scan_charging">Nígbà tí a bá ń gba agbára nìkan</string>
     <string name="settings_scan_charging_summary">Ó dúró de ẹ̀rọ agbára kí ó tó ṣe àkọsílẹ̀ lẹ́yìn ẹ̀rọ.</string>
     <string name="clip_title">Ṣàpèjúwe fọ́tò</string>
-    <string name="clip_summary">Wá fọ́tò nípa ohun tí wọ́n fi hàn, bíi “ajá létí òkun”. Ó nílò fáìlì àwòṣe méjì (wo README). A ń daakọ wọn sórí fóònù yìí lẹ́ẹ̀kan, a kò sì fi nǹkankan ránṣẹ́ sí ibikíbi.</string>
+    <string name="clip_summary">Wá fọ́tò nípa ohun tí wọ́n fi hàn, bíi \"ajá létí òkun\".</string>
     <string name="clip_choose_image">Yan àwòṣe àwòrán</string>
     <string name="clip_choose_text">Yan àwòṣe ọ̀rọ̀</string>
+    <string name="clip_replace_image">Pààrọ̀ awoṣe fọ́tò</string>
+    <string name="clip_replace_text">Pààrọ̀ awoṣe ọ̀rọ̀</string>
+    <string name="clip_info_title">Àwọn awoṣe wo ni láti lò?</string>
+    <string name="clip_info_body">O nilo àwọn fáìlì awoṣe méjì (Awoṣe Fọ́tò ati Awoṣe Ọ̀rọ̀) ní ọ̀nà ONNX (.onnx). Àwọn awoṣe méjèèjì gbọ́dọ̀ mú ìwọ̀n àbájáde kan náà jáde, àti pé awoṣe ọ̀rọ̀ gbọ́dọ̀ gba àwọn ID tókìnì. Àwọn awoṣe CLIP ViT-B/32 ṣiṣẹ́ dáradára.\nÀwọn awoṣe àkọ́bẹ̀rẹ̀ tí a lò níhìn-ín ni:\n- vision_model_quantized.onnx fún fọ́tò\n- text_model_quantized.onnx fún ọ̀rọ̀\n
+        •Ó ń lo awoṣe fọ́tò láti wo gbogbo fọ́tò inú ibi ìpamọ́ rẹ kí o sì pèsè ẹ̀yà ìṣirò (embedding) fún un.
+        •Lẹ́yìn náà, ó ń lo Awoṣe Ọ̀rọ̀ láti yí ọ̀rọ̀ àwárí rẹ padà sí àbájáde kan, ṣàfiwé rẹ̀ pẹ̀lú àwọn àbájáde fọ́tò rẹ, kí ó sì bá àwárí rẹ mu!
+    </string>
+    <string name="clip_info_close">Mo ti gbọ́</string>
     <string name="clip_status_none">Kò sí àwòṣe tí a fi sílẹ̀</string>
     <string name="clip_status_partial">Ọ̀kan nínú àwọn àwòṣe méjèèjì ṣì sọnù</string>
     <string name="clip_status_ready">Ó ti wà ní ìmúrasílẹ̀: a ń ka àwọn fọ́tò lẹ́yìn ẹ̀rọ</string>

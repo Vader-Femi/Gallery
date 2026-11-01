@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ImageSearch
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,6 +54,20 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
     val card by viewModel.card.collectAsStateWithLifecycle()
     val scan by viewModel.scan.collectAsStateWithLifecycle()
     var searchEnabled by remember { mutableStateOf(ThemePreferences.getSemanticSearch(context)) }
+    var showInfoDialog by remember { mutableStateOf(false) }
+
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text(stringResource(R.string.clip_info_title)) },
+            text = { Text(stringResource(R.string.clip_info_body)) },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text(stringResource(R.string.clip_info_close))
+                }
+            }
+        )
+    }
 
     // ONNX files have no media type of their own, so any file may be chosen.
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -86,6 +103,9 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                IconButton(onClick = { showInfoDialog = true }) {
+                    Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.clip_info_title))
+                }
             }
 
             Text(
@@ -109,10 +129,20 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(enabled = !card.busy, onClick = { pickImage.launch(arrayOf("*/*")) }) {
-                    Text(stringResource(R.string.clip_choose_image))
+                    Text(
+                        if (status == ClipModelStatus.ImageOnly || status == ClipModelStatus.Installed)
+                            stringResource(R.string.clip_replace_image)
+                        else
+                            stringResource(R.string.clip_choose_image)
+                    )
                 }
                 OutlinedButton(enabled = !card.busy, onClick = { pickText.launch(arrayOf("*/*")) }) {
-                    Text(stringResource(R.string.clip_choose_text))
+                    Text(
+                        if (status == ClipModelStatus.TextOnly || status == ClipModelStatus.Installed)
+                            stringResource(R.string.clip_replace_text)
+                        else
+                            stringResource(R.string.clip_choose_text)
+                    )
                 }
             }
 
