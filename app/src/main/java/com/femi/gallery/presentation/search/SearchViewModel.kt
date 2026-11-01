@@ -49,10 +49,40 @@ class SearchViewModel @Inject constructor(
     selectionFactory: MediaSelectionControllerFactory,
     private val refreshMedia: RefreshMediaUseCase,
     observeTextScan: ObserveTextScanUseCase,
+    observeClipScan: com.femi.gallery.domain.usecase.ObserveClipScanUseCase,
+    observeColorScan: com.femi.gallery.domain.usecase.ObserveColorScanUseCase,
+    observeLabelScan: com.femi.gallery.domain.usecase.ObserveLabelScanUseCase,
+    observeLocationScan: com.femi.gallery.domain.usecase.ObserveLocationScanUseCase,
 ) : ViewModel() {
 
-    /** How far the reading of the text in photos has got: search matches the text of photos read so far. */
-    val textScan: StateFlow<TextScanState> = observeTextScan()
+    data class CombinedScanState(
+        val isScanning: Boolean = false,
+        val scanned: Int = 0,
+        val total: Int = 0,
+        val isUnavailable: Boolean = false,
+    )
+
+    /** How far the combined background indexing has got. */
+    val combinedScan: StateFlow<CombinedScanState> = kotlinx.coroutines.flow.combine(
+        observeTextScan(),
+        observeClipScan(),
+        observeColorScan(),
+        observeLabelScan(),
+        observeLocationScan()
+    ) { text, clip, color, label, location ->
+        val isScanning = text.status == com.femi.gallery.domain.text.TextScanStatus.Scanning ||
+            clip.status == com.femi.gallery.domain.clip.ClipScanStatus.Scanning ||
+            color.status == com.femi.gallery.domain.color.ColorScanStatus.Scanning ||
+            label.status == com.femi.gallery.domain.label.LabelScanStatus.Scanning ||
+            location.status == com.femi.gallery.domain.geo.LocationScanStatus.Scanning
+            
+        val isUnavailable = text.status == com.femi.gallery.domain.text.TextScanStatus.Unavailable
+
+        val scanned = text.scanned + clip.scanned + color.scanned + label.scanned + location.scanned
+        val total = text.total + clip.total + color.total + label.total + location.total
+
+        CombinedScanState(isScanning, scanned, total, isUnavailable)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CombinedScanState())
 
     private val initialQuery: String = savedStateHandle.get<String>("query").orEmpty()
     private val _query = MutableStateFlow(initialQuery)

@@ -159,6 +159,13 @@ class TextIndexRepositoryImpl @Inject constructor(
                 }
                 _scan.value = TextScanState(TextScanStatus.Scanning, scanned, plan.toScan, withText)
                 next = end
+                
+                // Throttle when the user is actively using the app so we don't freeze image loading
+                if (com.femi.gallery.core.lifecycle.AppForeground.isInForeground) {
+                    kotlinx.coroutines.delay(50L)
+                } else {
+                    kotlinx.coroutines.yield()
+                }
             }
             if (unsaved > 0) checkpoint(results)
 

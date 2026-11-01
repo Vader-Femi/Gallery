@@ -37,6 +37,7 @@ class ClipModelViewModel @Inject constructor(
 ) : ViewModel() {
 
     val status: StateFlow<ClipModelStatus> = manager.status
+    val isInitializing: StateFlow<Boolean> = manager.isInitializing
     val scan: StateFlow<ClipScanState> = clip.scan
 
     private val _card = MutableStateFlow(ClipCardState())

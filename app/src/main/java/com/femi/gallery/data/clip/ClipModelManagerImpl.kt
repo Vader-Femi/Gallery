@@ -24,6 +24,7 @@ class ClipModelManagerImpl @Inject constructor(
 ) : ClipModelManager {
 
     override val status: StateFlow<ClipModelStatus> = files.status
+    override val isInitializing: StateFlow<Boolean> = files.isCopying
 
     override suspend fun install(kind: ClipModelKind, source: String): ClipInstallResult {
         if (!files.import(kind, Uri.parse(source))) return ClipInstallResult.Unusable

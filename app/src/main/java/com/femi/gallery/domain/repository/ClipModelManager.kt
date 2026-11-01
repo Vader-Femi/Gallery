@@ -19,6 +19,7 @@ enum class ClipInstallResult {
 /** Installing and removing the model files that describe-a-photo needs. */
 interface ClipModelManager {
     val status: StateFlow<ClipModelStatus>
+    val isInitializing: StateFlow<Boolean>
 
     /** Copies the file at [source] (a content address chosen by the person) in as the [kind] model, and checks it. */
     suspend fun install(kind: ClipModelKind, source: String): ClipInstallResult

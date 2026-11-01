@@ -107,7 +107,7 @@ fun SearchScreen(
         }
     }
     val criteria by viewModel.criteria.collectAsStateWithLifecycle()
-    val textScan by viewModel.textScan.collectAsStateWithLifecycle()
+    val combinedScan by viewModel.combinedScan.collectAsStateWithLifecycle()
     val items = viewModel.media.collectAsLazyPagingItems()
     val sections by viewModel.timeline.sections.collectAsStateWithLifecycle()
     val zoom by viewModel.timeline.zoom.collectAsStateWithLifecycle()
@@ -156,7 +156,7 @@ fun SearchScreen(
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             )
 
-            TextScanNotice(textScan)
+            CombinedScanNotice(combinedScan)
 
             Box(modifier = Modifier.weight(1f)) {
                 when {
@@ -265,17 +265,17 @@ private fun SearchHelp(onSuggestion: (String) -> Unit) {
 }
 
 /**
- * While the text in the photos is still being read, say so: a search only finds words in the photos
+ * While the photos are still being read, say so: a search only finds things in the photos
  * that have been read, so fewer results than expected are not a mistake. Nothing is shown otherwise.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun TextScanNotice(state: TextScanState) {
-    when (state.status) {
-        TextScanStatus.Scanning -> Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
+private fun CombinedScanNotice(state: SearchViewModel.CombinedScanState) {
+    if (state.isScanning) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
             val numbers = NumberFormat.getIntegerInstance()
             Text(
-                text = stringResource(R.string.search_reading_text, numbers.format(state.scanned), numbers.format(state.total)),
+                text = stringResource(R.string.notification_background_scan_progress, numbers.format(state.scanned), numbers.format(state.total)),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -284,13 +284,13 @@ private fun TextScanNotice(state: TextScanState) {
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             )
         }
-        TextScanStatus.Unavailable -> Text(
+    } else if (state.isUnavailable) {
+        Text(
             text = stringResource(R.string.search_text_unavailable),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
         )
-        TextScanStatus.Idle -> Unit
     }
 }
 

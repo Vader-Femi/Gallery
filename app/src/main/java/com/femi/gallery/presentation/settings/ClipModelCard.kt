@@ -51,8 +51,10 @@ import com.femi.gallery.domain.clip.ClipScanStatus
 fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val status by viewModel.status.collectAsStateWithLifecycle()
+    val isInitializing by viewModel.isInitializing.collectAsStateWithLifecycle()
     val card by viewModel.card.collectAsStateWithLifecycle()
     val scan by viewModel.scan.collectAsStateWithLifecycle()
+    val isBusy = card.busy || isInitializing
     var searchEnabled by remember { mutableStateOf(ThemePreferences.getSemanticSearch(context)) }
     var showInfoDialog by remember { mutableStateOf(false) }
 
@@ -110,7 +112,7 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
 
             Text(
                 text = when {
-                    card.busy -> stringResource(R.string.clip_importing)
+                    isBusy -> stringResource(R.string.clip_importing)
                     status == ClipModelStatus.NotInstalled -> stringResource(R.string.clip_status_none)
                     status == ClipModelStatus.Installed -> stringResource(R.string.clip_status_ready)
                     else -> stringResource(R.string.clip_status_partial)
@@ -128,7 +130,7 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(enabled = !card.busy, onClick = { pickImage.launch(arrayOf("*/*")) }) {
+                OutlinedButton(enabled = !isBusy, onClick = { pickImage.launch(arrayOf("*/*")) }) {
                     Text(
                         if (status == ClipModelStatus.ImageOnly || status == ClipModelStatus.Installed)
                             stringResource(R.string.clip_replace_image)
@@ -136,7 +138,7 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
                             stringResource(R.string.clip_choose_image)
                     )
                 }
-                OutlinedButton(enabled = !card.busy, onClick = { pickText.launch(arrayOf("*/*")) }) {
+                OutlinedButton(enabled = !isBusy, onClick = { pickText.launch(arrayOf("*/*")) }) {
                     Text(
                         if (status == ClipModelStatus.TextOnly || status == ClipModelStatus.Installed)
                             stringResource(R.string.clip_replace_text)
@@ -187,7 +189,7 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
 
             if (status != ClipModelStatus.NotInstalled) {
                 Spacer(Modifier.height(0.dp))
-                TextButton(enabled = !card.busy, onClick = viewModel::remove) {
+                TextButton(enabled = !isBusy, onClick = viewModel::remove) {
                     Text(stringResource(R.string.clip_remove), color = MaterialTheme.colorScheme.error)
                 }
             }

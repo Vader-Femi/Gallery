@@ -46,10 +46,11 @@ class ScanWorker(
         // cases). The first run, started when the app was opened, gets the notification; a run the system started
         // by itself while the app was closed cannot, and simply works without one (within its ten minutes).
         var foregroundAllowed = showForeground(getForegroundInfo())
+        val runLimit = if (foregroundAllowed) Long.MAX_VALUE else RUN_LIMIT_MS
 
         val throttle = ProgressThrottle()
         return when (
-            runner.run(RUN_LIMIT_MS) { scanned, total ->
+            runner.run(runLimit) { scanned, total ->
                 if (foregroundAllowed && throttle.shouldUpdate(scanned, total, SystemClock.elapsedRealtime())) {
                     foregroundAllowed = showForeground(getForegroundInfo(scanned, total))
                 }

@@ -150,6 +150,13 @@ class ClipIndexRepositoryImpl @Inject constructor(
                 }
                 _scan.value = ClipScanState(ClipScanStatus.Scanning, scanned, plan.toScan, withEmbeddings)
                 next = end
+                
+                // Throttle when the user is actively using the app so we don't freeze image loading
+                if (com.femi.gallery.core.lifecycle.AppForeground.isInForeground) {
+                    kotlinx.coroutines.delay(50L)
+                } else {
+                    kotlinx.coroutines.yield()
+                }
             }
             if (unsaved > 0) checkpoint(results)
 

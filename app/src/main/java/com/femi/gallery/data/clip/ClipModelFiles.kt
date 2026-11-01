@@ -41,9 +41,17 @@ class ClipModelFiles @Inject constructor(
     private val _status = MutableStateFlow(readStatus())
     val status: StateFlow<ClipModelStatus> = _status.asStateFlow()
 
+    private val _isCopying = MutableStateFlow(false)
+    val isCopying: StateFlow<Boolean> = _isCopying.asStateFlow()
+
     init {
         CoroutineScope(io).launch {
-            ensureDefaultModels()
+            _isCopying.value = true
+            try {
+                ensureDefaultModels()
+            } finally {
+                _isCopying.value = false
+            }
         }
     }
 
