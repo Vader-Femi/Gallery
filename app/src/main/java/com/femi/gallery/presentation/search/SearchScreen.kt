@@ -273,9 +273,12 @@ private fun SearchHelp(onSuggestion: (String) -> Unit) {
 private fun CombinedScanNotice(state: SearchViewModel.CombinedScanState) {
     if (state.isScanning) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
-            val numbers = NumberFormat.getIntegerInstance()
             Text(
-                text = stringResource(R.string.notification_background_scan_progress, numbers.format(state.scanned), numbers.format(state.total)),
+                text = stringResource(
+                    R.string.notification_background_scan_progress,
+                    state.scanned,
+                    state.total
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
