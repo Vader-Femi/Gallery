@@ -310,4 +310,25 @@
     <string name="notification_background_scan_title">Ana lissafta hotuna</string>
     <string name="notification_background_scan_text">Ana lissafta hotuna da bidiyo don bincike</string>
     <string name="notification_background_scan_progress">Ana yin rajista: %1$d daga %2$d hotuna</string>
+
+    <!-- Groups -->
+    <string name="settings_group_general">Gabaɗaya</string>
+    <string name="settings_group_albums">Kundin hotuna da Babban fayil</string>
+    <string name="settings_group_video">Kunna bidiyo</string>
+    <string name="settings_group_indexing">Bincike da Yiwa laburare rikodin</string>
+
+    <string name="settings_album_sort">Tsarin shirya kundin hotuna</string>
+    <string name="settings_album_sort_summary">Zaɓi yadda ake tsara kundin hotuna a shafin Kundin hotuna</string>
+    <string name="settings_album_sort_recency">Na baya-bayan nan</string>
+    <string name="settings_album_sort_name">Suna</string>
+    <string name="settings_album_sort_count">Adadin abubuwa</string>
+
+    <string name="settings_hide_albums">Ɓoye kundin hotuna</string>
+    <string name="settings_hide_albums_summary">Zaɓi kundin hotunan da za a ɓoye daga shafin Kundin hotuna</string>
+    <string name="settings_hide_albums_dialog_title">Zaɓi kundin hotunan da za a ɓoye</string>
+
+    <string name="settings_delete_empty_albums">Goge kofassai na wofi</string>
+    <string name="settings_delete_empty_albums_summary">Nemi kuma goge kofassai na wofi a ajiyar wayarka</string>
+    <string name="settings_delete_empty_albums_deleted">An goge kofassai na wofi %1$d.</string>
+    <string name="settings_delete_empty_albums_none">Ba a sami kofassai na wofi ba.</string>
 </resources>

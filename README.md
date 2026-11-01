@@ -124,6 +124,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Later**
 - [ ] More on-device ML: copy text from a photo, **people / face groups**, auto scene albums
+- [ ] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
 - [ ] Video editor: trim, speed and basic effects
 - [ ] Find **similar** photos (not byte-identical: bursts, re-saved or resized copies) with perceptual hashing; exact duplicates are done
 - [ ] Motion photo playback, *(set as wallpaper added)*
