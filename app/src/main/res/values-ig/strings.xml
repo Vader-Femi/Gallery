@@ -24,7 +24,7 @@
     <string name="map_permission_settings">Mepee ntọala</string>
     <string name="map_attribution">Data maapụ: Natural Earth (nke ọha na eze)</string>
     <string name="place_title">Foto ndị nọ ebe a</string>
-    <string name="search_help">Nwalee aha faịlụ ma ọ bụ folda, ụbọchị dị ka \"october 2025\" ma ọ bụ \"oct 15\", ma ọ bụ okwu dị ka vidiyo, foto na ọkacha mmasị. Jikọta ha: \"whatsapp videos 2025\". A na-achọtakwa okwu ndị e dere n\'foto, dị ka akara ma ọ bụ nnata.</string>
+    <string name="search_help">Nwalee aha faịlụ ma ọ bụ folda, ụbọchị dị ka "october 2025" ma ọ bụ "oct 15", okwu dị ka vidiyo, foto na ọkacha mmasị, ma ọ bụ &lt;b>kọwaa foto (dịka "nkịta n'ụsọ osimiri")&lt;/b>. Jikọta ha: "vidiyo whatsapp 2025". A na-ahụkwa okwu edere na foto ma ọ bụ ederede na bọọdụ.</string>
     <string name="search_no_results">Enweghị foto ma ọ bụ vidiyo dabara adaba</string>
     <string name="search_reading_text">Na-agụ ederede dị n\'foto gị: %1$s n\'ime %2$s</string>
     <string name="search_text_unavailable">Ịgụ ederede n\'foto anaghị arụ ọrụ n\'ekwentị a</string>
@@ -32,6 +32,9 @@
     <string name="search_suggestion_favorites">Ọkacha mmasị</string>
     <string name="search_suggestion_screenshots">Ngosipụta ihuenyo</string>
     <string name="search_suggestion_yesterday">N\'ụnyaahụ</string>
+    <string name="search_suggestion_sunset">Ọdịda anyanwụ</string>
+    <string name="search_suggestion_food">Nri</string>
+    <string name="search_suggestion_pets">Anụ ụlọ</string>
 
     <string name="selection_count">%d</string>
     <string name="selection_none">Họrọ ihe</string>
@@ -267,9 +270,9 @@
     <string name="clip_replace_image">Dochie ụdị foto</string>
     <string name="clip_replace_text">Dochie ụdị ederede</string>
     <string name="clip_info_title">Kedu ụdị ị ga-eji?</string>
-    <string name="clip_info_body">Ị chọrọ faịlụ ụdị abụọ (Ụdị Foto na Ụdị Ederede) na usoro ONNX (.onnx). Ụdị abụọ ahụ ga-enwerịrị otu nha nsonaazụ, na ụdị ederede ga-anabata IDs. Ụdị CLIP ViT-B/32 na-arụ ọrụ nke ọma.\nỤdị ndabara ejiri ebe a bụ:\n- vision_model_quantized.onnx maka foto\n- text_model_quantized.onnx maka ederede\n
-        •Ọ na-eji ụdị foto ahụ elele foto ọ bụla n\'ọbá akwụkwọ gị wee mepụta mgbakọ na mwepụ (embedding) maka ya.
-        •Ọ na-ejizi Ụdị Ederede sụgharịa nkebiokwu ọchụchọ gị gaa na nsonaazụ, jiri ya tụnyere nsonaazụ foto gị, wee kwekọọ ọchụchọ gị!
+    <string name="clip_info_body">Ị chọrọ faịlụ ụdị abụọ (Ụdị Foto na Ụdị Ederede) na usoro ONNX (.onnx). Ụdị abụọ ahụ ga-enwerịrị otu nha nsonaazụ, na ụdị ederede ga-anabata IDs. Ụdị CLIP ViT-B/32 na-arụ ọrụ nke ọma.\n\nỤdị ndabara ejiri ebe a bụ:\n- vision_model_quantized.onnx maka foto\n- text_model_quantized.onnx maka ederede.\n
+        \nỌ na-eji ụdị foto ahụ elele foto ọ bụla n\'ọbá akwụkwọ gị wee mepụta mgbakọ na mwepụ (embedding) maka ya.
+        \nỌ na-ejizi Ụdị Ederede sụgharịa nkebiokwu ọchụchọ gị gaa na nsonaazụ, jiri ya tụnyere nsonaazụ foto gị, wee kwekọọ ọchụchọ gị!
     </string>
     <string name="clip_info_close">Aghọtala m</string>
     <string name="clip_status_none">Ọ nweghị ụdị edebere</string>

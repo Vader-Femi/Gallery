@@ -24,7 +24,7 @@
     <string name="map_permission_settings">Ṣí ètò fóònù</string>
     <string name="map_attribution">Ìsọfúnni máàpù: Natural Earth (ti gbogbo eniyan)</string>
     <string name="place_title">Àwọn fọ́tò níbí</string>
-    <string name="search_help">Gbìyànjú orúkọ fáìlì tàbí fọ́lídà, ọjọ́ bí \"october 2025\" tàbí \"oct 15\", tàbí àwọn ọ̀rọ̀ bí fídíò, fọ́tò àti àwọn tí o fẹ́ jùlọ. Da wọn pọ̀: \"whatsapp videos 2025\". Àwọn ọ̀rọ̀ tí a kọ sínú fọ́tò, bí àmì tàbí rísítì, ni a tún ń wárí wọn.</string>
+    <string name="search_help">Gbìyànjú orúkọ fáìlì tàbí fọ́lídà, ọjọ́ bí "october 2025" tàbí "oct 15", àwọn ọ̀rọ̀ bíi fídíò, fọ́tò, àti àwọn tí o fẹ́ jùlọ, tàbí &lt;b>ṣàpèjúwe fọ́tò (bíi "ajá létí òkun")&lt;/b>. Da wọ́n pọ̀: "fídíò whatsapp 2025". A tún ń rí àwọn ọ̀rọ̀ tí a kọ sínú fọ́tò tàbí ọ̀rọ̀ orí àmì.</string>
     <string name="search_no_results">Kò sí fọ́tò tàbí fídíò tó báamu</string>
     <string name="search_reading_text">Ń ka ọ̀rọ̀ tó wà nínú fọ́tò rẹ: %1$s nínú %2$s</string>
     <string name="search_text_unavailable">Kíkà ọ̀rọ̀ tó wà nínú fọ́tò kò ṣiṣẹ́ lórí fóònù yìí</string>
@@ -32,6 +32,9 @@
     <string name="search_suggestion_favorites">Àwọn tí o fẹ́ jùlọ</string>
     <string name="search_suggestion_screenshots">Àwọn fọ́tò ojú-ìwé</string>
     <string name="search_suggestion_yesterday">Àná</string>
+    <string name="search_suggestion_sunset">Wíwọ̀ oòrùn</string>
+    <string name="search_suggestion_food">Oúnjẹ</string>
+    <string name="search_suggestion_pets">Ẹran ọ̀sìn</string>
 
     <string name="selection_count">%d</string>
     <string name="selection_none">Yan àwọn ohun kan</string>
@@ -267,9 +270,9 @@
     <string name="clip_replace_image">Pààrọ̀ awoṣe fọ́tò</string>
     <string name="clip_replace_text">Pààrọ̀ awoṣe ọ̀rọ̀</string>
     <string name="clip_info_title">Àwọn awoṣe wo ni láti lò?</string>
-    <string name="clip_info_body">O nilo àwọn fáìlì awoṣe méjì (Awoṣe Fọ́tò ati Awoṣe Ọ̀rọ̀) ní ọ̀nà ONNX (.onnx). Àwọn awoṣe méjèèjì gbọ́dọ̀ mú ìwọ̀n àbájáde kan náà jáde, àti pé awoṣe ọ̀rọ̀ gbọ́dọ̀ gba àwọn ID tókìnì. Àwọn awoṣe CLIP ViT-B/32 ṣiṣẹ́ dáradára.\nÀwọn awoṣe àkọ́bẹ̀rẹ̀ tí a lò níhìn-ín ni:\n- vision_model_quantized.onnx fún fọ́tò\n- text_model_quantized.onnx fún ọ̀rọ̀\n
-        •Ó ń lo awoṣe fọ́tò láti wo gbogbo fọ́tò inú ibi ìpamọ́ rẹ kí o sì pèsè ẹ̀yà ìṣirò (embedding) fún un.
-        •Lẹ́yìn náà, ó ń lo Awoṣe Ọ̀rọ̀ láti yí ọ̀rọ̀ àwárí rẹ padà sí àbájáde kan, ṣàfiwé rẹ̀ pẹ̀lú àwọn àbájáde fọ́tò rẹ, kí ó sì bá àwárí rẹ mu!
+    <string name="clip_info_body">O nilo àwọn fáìlì awoṣe méjì (Awoṣe Fọ́tò ati Awoṣe Ọ̀rọ̀) ní ọ̀nà ONNX (.onnx). Àwọn awoṣe méjèèjì gbọ́dọ̀ mú ìwọ̀n àbájáde kan náà jáde, àti pé awoṣe ọ̀rọ̀ gbọ́dọ̀ gba àwọn ID tókìnì. Àwọn awoṣe CLIP ViT-B/32 ṣiṣẹ́ dáradára.\n\nÀwọn awoṣe àkọ́bẹ̀rẹ̀ tí a lò níhìn-ín ni:\n- vision_model_quantized.onnx fún fọ́tò\n- text_model_quantized.onnx fún ọ̀rọ̀.\n
+        \nÓ ń lo awoṣe fọ́tò láti wo gbogbo fọ́tò inú ibi ìpamọ́ rẹ kí o sì pèsè ẹ̀yà ìṣirò (embedding) fún un.
+        \nLẹ́yìn náà, ó ń lo Awoṣe Ọ̀rọ̀ láti yí ọ̀rọ̀ àwárí rẹ padà sí àbájáde kan, ṣàfiwé rẹ̀ pẹ̀lú àwọn àbájáde fọ́tò rẹ, kí ó sì bá àwárí rẹ mu!
     </string>
     <string name="clip_info_close">Mo ti gbọ́</string>
     <string name="clip_status_none">Kò sí àwòṣe tí a fi sílẹ̀</string>

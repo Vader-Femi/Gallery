@@ -24,7 +24,7 @@
     <string name="map_permission_settings">Open settings</string>
     <string name="map_attribution">Map data: Natural Earth (public domain)</string>
     <string name="place_title">Photos here</string>
-    <string name="search_help">Try a file or folder name, a date like "october 2025" or "oct 15", or words like videos, photos and favorites. Combine them: "whatsapp videos 2025". Words written in a photo, like a sign or a receipt, are found too.</string>
+    <string name="search_help">Try a file or folder name, a date like "october 2025" or "oct 15", words like videos, photos and favorites, or &lt;b>describe a photo (e.g. "a dog on a beach")&lt;/b>. Combine them: "whatsapp videos 2025". Words written in a photo or text on a sign are found too.</string>
     <string name="search_no_results">No matching photos or videos</string>
     <string name="search_reading_text">Reading the text in your photos: %1$s of %2$s</string>
     <string name="search_text_unavailable">Reading the text in photos does not work on this phone</string>
@@ -32,6 +32,9 @@
     <string name="search_suggestion_favorites">Favorites</string>
     <string name="search_suggestion_screenshots">Screenshots</string>
     <string name="search_suggestion_yesterday">Yesterday</string>
+    <string name="search_suggestion_sunset">A sunset</string>
+    <string name="search_suggestion_food">Food</string>
+    <string name="search_suggestion_pets">Pets</string>
 
     <string name="selection_count">%d</string>
     <string name="selection_none">Select items</string>
@@ -267,9 +270,9 @@
     <string name="clip_replace_image">Replace image model</string>
     <string name="clip_replace_text">Replace text model</string>
     <string name="clip_info_title">Which models to use?</string>
-    <string name="clip_info_body">You need two model files (an Image Model and a Text Model) in ONNX format (.onnx). Both models must output the same embedding size, and the text model must accept token IDs. Standard CLIP ViT-B/32 models work perfectly.\nThe default models used here were:\n- vision_model_quantized.onnx for image\n- text_model_quantized.onnx for text\n
-        •It uses the image model to look at every photo in your library and generates a mathematical fingerprint (embedding) for it.
-        •It then uses the Text Model to translate your search phrase into an embedding, compare it to your photo embeddings, and match your search!
+    <string name="clip_info_body">You need two model files (an Image Model and a Text Model) in ONNX format (.onnx). Both models must output the same embedding size, and the text model must accept token IDs. Standard CLIP ViT-B/32 models work perfectly.\n\nThe default models used here were:\n- vision_model_quantized.onnx for image\n- text_model_quantized.onnx for text.\n
+        \nIt uses the image model to look at every photo in your library and generates a mathematical fingerprint (embedding) for it.
+        \nIt then uses the Text Model to translate your search phrase into an embedding, compare it to your photo embeddings, and match your search!
     </string>
     <string name="clip_info_close">Got it</string>
     <string name="clip_status_none">No models installed</string>

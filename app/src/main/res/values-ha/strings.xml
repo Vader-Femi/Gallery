@@ -24,7 +24,7 @@
     <string name="map_permission_settings">Buɗe saituna</string>
     <string name="map_attribution">Bayanan taswira: Natural Earth (mallakar jama\'a)</string>
     <string name="place_title">Hotunan nan</string>
-    <string name="search_help">Gwada sunan fayil ko babban fayil, kwanan wata kamar \"Oktoba 2025\" ko \"Okt 15\", ko kalmomi kamar bidiyo, hotuna da abubuwan da aka fi so. Haɗa su: \"whatsapp videos 2025\". Hakanan ana samun kalmomin da aka rubuta a cikin hoto, kamar alama ko rasiti.</string>
+    <string name="search_help">Gwada sunan fayil ko babban fayil, kwanan wata kamar "Oktoba 2025" ko "Okt 15", kalmomi kamar bidiyo, hotuna da waɗanda aka fi so, ko &lt;b>kwatanta hoto (misali "kare a bakin teku")&lt;/b>. Haɗa su: "bidiyoyin whatsapp 2025". Hakanan ana samun kalmomin da aka rubuta a hoto ko rubutu akan lamba.</string>
     <string name="search_no_results">Babu hotuna ko bidiyo da suka dace</string>
     <string name="search_reading_text">Ana karanta rubutun dake cikin hotunanka: %1$s na %2$s</string>
     <string name="search_text_unavailable">Karanta rubutu a cikin hotuna baya aiki a wannan wayar</string>
@@ -32,6 +32,9 @@
     <string name="search_suggestion_favorites">Abubuwan da aka fi so</string>
     <string name="search_suggestion_screenshots">Hotunan allo</string>
     <string name="search_suggestion_yesterday">Jiya</string>
+    <string name="search_suggestion_sunset">Faɗuwar rana</string>
+    <string name="search_suggestion_food">Abinci</string>
+    <string name="search_suggestion_pets">Dabbobi</string>
 
     <string name="selection_count">%d</string>
     <string name="selection_none">Zaɓi abubuwa</string>
@@ -267,9 +270,9 @@
     <string name="clip_replace_image">Canza tsarin hoto</string>
     <string name="clip_replace_text">Canza tsarin rubutu</string>
     <string name="clip_info_title">Waɗanne tsari za a yi amfani da su?</string>
-    <string name="clip_info_body">Kana buƙatar fayilolin tsari guda biyu (Tsarin Hoto da Tsarin Rubutu) a tsarin ONNX (.onnx). Dole ne duka tsare-tsaren su fitar da girman sakamako ɗaya, kuma tsarin rubutun dole ne ya yarda da alamomin IDs. Tsarin CLIP ViT-B/32 na yau da kullun suna aiki sosai.\nTsarin asali da aka yi amfani da su anan sune:\n- vision_model_quantized.onnx don hoto\n- text_model_quantized.onnx don rubutu\n
-        •Yana amfani da tsarin hoto don duba kowane hoto a dakin karatunka sannan ya ƙirƙiri lissafin lissafi (embedding) don shi.
-        •Sannan yana amfani da Tsarin Rubutu don fassara kalmar bincikenka zuwa sakamako, kwatanta shi da sakamakon hotonka, sannan ya daidaita bincikenka!
+    <string name="clip_info_body">Kana buƙatar fayilolin tsari guda biyu (Tsarin Hoto da Tsarin Rubutu) a tsarin ONNX (.onnx). Dole ne duka tsare-tsaren su fitar da girman sakamako ɗaya, kuma tsarin rubutun dole ne ya yarda da alamomin IDs. Tsarin CLIP ViT-B/32 na yau da kullun suna aiki sosai.\n\nTsarin asali da aka yi amfani da su anan sune:\n- vision_model_quantized.onnx don hoto\n- text_model_quantized.onnx don rubutu.\n
+        \nYana amfani da tsarin hoto don duba kowane hoto a dakin karatunka sannan ya ƙirƙiri lissafin lissafi (embedding) don shi.
+        \nSannan yana amfani da Tsarin Rubutu don fassara kalmar bincikenka zuwa sakamako, kwatanta shi da sakamakon hotonka, sannan ya daidaita bincikenka!
     </string>
     <string name="clip_info_close">Na gane</string>
     <string name="clip_status_none">Babu samfurin da aka sanya</string>

@@ -24,7 +24,7 @@
     <string name="map_permission_settings">Open settings</string>
     <string name="map_attribution">Map data: Natural Earth (public domain)</string>
     <string name="place_title">Photos wey dey here</string>
-    <string name="search_help">Try file or folder name, date like \"october 2025\" or \"oct 15\", or words like videos, photos and favorites. Combine them: \"whatsapp videos 2025\". Words wey dem write inside photo, like signboard or receipt, we dey find them too.</string>
+    <string name="search_help">Try file or folder name, date like "october 2025" or "oct 15", words like videos, photos and favorites, or &lt;b>describe picture (e.g. "dog for beach")&lt;/b>. Combine dem: "whatsapp videos 2025". Dem dey find words wey dem write for photo or text for signpost too.</string>
     <string name="search_no_results">No matching photos or videos</string>
     <string name="search_reading_text">We dey read di text inside your photos: %1$s of %2$s</string>
     <string name="search_text_unavailable">Reading text inside photos no work for dis phone</string>
@@ -32,6 +32,9 @@
     <string name="search_suggestion_favorites">Favorites</string>
     <string name="search_suggestion_screenshots">Screenshots</string>
     <string name="search_suggestion_yesterday">Yesterday</string>
+    <string name="search_suggestion_sunset">Sunset</string>
+    <string name="search_suggestion_food">Food</string>
+    <string name="search_suggestion_pets">Pets</string>
 
     <string name="selection_count">%d</string>
     <string name="selection_none">Select items</string>
@@ -267,9 +270,9 @@
     <string name="clip_replace_image">Change picture model</string>
     <string name="clip_replace_text">Change text model</string>
     <string name="clip_info_title">Which models we go use?</string>
-    <string name="clip_info_body">You need two model files (Picture Model and Text Model) inside ONNX format (.onnx). Di two models must bring out di exact same size, and di text model must take token IDs. Normal CLIP ViT-B/32 models dey work perfectly.\nDi default models wey we use for here na:\n- vision_model_quantized.onnx for picture\n- text_model_quantized.onnx for text\n
-        •E dey use di picture model look all di pictures inside your library con generate strong fingerprint (embedding) for am.
-        •E go con use di Text Model change your search word to embedding, compare am to your picture embeddings, con match your search!
+    <string name="clip_info_body">You need two model files (Picture Model and Text Model) inside ONNX format (.onnx). Di two models must bring out di exact same size, and di text model must take token IDs. Normal CLIP ViT-B/32 models dey work perfectly.\n\nDi default models wey we use for here na:\n- vision_model_quantized.onnx for picture\n- text_model_quantized.onnx for text.\n
+        \nE dey use di picture model look all di pictures inside your library con generate strong fingerprint (embedding) for am.
+        \nE go con use di Text Model change your search word to embedding, compare am to your picture embeddings, con match your search!
     </string>
     <string name="clip_info_close">I don get am</string>
     <string name="clip_status_none">No model dey</string>

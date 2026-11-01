@@ -64,12 +64,28 @@ import com.femi.gallery.domain.text.TextScanState
 import com.femi.gallery.domain.text.TextScanStatus
 import java.text.NumberFormat
 
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Screenshot
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ElevatedAssistChip
+
 /** Suggestion chips: the label shown, and the (English) query it fills in. */
 private val Suggestions = listOf(
-    R.string.search_suggestion_videos to "videos",
-    R.string.search_suggestion_favorites to "favorites",
-    R.string.search_suggestion_screenshots to "screenshots",
-    R.string.search_suggestion_yesterday to "yesterday",
+    Triple(R.string.search_suggestion_videos, "videos", Icons.Filled.VideoLibrary),
+    Triple(R.string.search_suggestion_favorites, "favorites", Icons.Filled.Star),
+    Triple(R.string.search_suggestion_screenshots, "screenshots", Icons.Filled.Screenshot),
+    Triple(R.string.search_suggestion_yesterday, "yesterday", Icons.Filled.History),
+    Triple(R.string.search_suggestion_sunset, "a sunset", Icons.Filled.WbSunny),
+    Triple(R.string.search_suggestion_food, "food", Icons.Filled.Restaurant),
+    Triple(R.string.search_suggestion_pets, "pets", Icons.Filled.Pets),
 )
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -219,7 +235,7 @@ private fun SearchHelp(onSuggestion: (String) -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
             text = stringResource(R.string.search_help),
@@ -228,10 +244,21 @@ private fun SearchHelp(onSuggestion: (String) -> Unit) {
         )
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Suggestions.forEach { (label, text) ->
-                SuggestionChip(onClick = { onSuggestion(text) }, label = { Text(stringResource(label)) })
+            Suggestions.forEach { (label, text, icon) ->
+                ElevatedAssistChip(
+                    onClick = { onSuggestion(text) },
+                    label = { Text(stringResource(label)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(AssistChipDefaults.IconSize)
+                        )
+                    },
+                    shape = RoundedCornerShape(16.dp)
+                )
             }
         }
     }
