@@ -24,6 +24,18 @@ class SaveEditedCopyUseCase @Inject constructor(
     suspend operator fun invoke(uri: String, state: EditState): Boolean = repository.saveCopy(uri, state)
 }
 
+class ReplaceOriginalUseCase @Inject constructor(
+    private val repository: EditRepository,
+) {
+    suspend operator fun invoke(uri: String, state: EditState): Boolean = repository.replaceOriginal(uri, state)
+}
+
+class RequestWriteOriginalUseCase @Inject constructor(
+    private val repository: com.femi.gallery.domain.repository.MediaRepository,
+) {
+    suspend operator fun invoke(uri: String): List<com.femi.gallery.domain.model.WriteRequest> = repository.createWriteRequests(listOf(uri))
+}
+
 class ApplyEditEffectsUseCase @Inject constructor(
     private val repository: EditRepository,
 ) {

@@ -160,7 +160,9 @@
 
     <string name="editor_close">Close editor</string>
     <string name="editor_reset">Reset</string>
-    <string name="editor_save">Save copy</string>
+    <string name="editor_save">Save</string>
+    <string name="editor_save_copy">Save as copy</string>
+    <string name="editor_more_options">More options</string>
     <string name="editor_load_failed">Couldn\'t open this photo</string>
     <string name="editor_tool_crop">Crop</string>
     <string name="editor_tool_adjust">Adjust</string>
@@ -172,7 +174,7 @@
     <string name="editor_discard_body">Your edits haven\'t been saved.</string>
     <string name="editor_discard_confirm">Discard</string>
     <string name="editor_keep_editing">Keep editing</string>
-    <string name="toast_edit_saved">Saved a copy</string>
+    <string name="toast_edit_saved">Saved</string>
     <string name="toast_edit_failed">Couldn\'t save the edited photo</string>
 
     <string name="crop_free">Free</string>

@@ -53,6 +53,10 @@ class BitmapEditor @Inject constructor(
         runCatching { save(Uri.parse(uri), state) }.getOrDefault(false)
     }
 
+    override suspend fun replaceOriginal(uri: String, state: EditState): Boolean = withContext(io) {
+        runCatching { overwrite(Uri.parse(uri), state) }.getOrDefault(false)
+    }
+
     /** Decodes with the photo's orientation applied, scaled so the longest side is at most [maxSize]. */
     private fun decode(uri: Uri, maxSize: Int): Bitmap {
         val source = ImageDecoder.createSource(context.contentResolver, uri)
@@ -224,25 +228,7 @@ class BitmapEditor @Inject constructor(
                     resolver.openFileDescriptor(target, "rw")?.use { targetFd ->
                         val sourceExif = ExifInterface(sourceFd.fileDescriptor)
                         val targetExif = ExifInterface(targetFd.fileDescriptor)
-                        val tags = listOf(
-                            ExifInterface.TAG_DATETIME,
-                            ExifInterface.TAG_DATETIME_ORIGINAL,
-                            ExifInterface.TAG_DATETIME_DIGITIZED,
-                            ExifInterface.TAG_GPS_LATITUDE,
-                            ExifInterface.TAG_GPS_LONGITUDE,
-                            ExifInterface.TAG_GPS_LATITUDE_REF,
-                            ExifInterface.TAG_GPS_LONGITUDE_REF,
-                            ExifInterface.TAG_GPS_ALTITUDE,
-                            ExifInterface.TAG_GPS_ALTITUDE_REF,
-                            ExifInterface.TAG_MAKE,
-                            ExifInterface.TAG_MODEL,
-                            ExifInterface.TAG_FOCAL_LENGTH,
-                            ExifInterface.TAG_F_NUMBER,
-                            ExifInterface.TAG_EXPOSURE_TIME,
-                            ExifInterface.TAG_EXPOSURE_PROGRAM,
-                            ExifInterface.TAG_WHITE_BALANCE,
-                            ExifInterface.TAG_FLASH,
-                        )
+                        val tags = EXIF_TAGS
                         for (tag in tags) {
                             sourceExif.getAttribute(tag)?.let { targetExif.setAttribute(tag, it) }
                         }
@@ -259,6 +245,78 @@ class BitmapEditor @Inject constructor(
             true
         } catch (e: Exception) {
             resolver.delete(target, null, null)
+            false
+        }
+    }
+
+    private fun overwrite(uri: Uri, state: EditState): Boolean {
+        val resolver = context.contentResolver
+        val row = ContentUris.withAppendedId(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), ContentUris.parseId(uri))
+        val projection = arrayOf(
+            MediaStore.MediaColumns.MIME_TYPE,
+            MediaStore.MediaColumns.DATE_TAKEN,
+        )
+        val meta = resolver.query(row, projection, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                Pair(cursor.getString(0).orEmpty(), cursor.getLong(1))
+            } else {
+                null
+            }
+        } ?: return false
+
+        val full = decode(uri, MAX_SAVE_SIZE)
+        val oriented = orient(full, state)
+        if (oriented !== full) full.recycle()
+        val geometry = crop(oriented, state.crop)
+        if (geometry !== oriented) oriented.recycle()
+        val effected = renderEffects(geometry, state)
+        if (effected !== geometry) geometry.recycle()
+        val result = Bitmap.createBitmap(effected.width, effected.height, Bitmap.Config.ARGB_8888)
+        val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
+            colorFilter = ColorMatrixColorFilter(ColorMatrix(state.colorMatrix()))
+        }
+        Canvas(result).drawBitmap(effected, 0f, 0f, paint)
+        effected.recycle()
+
+        val isPng = meta.first == "image/png"
+        val takenMillis = meta.second.takeIf { it > 0 } ?: System.currentTimeMillis()
+
+        // Read EXIF before truncating
+        val exifMap = mutableMapOf<String, String>()
+        runCatching {
+            resolver.openFileDescriptor(uri, "r")?.use { sourceFd ->
+                val sourceExif = ExifInterface(sourceFd.fileDescriptor)
+                for (tag in EXIF_TAGS) {
+                    sourceExif.getAttribute(tag)?.let { exifMap[tag] = it }
+                }
+            }
+        }
+
+        return try {
+            val output = resolver.openOutputStream(uri, "wt") ?: error("Cannot write $uri")
+            output.use {
+                if (isPng) result.compress(Bitmap.CompressFormat.PNG, 100, it)
+                else result.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)
+            }
+            resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.DATE_MODIFIED, takenMillis / 1000L) }, null, null)
+
+            // Write EXIF back
+            runCatching {
+                resolver.openFileDescriptor(uri, "rw")?.use { targetFd ->
+                    val targetExif = ExifInterface(targetFd.fileDescriptor)
+                    for ((tag, value) in exifMap) {
+                        targetExif.setAttribute(tag, value)
+                    }
+                    targetExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+                    targetExif.saveAttributes()
+                }
+            }.onFailure { e ->
+                Log.w(TAG, "Could not write EXIF attributes to overwritten original", e)
+            }
+
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to overwrite $uri", e)
             false
         }
     }
@@ -280,5 +338,25 @@ class BitmapEditor @Inject constructor(
         /** Longest side of a saved edit; a 50 MP photo would need ~200 MB of memory at full size. */
         const val MAX_SAVE_SIZE = 4096
         const val JPEG_QUALITY = 95
+        
+        val EXIF_TAGS = listOf(
+            ExifInterface.TAG_DATETIME,
+            ExifInterface.TAG_DATETIME_ORIGINAL,
+            ExifInterface.TAG_DATETIME_DIGITIZED,
+            ExifInterface.TAG_GPS_LATITUDE,
+            ExifInterface.TAG_GPS_LONGITUDE,
+            ExifInterface.TAG_GPS_LATITUDE_REF,
+            ExifInterface.TAG_GPS_LONGITUDE_REF,
+            ExifInterface.TAG_GPS_ALTITUDE,
+            ExifInterface.TAG_GPS_ALTITUDE_REF,
+            ExifInterface.TAG_MAKE,
+            ExifInterface.TAG_MODEL,
+            ExifInterface.TAG_FOCAL_LENGTH,
+            ExifInterface.TAG_F_NUMBER,
+            ExifInterface.TAG_EXPOSURE_TIME,
+            ExifInterface.TAG_EXPOSURE_PROGRAM,
+            ExifInterface.TAG_WHITE_BALANCE,
+            ExifInterface.TAG_FLASH,
+        )
     }
 }
