@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.mlkit.image.labeling)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)
+    implementation(libs.telephoto.zoomable.image.coil3)
     ksp(libs.hilt.compiler)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)

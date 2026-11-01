@@ -41,6 +41,11 @@ class MediaThumbnailFetcher(
                 Size(size, size),
                 signal,
             )
+            // Reject very small (e.g. 96x96 MICRO_KIND) system thumbnails which are often
+            // low-res and squashed out of proportion for older photos.
+            if (bitmap.width <= 128 && bitmap.height <= 128) {
+                return@withContext null
+            }
             ImageFetchResult(
                 image = bitmap.asImage(),
                 isSampled = true,
