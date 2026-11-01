@@ -279,7 +279,6 @@ class BitmapEditor @Inject constructor(
         effected.recycle()
 
         val isPng = meta.first == "image/png"
-        val takenMillis = meta.second.takeIf { it > 0 } ?: System.currentTimeMillis()
 
         // Read EXIF before truncating
         val exifMap = mutableMapOf<String, String>()
@@ -298,7 +297,7 @@ class BitmapEditor @Inject constructor(
                 if (isPng) result.compress(Bitmap.CompressFormat.PNG, 100, it)
                 else result.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)
             }
-            resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.DATE_MODIFIED, takenMillis / 1000L) }, null, null)
+            resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis() / 1000L) }, null, null)
 
             // Write EXIF back
             runCatching {

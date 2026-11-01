@@ -2,7 +2,9 @@ package com.femi.gallery.domain.usecase
 
 import android.graphics.Bitmap
 import com.femi.gallery.domain.edit.EditState
+import com.femi.gallery.domain.model.WriteRequest
 import com.femi.gallery.domain.repository.EditRepository
+import com.femi.gallery.domain.repository.MediaRepository
 import javax.inject.Inject
 
 class LoadEditPreviewUseCase @Inject constructor(
@@ -31,9 +33,9 @@ class ReplaceOriginalUseCase @Inject constructor(
 }
 
 class RequestWriteOriginalUseCase @Inject constructor(
-    private val repository: com.femi.gallery.domain.repository.MediaRepository,
+    private val repository: MediaRepository,
 ) {
-    suspend operator fun invoke(uri: String): List<com.femi.gallery.domain.model.WriteRequest> = repository.createWriteRequests(listOf(uri))
+    suspend operator fun invoke(uri: String): List<WriteRequest> = repository.createWriteRequests(listOf(uri))
 }
 
 class ApplyEditEffectsUseCase @Inject constructor(
