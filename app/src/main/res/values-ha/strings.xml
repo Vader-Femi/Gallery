@@ -331,4 +331,6 @@
     <string name="settings_delete_empty_albums_summary">Nemi kuma goge kofassai na wofi a ajiyar wayarka</string>
     <string name="settings_delete_empty_albums_deleted">An goge kofassai na wofi %1$d.</string>
     <string name="settings_delete_empty_albums_none">Ba a sami kofassai na wofi ba.</string>
+    <string name="editor_save_copy">Ajiye a matsayin kwafi</string>
+    <string name="editor_more_options">Ƙarin zaɓuɓɓuka</string>
 </resources>

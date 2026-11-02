@@ -331,4 +331,6 @@
     <string name="settings_delete_empty_albums_summary">Find and delete empty folder dem inside storage</string>
     <string name="settings_delete_empty_albums_deleted">You don delete %1$d empty album dem.</string>
     <string name="settings_delete_empty_albums_none">No empty album dem found.</string>
+    <string name="editor_save_copy">Save am as copy</string>
+    <string name="editor_more_options">More options</string>
 </resources>

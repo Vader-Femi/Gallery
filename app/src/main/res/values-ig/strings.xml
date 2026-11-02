@@ -331,4 +331,6 @@
     <string name="settings_delete_empty_albums_summary">Chọta ma hichapụ folda efu n\'nchekwa gị</string>
     <string name="settings_delete_empty_albums_deleted">Ehichapụrụ folda efu %1$d.</string>
     <string name="settings_delete_empty_albums_none">Enweghị folda efu a hụrụ.</string>
+    <string name="editor_save_copy">Chekwaba dị ka kọpị</string>
+    <string name="editor_more_options">Nhọrọ ndị ọzọ</string>
 </resources>

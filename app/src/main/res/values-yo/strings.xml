@@ -331,4 +331,6 @@
     <string name="settings_delete_empty_albums_summary">Rí àti pa àwọn fọ́lídà tí ó ṣófo rẹ́ kúrò ní ààyè ìtọ́jú rẹ</string>
     <string name="settings_delete_empty_albums_deleted">Ti pa àwọn fọ́lídà tí ó ṣófo %1$d rẹ́.</string>
     <string name="settings_delete_empty_albums_none">Kò sí fọ́lídà tí ó ṣófo tí a rí.</string>
+    <string name="editor_save_copy">Fi pamọ́ bí ẹ̀dà</string>
+    <string name="editor_more_options">Àwọn àṣàyàn míì</string>
 </resources>
