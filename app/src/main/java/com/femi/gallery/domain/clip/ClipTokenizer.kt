@@ -76,8 +76,9 @@ class ClipTokenizer(mergesText: String) {
         var t = Normalizer.normalize(text, Normalizer.Form.NFC)
         t = repairLikeFtfy(t)
         repeat(2) { t = unescapeHtml(t) }
-        // Regex pattern matches any Unicode whitespace character
-        return t.trim().replace(Regex("\\p{Z}+"), " ").trim().lowercase()
+        // Like Python's whitespace handling: tabs and line breaks (\s) and Unicode separators such as a non-breaking
+        // space (\p{Z}). Written without inline flags such as (?U), which Android's ICU engine rejects.
+        return t.trim().replace(WHITESPACE, " ").trim().lowercase()
     }
 
     /** The few repairs of the `ftfy` library that matter for typed text: curly quotes, ligatures and full-width letters. */
@@ -164,6 +165,8 @@ class ClipTokenizer(mergesText: String) {
     }
 
     companion object {
+        private val WHITESPACE = Regex("[\\s\\p{Z}]+")
+
         const val CONTEXT_LENGTH = 77
         const val START_ID = 49406
         const val END_ID = 49407

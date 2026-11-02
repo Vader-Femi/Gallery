@@ -28,6 +28,7 @@ import java.io.IOException
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 import java.nio.LongBuffer
+import java.util.zip.GZIPInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -206,7 +207,7 @@ class OnnxClipEmbedder @Inject constructor(
     }
 
     private fun readVocabulary(): String =
-        context.assets.open(VOCABULARY_ASSET).use { it.bufferedReader().readText() }
+        context.assets.open(VOCABULARY_ASSET).use { GZIPInputStream(it).bufferedReader().readText() }
 
     private fun reopenIfFilesChanged() {
         val now = files.signature
@@ -312,7 +313,7 @@ class OnnxClipEmbedder @Inject constructor(
 
     private companion object {
         const val TAG = "ClipModel"
-        const val VOCABULARY_ASSET = "clip/bpe_simple_vocab_16e6.txt"
+        const val VOCABULARY_ASSET = "clip/bpe_simple_vocab_16e6.txt.gz"
         const val THREADS = 2
     }
 }

@@ -94,6 +94,12 @@ class ClipTokenizerTest {
     }
 
     @Test
+    fun tabsLineBreaksAndNonBreakingSpacesCountAsSpaces() {
+        val plain = tokenizer.encode("a photo of a dog").toList()
+        assertEquals(plain, tokenizer.encode("a\tphoto\nof \u00a0a\r\ndog").toList())
+    }
+
+    @Test
     fun emptyTextIsJustTheMarkers() {
         val tokens = tokenizer.tokenize("")
         assertEquals(listOf(ClipTokenizer.START_ID, ClipTokenizer.END_ID, 0), tokens.take(3))
