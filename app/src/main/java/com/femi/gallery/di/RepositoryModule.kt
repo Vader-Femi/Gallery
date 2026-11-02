@@ -8,6 +8,7 @@ import com.femi.gallery.data.db.RoomLocationStore
 import com.femi.gallery.data.clip.ClipModelManagerImpl
 import com.femi.gallery.data.clip.OnnxClipEmbedder
 import com.femi.gallery.data.duplicates.ContentFileHasher
+import com.femi.gallery.data.video.TransformerVideoTrimRepository
 import com.femi.gallery.data.repository.DuplicateRepositoryImpl
 import com.femi.gallery.data.story.FileStoryEditStore
 import com.femi.gallery.data.edit.BitmapEditor
@@ -28,6 +29,7 @@ import com.femi.gallery.domain.repository.ColorStore
 import com.femi.gallery.domain.repository.DuplicateRepository
 import com.femi.gallery.domain.repository.StoryEditStore
 import com.femi.gallery.domain.repository.EditRepository
+import com.femi.gallery.domain.video.VideoTrimRepository
 import com.femi.gallery.domain.repository.ClipModelManager
 import com.femi.gallery.domain.repository.ImageEmbedder
 import com.femi.gallery.domain.repository.ImageLabeller
@@ -54,6 +56,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindEditRepository(impl: BitmapEditor): EditRepository
+
+    @Binds
+    abstract fun bindVideoTrimRepository(impl: TransformerVideoTrimRepository): VideoTrimRepository
 
     @Binds
     abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
