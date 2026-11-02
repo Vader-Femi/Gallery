@@ -116,13 +116,13 @@ object ThemePreferences {
 
     fun getAlbumSortOption(context: Context): AlbumSortOption = runBlocking {
         val name = context.dataStore.data.map { it[KEY_ALBUM_SORT] }.first()
-        name?.let { runCatching { AlbumSortOption.valueOf(it) }.getOrNull() } ?: AlbumSortOption.Recency
+        name?.let { runCatching { AlbumSortOption.valueOf(it) }.getOrNull() } ?: AlbumSortOption.Name
     }
 
     fun getAlbumSortOptionFlow(context: Context): Flow<AlbumSortOption> =
         context.dataStore.data.map { prefs ->
             val name = prefs[KEY_ALBUM_SORT]
-            name?.let { runCatching { AlbumSortOption.valueOf(it) }.getOrNull() } ?: AlbumSortOption.Recency
+            name?.let { runCatching { AlbumSortOption.valueOf(it) }.getOrNull() } ?: AlbumSortOption.Name
         }
 
     fun setAlbumSortOption(context: Context, option: AlbumSortOption) = runBlocking {
