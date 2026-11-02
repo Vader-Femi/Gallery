@@ -66,6 +66,29 @@ class ClipModelViewModel @Inject constructor(
         }
     }
 
+    /** Copies the bundled models back in (they are not copied again on their own after "Remove models"). */
+    fun restoreBundled() {
+        if (_card.value.busy) return
+        _card.value = ClipCardState(busy = true)
+        viewModelScope.launch {
+            val result = manager.restoreBundled()
+            _card.update {
+                it.copy(
+                    busy = false,
+                    problem = when (result) {
+                        ClipInstallResult.Installed -> null
+                        ClipInstallResult.Unusable -> ClipCardState.Problem.Unusable
+                        ClipInstallResult.Mismatch -> ClipCardState.Problem.Mismatch
+                    },
+                )
+            }
+            if (result == ClipInstallResult.Installed && manager.status.value.isComplete) {
+                clip.startScan()
+                BackgroundScans.update(context)
+            }
+        }
+    }
+
     fun remove() {
         viewModelScope.launch {
             clip.stopScan()

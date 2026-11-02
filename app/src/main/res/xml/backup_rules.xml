@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pre-Android 12 auto backup. The Locked folder, the record of where photos were taken, the text read from photos and the index database must never leave the device. -->
+<!-- Pre-Android 12 auto backup. The Locked folder, the model files (about 150 MB, copied from the app on the first run), the record of where photos were taken, the text read from photos and the index database must never leave the device. -->
 <full-backup-content>
     <exclude domain="file" path="locked/" />
+    <exclude domain="file" path="models/" />
     <exclude domain="file" path="locations.bin" />
     <exclude domain="file" path="texts.bin" />
     <exclude domain="file" path="labels.bin" />

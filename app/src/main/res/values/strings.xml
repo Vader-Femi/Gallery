@@ -285,6 +285,7 @@
     <string name="clip_error_mismatch">The two models do not belong together (their results are not the same size). The file was not kept.</string>
     <string name="clip_progress">Reading photos: %1$d of %2$d</string>
     <string name="clip_remove">Remove models</string>
+    <string name="clip_restore_bundled">Restore bundled models</string>
     <string name="clip_search_title">Include described matches in search</string>
     <string name="clip_search_summary">Photos that look like what you typed are added to the results. Names, text, colours, labels and places are matched as before.</string>
     <string name="theme_system">System default</string>

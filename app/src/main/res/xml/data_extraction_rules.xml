@@ -3,6 +3,7 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="locked/" />
+        <exclude domain="file" path="models/" />
         <exclude domain="file" path="locations.bin" />
         <exclude domain="file" path="texts.bin" />
         <exclude domain="file" path="labels.bin" />
@@ -11,4 +12,7 @@
         <exclude domain="database" path="gallery.db-wal" />
         <exclude domain="database" path="gallery.db-shm" />
     </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="models/" />
+    </device-transfer>
 </data-extraction-rules>

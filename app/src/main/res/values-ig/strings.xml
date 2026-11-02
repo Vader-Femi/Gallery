@@ -283,6 +283,7 @@
     <string name="clip_error_mismatch">Ụdị abụọ ahụ adabaghị ọnụ. Edebeghị faịlụ ahụ.</string>
     <string name="clip_progress">Na-agụ foto: %1$d n’ime %2$d</string>
     <string name="clip_remove">Wepụ ụdị</string>
+    <string name="clip_restore_bundled">Weghachi ụdị ndị ejikọtara na ngwa</string>
     <string name="clip_search_title">Tinye nsonaazụ nkọwa n’ọchụchọ</string>
     <string name="clip_search_summary">A na-agbakwunye foto yiri ihe ị dere n’nsonaazụ. A na-edozi aha, ederede, agba, akara na ebe dị ka mbụ.</string>
     <string name="theme_system">Ndịdị sistemụ</string>

@@ -283,6 +283,7 @@
     <string name="clip_error_mismatch">Àwọn àwòṣe méjèèjì kò bára mu. A kò tọ́jú fáìlì náà.</string>
     <string name="clip_progress">À ń ka àwọn fọ́tò: %1$d nínú %2$d</string>
     <string name="clip_remove">Yọ àwọn àwòṣe kúrò</string>
+    <string name="clip_restore_bundled">Mú àwọn àwòṣe inú ìṣàfilọ́lẹ̀ padà</string>
     <string name="clip_search_title">Fi àbájáde àpèjúwe kún ìwádìí</string>
     <string name="clip_search_summary">A fi àwọn fọ́tò tó jọ ohun tí o tẹ̀ kún àbájáde. A ń báramu orúkọ, ọ̀rọ̀, àwọ̀, àmì àti ibi bíi tẹ́lẹ̀.</string>
     <string name="theme_system">Èdè ẹ̀rọ (System default)</string>

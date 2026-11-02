@@ -46,6 +46,15 @@ class ClipModelManagerImpl @Inject constructor(
         return ClipInstallResult.Installed
     }
 
+    override suspend fun restoreBundled(): ClipInstallResult {
+        embedder.release()
+        if (!files.restoreBundled()) return ClipInstallResult.Unusable
+        val image = embedder.check(ClipModelKind.Image)
+        val text = embedder.check(ClipModelKind.Text)
+        if (image !is OnnxClipEmbedder.Check.Ok || text !is OnnxClipEmbedder.Check.Ok) return ClipInstallResult.Unusable
+        return if (image.dimension == text.dimension) ClipInstallResult.Installed else ClipInstallResult.Mismatch
+    }
+
     override suspend fun remove() {
         files.deleteAll()
         embedder.release()

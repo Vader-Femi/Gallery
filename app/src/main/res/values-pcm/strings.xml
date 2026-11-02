@@ -283,6 +283,7 @@
     <string name="clip_error_mismatch">De two models no match each oda (results no be de same size). De file no save.</string>
     <string name="clip_progress">Reading photo dem: %1$d of %2$d</string>
     <string name="clip_remove">Remove model dem</string>
+    <string name="clip_restore_bundled">Bring back di models wey dey inside di app</string>
     <string name="clip_search_title">Include described match dem inside search</string>
     <string name="clip_search_summary">Picture dem wey look like wetin you type go join de results. Name, text, color, label and place dem go match as before.</string>
     <string name="theme_system">System default</string>

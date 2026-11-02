@@ -187,6 +187,11 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
                 }
             }
 
+            if (status != ClipModelStatus.Installed) {
+                TextButton(enabled = !isBusy, onClick = viewModel::restoreBundled) {
+                    Text(stringResource(R.string.clip_restore_bundled))
+                }
+            }
             if (status != ClipModelStatus.NotInstalled) {
                 Spacer(Modifier.height(0.dp))
                 TextButton(enabled = !isBusy, onClick = viewModel::remove) {

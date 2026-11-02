@@ -283,6 +283,7 @@
     <string name="clip_error_mismatch">Samfuran biyu ba su dace da juna ba. Ba a ajiye fayil ɗin ba.</string>
     <string name="clip_progress">Ana karanta hotuna: %1$d daga %2$d</string>
     <string name="clip_remove">Cire samfuran</string>
+    <string name="clip_restore_bundled">Mayar da samfuran da aka haɗa</string>
     <string name="clip_search_title">Haɗa sakamakon bayani a bincike</string>
     <string name="clip_search_summary">Ana ƙara hotunan da suka yi kama da abin da ka rubuta cikin sakamako. Ana daidaita sunaye, rubutu, launuka, lakabi da wurare kamar da.</string>
     <string name="theme_system">Tsarin waya</string>

@@ -24,6 +24,9 @@ interface ClipModelManager {
     /** Copies the file at [source] (a content address chosen by the person) in as the [kind] model, and checks it. */
     suspend fun install(kind: ClipModelKind, source: String): ClipInstallResult
 
+    /** Copies the two models bundled in the app in again (replacing what is there) and checks them. */
+    suspend fun restoreBundled(): ClipInstallResult
+
     /** Removes both models and the embeddings made with them. */
     suspend fun remove()
 }
