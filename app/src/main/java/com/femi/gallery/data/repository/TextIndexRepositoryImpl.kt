@@ -5,6 +5,7 @@ import android.os.PowerManager
 import android.os.Process
 import android.os.SystemClock
 import android.util.Log
+import com.femi.gallery.core.lifecycle.ScanThrottle
 import com.femi.gallery.core.permission.MediaPermissionChecker
 import com.femi.gallery.data.mediastore.MediaStoreDataSource
 import com.femi.gallery.data.text.TextIndexHolder
@@ -159,13 +160,9 @@ class TextIndexRepositoryImpl @Inject constructor(
                 }
                 _scan.value = TextScanState(TextScanStatus.Scanning, scanned, plan.toScan, withText)
                 next = end
-                
-                // Throttle when the user is actively using the app so we don't freeze image loading
-                if (com.femi.gallery.core.lifecycle.AppForeground.isInForeground) {
-                    kotlinx.coroutines.delay(50L)
-                } else {
-                    kotlinx.coroutines.yield()
-                }
+
+                // Between batches: a short sleep while the app is on display, so image loading is not starved.
+                ScanThrottle.pause()
             }
             if (unsaved > 0) checkpoint(results)
 

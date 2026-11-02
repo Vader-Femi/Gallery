@@ -6,6 +6,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
+import com.femi.gallery.core.lifecycle.ScanThrottle
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.geo.GeoPoint
 import com.femi.gallery.domain.geo.LocationEntry
@@ -54,13 +55,9 @@ class LocationScanner @Inject constructor(
                 .filterNotNull()
             onBatch(entries, end - start)
             start = end
-            
-            // Throttle when the user is actively using the app so we don't freeze image loading
-            if (com.femi.gallery.core.lifecycle.AppForeground.isInForeground) {
-                kotlinx.coroutines.delay(50L)
-            } else {
-                kotlinx.coroutines.yield()
-            }
+
+            // Between batches: a short sleep while the app is on display, so image loading is not starved.
+            ScanThrottle.pause()
         }
     }
 
