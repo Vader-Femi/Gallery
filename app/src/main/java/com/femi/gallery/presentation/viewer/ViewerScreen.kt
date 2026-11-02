@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -531,6 +532,11 @@ internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
 
     val viewerDrag = LocalViewerDrag.current
     val zoomableState = me.saket.telephoto.zoomable.rememberZoomableImageState()
+    // A photo that is swiped away is put back to fit-to-screen, as the photo page did before Telephoto, so that
+    // coming back to it does not show it still zoomed in.
+    LaunchedEffect(isCurrent) {
+        if (!isCurrent) zoomableState.zoomableState.resetZoom(animationSpec = snap())
+    }
     LaunchedEffect(zoomableState.zoomableState.zoomFraction, isCurrent) {
         if (viewerDrag != null && isCurrent) {
             viewerDrag.zoomed = (zoomableState.zoomableState.zoomFraction ?: 0f) > 0.02f
