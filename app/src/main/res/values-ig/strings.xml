@@ -333,5 +333,8 @@
     <string name="settings_delete_empty_albums_deleted">Ehichapụrụ folda efu %1$d.</string>
     <string name="settings_delete_empty_albums_none">Enweghị folda efu a hụrụ.</string>
     <string name="editor_save_copy">Chekwaba dị ka kọpị</string>
+    <string name="editor_replace_title">Dochie ihe mbụ?</string>
+    <string name="editor_replace_body">A ga-edochi foto mbụ site na mgbanwe gị. Enweghị ike ịmegharị ya. Họrọ “Chekwaba dị ka kọpị” ka ichekwa nke mbụ.</string>
+    <string name="editor_replace_confirm">Dochie</string>
     <string name="editor_more_options">Nhọrọ ndị ọzọ</string>
 </resources>

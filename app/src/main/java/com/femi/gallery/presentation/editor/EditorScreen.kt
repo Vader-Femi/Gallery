@@ -111,6 +111,31 @@ fun EditorScreen(
         ColorFilter.colorMatrix(ColorMatrix(edit.colorMatrix()))
     }
 
+    // Replacing overwrites the photo for good, so it is only done after the person has agreed to it.
+    var confirmReplace by rememberSaveable { mutableStateOf(false) }
+    if (confirmReplace) {
+        AlertDialog(
+            onDismissRequest = { confirmReplace = false },
+            title = { Text(stringResource(R.string.editor_replace_title)) },
+            text = { Text(stringResource(R.string.editor_replace_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmReplace = false
+                    viewModel.saveReplacingOriginal()
+                }) { Text(stringResource(R.string.editor_replace_confirm)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { confirmReplace = false }) { Text(stringResource(R.string.picker_cancel)) }
+                    TextButton(onClick = {
+                        confirmReplace = false
+                        viewModel.saveAsCopy()
+                    }) { Text(stringResource(R.string.editor_save_copy)) }
+                }
+            },
+        )
+    }
+
     Surface(color = Color(0xFF111111), contentColor = Color.White) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
             EditorTopBar(
@@ -118,7 +143,7 @@ fun EditorScreen(
                 canReset = !edit.isUnchanged && !state.saving,
                 onClose = requestClose,
                 onReset = viewModel::reset,
-                onSaveReplace = viewModel::saveReplacingOriginal,
+                onSaveReplace = { confirmReplace = true },
                 onSaveCopy = viewModel::saveAsCopy,
             )
 

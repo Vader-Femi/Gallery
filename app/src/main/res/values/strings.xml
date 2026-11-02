@@ -162,6 +162,9 @@
     <string name="editor_reset">Reset</string>
     <string name="editor_save">Save</string>
     <string name="editor_save_copy">Save as copy</string>
+    <string name="editor_replace_title">Replace the original?</string>
+    <string name="editor_replace_body">The original photo will be overwritten with your edits. This cannot be undone. Choose “Save as copy” to keep the original.</string>
+    <string name="editor_replace_confirm">Replace</string>
     <string name="editor_more_options">More options</string>
     <string name="editor_load_failed">Couldn\'t open this photo</string>
     <string name="editor_tool_crop">Crop</string>

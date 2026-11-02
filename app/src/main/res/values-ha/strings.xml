@@ -333,5 +333,8 @@
     <string name="settings_delete_empty_albums_deleted">An goge kofassai na wofi %1$d.</string>
     <string name="settings_delete_empty_albums_none">Ba a sami kofassai na wofi ba.</string>
     <string name="editor_save_copy">Ajiye a matsayin kwafi</string>
+    <string name="editor_replace_title">Maye na asali?</string>
+    <string name="editor_replace_body">Za a maye hoton asali da gyare-gyarenka. Ba za a iya mayar da shi ba. Zaɓi “Ajiye a matsayin kwafi” don adana na asali.</string>
+    <string name="editor_replace_confirm">Maye</string>
     <string name="editor_more_options">Ƙarin zaɓuɓɓuka</string>
 </resources>

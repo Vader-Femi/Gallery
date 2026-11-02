@@ -333,5 +333,8 @@
     <string name="settings_delete_empty_albums_deleted">You don delete %1$d empty album dem.</string>
     <string name="settings_delete_empty_albums_none">No empty album dem found.</string>
     <string name="editor_save_copy">Save am as copy</string>
+    <string name="editor_replace_title">Change di original?</string>
+    <string name="editor_replace_body">Di original photo go change to wetin you edit. You no fit bring am back. Choose “Save am as copy” if you wan keep di original.</string>
+    <string name="editor_replace_confirm">Change am</string>
     <string name="editor_more_options">More options</string>
 </resources>

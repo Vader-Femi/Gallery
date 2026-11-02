@@ -333,5 +333,8 @@
     <string name="settings_delete_empty_albums_deleted">Ti pa àwọn fọ́lídà tí ó ṣófo %1$d rẹ́.</string>
     <string name="settings_delete_empty_albums_none">Kò sí fọ́lídà tí ó ṣófo tí a rí.</string>
     <string name="editor_save_copy">Fi pamọ́ bí ẹ̀dà</string>
+    <string name="editor_replace_title">Rọ́pò ti àtilẹ̀bá?</string>
+    <string name="editor_replace_body">A ó fi àtúnṣe rẹ rọ́pò fọ́tò àtilẹ̀bá. A kò lè dá a padà. Yan “Fi pamọ́ bí ẹ̀dà” láti pa ti àtilẹ̀bá mọ́.</string>
+    <string name="editor_replace_confirm">Rọ́pò</string>
     <string name="editor_more_options">Àwọn àṣàyàn míì</string>
 </resources>
