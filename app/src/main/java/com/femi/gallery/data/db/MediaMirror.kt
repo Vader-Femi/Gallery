@@ -76,6 +76,7 @@ class MediaMirror @Inject constructor(
             bucketId = query.bucketId,
             type = query.mediaType?.let(::typeCode),
             favoritesOnly = if (query.favoritesOnly) 1 else 0,
+            excluded = query.excludedBuckets,
         )
         val order = MediaOrder(
             ids = LongArray(rows.size) { rows[it].id },

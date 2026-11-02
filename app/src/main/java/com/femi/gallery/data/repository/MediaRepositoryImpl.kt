@@ -28,11 +28,13 @@ import com.femi.gallery.domain.model.StoryVideos
 import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.repository.StoryEditStore
 import com.femi.gallery.domain.search.SearchCriteria
+import com.femi.gallery.presentation.settings.ThemePreferences
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
 import com.femi.gallery.domain.repository.MediaRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
@@ -42,6 +44,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -79,27 +82,30 @@ class MediaRepositoryImpl @Inject constructor(
         if (dataSource.generation() != indexedGeneration) refreshSignal.tryEmit(Unit)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getPagedMedia(
         initialKey: Int?,
         bucketId: Long?,
         search: SearchCriteria?,
-    ): Flow<PagingData<MediaItem>> = Pager(
-        config = PagingConfig(
-            pageSize = 120,
-            initialLoadSize = 240,
-            prefetchDistance = 120,
-            enablePlaceholders = true,
-            jumpThreshold = 240,
-        ),
-        initialKey = initialKey,
-        pagingSourceFactory = {
-            if (bucketId == SpecialAlbums.LOCKED) {
-                LockedPagingSource(lockedStore)
-            } else {
-                MediaPagingSource(dataSource, context, bucketId, search).also { sources.add(it) }
-            }
-        },
-    ).flow
+    ): Flow<PagingData<MediaItem>> = hiddenAlbumsChanges().flatMapLatest {
+        Pager(
+            config = PagingConfig(
+                pageSize = 120,
+                initialLoadSize = 240,
+                prefetchDistance = 120,
+                enablePlaceholders = true,
+                jumpThreshold = 240,
+            ),
+            initialKey = initialKey,
+            pagingSourceFactory = {
+                if (bucketId == SpecialAlbums.LOCKED) {
+                    LockedPagingSource(lockedStore)
+                } else {
+                    MediaPagingSource(dataSource, context, bucketId, search).also { sources.add(it) }
+                }
+            },
+        ).flow
+    }
 
     override suspend fun getDetails(item: MediaItem): MediaDetails = exifReader.read(item)
 
@@ -209,9 +215,13 @@ class MediaRepositoryImpl @Inject constructor(
     /** Emits once on start, then (debounced) whenever MediaStore changes or the app resumes after a change. */
     @OptIn(FlowPreview::class)
     private fun changeTriggers(): Flow<Unit> =
-        merge(mediaChanges().debounce(CHANGE_DEBOUNCE_MS), refreshSignal)
+        merge(mediaChanges().debounce(CHANGE_DEBOUNCE_MS), refreshSignal, hiddenAlbumsChanges().map { })
             .onStart { emit(Unit) }
             .conflate()
+
+    /** The albums hidden in Settings; every list built from the library starts again when they change. */
+    private fun hiddenAlbumsChanges(): Flow<Set<Long>> =
+        ThemePreferences.getHiddenAlbumsFlow(context).distinctUntilChanged()
 
     private fun mediaChanges(): Flow<Unit> = callbackFlow {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {

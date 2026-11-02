@@ -25,7 +25,9 @@ import com.femi.gallery.domain.model.MediaOrder
 import com.femi.gallery.domain.model.MediaStamps
 import com.femi.gallery.domain.model.MediaOrdering
 import com.femi.gallery.domain.model.MediaRef
+import com.femi.gallery.domain.model.HiddenAlbums
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.presentation.settings.ThemePreferences
 import com.femi.gallery.domain.model.WriteLimits
 import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.search.SearchCriteria
@@ -34,6 +36,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,8 +75,9 @@ class MediaStoreDataSource @Inject constructor(
      * is done here; only two numbers per item are read, which is cheap even for 50,000 photos.
      */
     suspend fun loadOrder(bucketId: Long? = null, search: SearchCriteria? = null): MediaOrder = withContext(io) {
+        val excluded = HiddenAlbums.excludedFor(bucketId, hiddenAlbums())
         // The local copy of the library answers what it can (see MirrorQuery); the rest is read from MediaStore.
-        MirrorQuery.from(bucketId, search)?.let { query ->
+        MirrorQuery.from(bucketId, search, excluded)?.let { query ->
             fromMirror { mirror.order(query) }?.let { return@withContext it }
         }
         val projection = arrayOf(
@@ -82,7 +86,7 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.MediaColumns.DATE_ADDED,
             MediaStore.Files.FileColumns.MEDIA_TYPE,
         )
-        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search)), null)?.use { cursor ->
+        val order = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search), excludedBuckets = excluded), null)?.use { cursor ->
             val ids = LongArray(cursor.count)
             val dates = LongArray(cursor.count)
             val videos = BooleanArray(cursor.count)
@@ -163,7 +167,18 @@ class MediaStoreDataSource @Inject constructor(
 
     /** Every photo and video in the library (not the recycle bin), in no particular order; used to look for duplicates. */
     suspend fun loadAllItems(): List<MediaItem> = withContext(io) {
-        fromMirror { mirror.allItems() } ?: loadAllItemsFromMediaStore()
+        val items = fromMirror { mirror.allItems() } ?: loadAllItemsFromMediaStore()
+        val hidden = hiddenAlbums()
+        if (hidden.isEmpty()) items else items.filter { it.bucketId !in hidden }
+    }
+
+    /** The albums the person hid in Settings; their photos are left out of everything but the album list. */
+    private suspend fun hiddenAlbums(): Set<Long> = try {
+        ThemePreferences.getHiddenAlbumsFlow(context).first()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        emptySet()
     }
 
     /** [loadAllItems], read from MediaStore itself (it is also what fills the mirror). */
@@ -345,7 +360,8 @@ class MediaStoreDataSource @Inject constructor(
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             MediaStore.MediaColumns.IS_FAVORITE,
         )
-        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search)), null)
+        val excluded = HiddenAlbums.excludedFor(bucketId, hiddenAlbums())
+        val refs = resolver.query(collectionUri, projection, queryArgs(bucketId = bucketId, search = search, textMatches = combinedMatches(search), excludedBuckets = excluded), null)
             ?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                 val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
@@ -548,6 +564,8 @@ class MediaStoreDataSource @Inject constructor(
         textMatches: Map<String, Set<Long>> = emptyMap(),
         /** Restricts the query to these ids (used to load one page of an ordered list). */
         onlyIds: LongArray? = null,
+        /** Albums left out of the result (the hidden ones). */
+        excludedBuckets: Set<Long> = emptySet(),
     ): Bundle = Bundle().apply {
         val selection = StringBuilder("${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)")
         val selectionArgs = mutableListOf(
@@ -563,6 +581,10 @@ class MediaStoreDataSource @Inject constructor(
                 selection.append(" AND ${MediaStore.MediaColumns.BUCKET_ID} = ?")
                 selectionArgs.add(bucketId.toString())
             }
+        }
+        if (excludedBuckets.isNotEmpty()) {
+            selection.append(" AND (${MediaStore.MediaColumns.BUCKET_ID} IS NULL OR ${MediaStore.MediaColumns.BUCKET_ID} NOT IN (${excludedBuckets.joinToString(",") { "?" }}))")
+            excludedBuckets.forEach { selectionArgs.add(it.toString()) }
         }
         if (search != null) appendSearch(search, textMatches, selection, selectionArgs)
         if (onlyIds != null && onlyIds.isNotEmpty()) {

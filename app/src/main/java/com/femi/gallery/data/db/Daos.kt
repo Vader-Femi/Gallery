@@ -162,9 +162,10 @@ abstract class MediaDao {
             "WHERE (:bucketId IS NULL OR bucketId = :bucketId) " +
             "AND (:type IS NULL OR type = :type) " +
             "AND (:favoritesOnly = 0 OR isFavorite = 1) " +
+            "AND bucketId NOT IN (:excluded) " +
             "ORDER BY dateMillis DESC, id DESC",
     )
-    abstract suspend fun order(bucketId: Long?, type: Int?, favoritesOnly: Int): List<OrderRow>
+    abstract suspend fun order(bucketId: Long?, type: Int?, favoritesOnly: Int, excluded: List<Long>): List<OrderRow>
 
     /** Every album, with how many items it holds and its newest item as the cover (the bare columns come from that row). */
     @Query(

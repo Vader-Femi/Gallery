@@ -1,5 +1,6 @@
 package com.femi.gallery.domain.mirror
 
+import com.femi.gallery.domain.model.HiddenAlbums
 import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.search.SearchCriteria
@@ -20,10 +21,12 @@ data class MirrorQuery(
     val favoritesOnly: Boolean,
     /** Epoch-second ranges (inclusive); an item is kept if its date falls in any of them. Empty means any date. */
     val dateRanges: List<LongRange>,
+    /** Albums left out (the hidden ones), see `HiddenAlbums`. */
+    val excludedBuckets: List<Long> = emptyList(),
 ) {
     companion object {
         /** The mirror's version of a request for [bucketId] and [search], or null when MediaStore has to answer it. */
-        fun from(bucketId: Long?, search: SearchCriteria?): MirrorQuery? {
+        fun from(bucketId: Long?, search: SearchCriteria?, hidden: Set<Long> = emptySet()): MirrorQuery? {
             if (bucketId == SpecialAlbums.TRASH || bucketId == SpecialAlbums.LOCKED) return null
             if (search != null && (search.terms.isNotEmpty() || search.area != null)) return null
             val favoritesAlbum = bucketId == SpecialAlbums.FAVORITES
@@ -32,6 +35,7 @@ data class MirrorQuery(
                 mediaType = search?.mediaType,
                 favoritesOnly = favoritesAlbum || search?.favoritesOnly == true,
                 dateRanges = search?.dateRanges.orEmpty(),
+                excludedBuckets = HiddenAlbums.excludedFor(bucketId, hidden).toList(),
             )
         }
     }
