@@ -124,7 +124,6 @@ import kotlinx.coroutines.launch
 
 private const val Tag = "Viewer"
 private const val ThumbnailRequestSize = 512
-private const val FullRequestSize = 2160
 
 @Composable
 fun ViewerScreen(
@@ -527,36 +526,33 @@ private fun ViewerPage(
 @Composable
 internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
     val context = LocalContext.current
-    // Layer 1: the system thumbnail appears instantly. Layer 2: the sharper image fades in on top.
-    val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
-    val full = remember(item.uri) {
-        ImageRequest.Builder(context).data(item.uri).size(FullRequestSize).crossfade(true).build()
-    }
     val handleTap = remember(onTap) { { onTap() } }
-    // The current photo grows out of (and shrinks back into) its thumbnail in the grid.
     val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
-    ZoomableBox(
-        isCurrent = isCurrent,
-        onTap = handleTap,
-        sharedBounds = sharedModifier,
-        initialImageSize = GridThumbnails.sizeFor(item.id) ?: Size.Zero,
-    ) { onImageSize ->
-        AsyncImage(
-            model = thumbnail,
-            onLoading = { state -> state.painter?.intrinsicSize?.takeKnown()?.let(onImageSize) },
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(),
-            onSuccess = { onImageSize(it.painter.intrinsicSize) },
-        )
-        AsyncImage(
-            model = full,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(),
-            onSuccess = { onImageSize(it.painter.intrinsicSize) },
-        )
+
+    val viewerDrag = LocalViewerDrag.current
+    val zoomableState = me.saket.telephoto.zoomable.rememberZoomableImageState()
+    LaunchedEffect(zoomableState.zoomableState.zoomFraction, isCurrent) {
+        if (viewerDrag != null && isCurrent) {
+            viewerDrag.zoomed = (zoomableState.zoomableState.zoomFraction ?: 0f) > 0.02f
+        }
     }
+
+    val thumbnailKey = GridThumbnails.keyFor(item.id)
+    val request = remember(item.uri, thumbnailKey) {
+        ImageRequest.Builder(context)
+            .data(item.uri)
+            .apply { if (thumbnailKey != null) placeholderMemoryCacheKey(thumbnailKey) }
+            .crossfade(true)
+            .build()
+    }
+
+    me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage(
+        model = request,
+        state = zoomableState,
+        contentDescription = null,
+        modifier = Modifier.fillMaxSize().then(sharedModifier),
+        onClick = { handleTap() }
+    )
 }
 
 @Composable

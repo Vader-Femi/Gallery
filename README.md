@@ -119,7 +119,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Next up**
 - [ ] **Map extras**: a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
 - [ ] **Slideshow music** (cannot be tested without a device), *(progress bar added; shuffle and speed choice between launches remembered; videos in slideshows added)*
-- [ ] **Editor extras**: draw, text and stickers, and offer to replace the original (straighten, sharpen, vignette and keeping the camera details are done)
+- [x] **Save as copy or replace original**: the editor now offers both options. When replacing the original, the edited photo is saved directly over the old one, preserving EXIF metadata.
+- [ ] **Editor extras**: draw, text and stickers (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo**, to tune on a real library: the closeness floor and margin (`SemanticSelection.Config`), a strictness setting, "a photo of ..." wrapping for short words, a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
 
 **Later**
@@ -128,9 +129,9 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] Video editor: trim, speed and basic effects
 - [ ] Find **similar** photos (not byte-identical: bursts, re-saved or resized copies) with perceptual hashing; exact duplicates are done
 - [ ] Motion photo playback, *(set as wallpaper added)*
-- [ ] Tiled full-resolution zoom for very large photos
+- [x] Tiled full-resolution zoom for very large photos
 - [x] Small settings screen (DataStore); hide albums; sort options; delete empty albums *(zoom level remembered)*
-- [ ] Select a whole day by tapping its header; drag-to-select
+- [x] Select a whole day by tapping its header; drag-to-select
 - [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)

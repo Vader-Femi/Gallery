@@ -19,4 +19,7 @@ interface EditRepository {
 
     /** Renders [state] onto the original photo and saves the result as a new picture next to it. */
     suspend fun saveCopy(uri: String, state: EditState): Boolean
+
+    /** Renders [state] onto the original photo and overwrites the original file. */
+    suspend fun replaceOriginal(uri: String, state: EditState): Boolean
 }

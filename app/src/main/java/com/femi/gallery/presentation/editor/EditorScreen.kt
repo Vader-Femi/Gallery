@@ -38,8 +38,14 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,6 +72,7 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.edit.ColorMatrices
 import com.femi.gallery.domain.edit.EditFilter
 import com.femi.gallery.domain.edit.EditState
+import com.femi.gallery.presentation.selection.WriteRequestHandler
 import kotlin.math.roundToInt
 
 private val PanelColor = Color(0xFF1C1C1E)
@@ -95,6 +102,8 @@ fun EditorScreen(
             }
         }
     }
+    
+    WriteRequestHandler(batches = viewModel.batches, onSuccess = {})
 
     // Only changes to the colors need a new filter; crop drags happen far more often.
     val edit = state.edit
@@ -109,7 +118,8 @@ fun EditorScreen(
                 canReset = !edit.isUnchanged && !state.saving,
                 onClose = requestClose,
                 onReset = viewModel::reset,
-                onSave = viewModel::save,
+                onSaveReplace = viewModel::saveReplacingOriginal,
+                onSaveCopy = viewModel::saveAsCopy,
             )
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -154,8 +164,10 @@ private fun EditorTopBar(
     canReset: Boolean,
     onClose: () -> Unit,
     onReset: () -> Unit,
-    onSave: () -> Unit,
+    onSaveReplace: () -> Unit,
+    onSaveCopy: () -> Unit,
 ) {
+    var moreExpanded by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -165,8 +177,22 @@ private fun EditorTopBar(
         }
         Box(modifier = Modifier.weight(1f))
         TextButton(onClick = onReset, enabled = canReset) { Text(stringResource(R.string.editor_reset)) }
-        Button(onClick = onSave, enabled = canSave, modifier = Modifier.padding(end = 8.dp)) {
+        Button(onClick = onSaveReplace, enabled = canSave, modifier = Modifier.padding(end = 8.dp)) {
             Text(stringResource(R.string.editor_save))
+        }
+        Box {
+            IconButton(onClick = { moreExpanded = true }, enabled = canSave) {
+                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.editor_more_options))
+            }
+            DropdownMenu(expanded = moreExpanded, onDismissRequest = { moreExpanded = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.editor_save_copy)) },
+                    onClick = {
+                        moreExpanded = false
+                        onSaveCopy()
+                    }
+                )
+            }
         }
     }
 }

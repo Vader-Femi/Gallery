@@ -14,7 +14,11 @@ import com.femi.gallery.domain.edit.EditState
 import com.femi.gallery.domain.usecase.ApplyEditEffectsUseCase
 import com.femi.gallery.domain.usecase.ApplyEditGeometryUseCase
 import com.femi.gallery.domain.usecase.LoadEditPreviewUseCase
+import com.femi.gallery.domain.usecase.ReplaceOriginalUseCase
+import com.femi.gallery.domain.usecase.RequestWriteOriginalUseCase
 import com.femi.gallery.domain.usecase.SaveEditedCopyUseCase
+import com.femi.gallery.presentation.selection.WriteBatch
+import com.femi.gallery.presentation.selection.WriteKind
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -74,6 +78,8 @@ class EditorViewModel @Inject constructor(
     private val applyGeometry: ApplyEditGeometryUseCase,
     private val applyEffects: ApplyEditEffectsUseCase,
     private val saveCopy: SaveEditedCopyUseCase,
+    private val replaceOriginal: ReplaceOriginalUseCase,
+    private val requestWrite: RequestWriteOriginalUseCase,
 ) : ViewModel() {
 
     private val uri: String = checkNotNull(savedStateHandle.get<String>(URI_ARG))
@@ -83,6 +89,9 @@ class EditorViewModel @Inject constructor(
 
     private val _events = Channel<EditorEvent>(Channel.BUFFERED)
     val events: Flow<EditorEvent> = _events.receiveAsFlow()
+
+    private val _batches = Channel<WriteBatch>(Channel.BUFFERED)
+    val batches: Flow<WriteBatch> = _batches.receiveAsFlow()
 
     private var source: Bitmap? = null
     private var geometryJob: Job? = null
@@ -206,12 +215,48 @@ class EditorViewModel @Inject constructor(
 
     // ---- saving ---------------------------------------------------------------------------
 
-    fun save() {
+    fun saveAsCopy() {
         val current = _state.value
         if (current.saving || current.edit.isUnchanged) return
         _state.update { it.copy(saving = true) }
         viewModelScope.launch {
             val saved = saveCopy(uri, current.edit)
+            _state.update { it.copy(saving = false) }
+            _events.send(if (saved) EditorEvent.Saved else EditorEvent.SaveFailed)
+        }
+    }
+
+    fun saveReplacingOriginal() {
+        val current = _state.value
+        if (current.saving || current.edit.isUnchanged) return
+        _state.update { it.copy(saving = true) }
+        viewModelScope.launch {
+            try {
+                val requests = requestWrite(uri)
+                if (requests.isEmpty()) {
+                    performReplace()
+                } else {
+                    _batches.send(
+                        WriteBatch(
+                            kind = WriteKind.Move, // Using Move just as a generic "requires permission" kind, or we could use a custom one if Edit existed, but Move shows no toast for success message.
+                            itemCount = 1,
+                            requests = requests,
+                            onDeclined = { _state.update { it.copy(saving = false) } },
+                            onApproved = { performReplace() }
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(saving = false) }
+                _events.send(EditorEvent.SaveFailed)
+            }
+        }
+    }
+
+    private fun performReplace() {
+        val current = _state.value
+        viewModelScope.launch {
+            val saved = replaceOriginal(uri, current.edit)
             _state.update { it.copy(saving = false) }
             _events.send(if (saved) EditorEvent.Saved else EditorEvent.SaveFailed)
         }
