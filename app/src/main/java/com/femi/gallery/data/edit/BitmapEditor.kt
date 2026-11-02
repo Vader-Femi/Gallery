@@ -4,6 +4,7 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color as AndroidColor
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
@@ -14,6 +15,7 @@ import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
@@ -29,6 +31,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import java.io.ByteArrayOutputStream
+import java.io.File
 import javax.inject.Singleton
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -264,6 +268,24 @@ class BitmapEditor @Inject constructor(
             }
         } ?: return false
 
+        // Replacing keeps the file's own format and size: a HEIC, AVIF or other file would otherwise get JPEG bytes
+        // under its old name, and a photo larger than the editing size would silently lose its resolution.
+        val format = when (meta.first) {
+            "image/jpeg" -> Bitmap.CompressFormat.JPEG
+            "image/png" -> Bitmap.CompressFormat.PNG
+            "image/webp" -> if (Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else Bitmap.CompressFormat.WEBP
+            else -> null
+        }
+        if (format == null) {
+            Log.w(TAG, "Not replacing $uri: ${meta.first} cannot be written back in its own format; use Save as copy")
+            return false
+        }
+        val longest = longestSide(uri)
+        if (longest > MAX_SAVE_SIZE) {
+            Log.w(TAG, "Not replacing $uri: it is $longest px on its longest side, more than the $MAX_SAVE_SIZE px edits are saved at; use Save as copy")
+            return false
+        }
+
         val full = decode(uri, MAX_SAVE_SIZE)
         val oriented = orient(full, state)
         if (oriented !== full) full.recycle()
@@ -278,7 +300,17 @@ class BitmapEditor @Inject constructor(
         Canvas(result).drawBitmap(effected, 0f, 0f, paint)
         effected.recycle()
 
-        val isPng = meta.first == "image/png"
+        // Encode first, in memory: if that fails, the original has not been touched.
+        val encoded = ByteArrayOutputStream().use { buffer ->
+            val quality = if (format == Bitmap.CompressFormat.PNG) 100 else JPEG_QUALITY
+            if (!result.compress(format, quality, buffer)) {
+                Log.e(TAG, "Could not encode the edited photo for $uri")
+                result.recycle()
+                return false
+            }
+            buffer.toByteArray()
+        }
+        result.recycle()
 
         // Read EXIF before truncating
         val exifMap = mutableMapOf<String, String>()
@@ -291,12 +323,20 @@ class BitmapEditor @Inject constructor(
             }
         }
 
+        // Keep the original's bytes until the new ones are written; put them back if writing fails half way.
+        val backup = File(context.cacheDir, "replace_backup.bin")
+        val backedUp = runCatching {
+            resolver.openInputStream(uri)?.use { input -> backup.outputStream().use { input.copyTo(it) } } != null
+        }.getOrDefault(false)
+        if (!backedUp) {
+            Log.w(TAG, "Not replacing $uri: its original bytes could not be kept as a backup")
+            backup.delete()
+            return false
+        }
+
         return try {
             val output = resolver.openOutputStream(uri, "wt") ?: error("Cannot write $uri")
-            output.use {
-                if (isPng) result.compress(Bitmap.CompressFormat.PNG, 100, it)
-                else result.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)
-            }
+            output.use { it.write(encoded) }
             resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis() / 1000L) }, null, null)
 
             // Write EXIF back
@@ -313,12 +353,24 @@ class BitmapEditor @Inject constructor(
                 Log.w(TAG, "Could not write EXIF attributes to overwritten original", e)
             }
 
+            backup.delete()
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to overwrite $uri", e)
+            Log.e(TAG, "Failed to overwrite $uri; putting the original back", e)
+            val restored = runCatching {
+                resolver.openOutputStream(uri, "wt")?.use { out -> backup.inputStream().use { it.copyTo(out) } } != null
+            }.getOrDefault(false)
+            if (restored) backup.delete() else Log.e(TAG, "The original of $uri could not be restored; the backup stays in ${backup.path}")
             false
         }
     }
+
+    /** The longest side of the picture in pixels, read from its header only; 0 when it cannot be read. */
+    private fun longestSide(uri: Uri): Int = runCatching {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(0)
+    }.getOrDefault(0)
 
     /** Next to the original when apps may write there, otherwise in Pictures/Edited. */
     private fun destinationFor(originalPath: String): String =
