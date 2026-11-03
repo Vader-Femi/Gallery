@@ -38,14 +38,8 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -144,7 +138,6 @@ fun EditorScreen(
                 onClose = requestClose,
                 onReset = viewModel::reset,
                 onSaveReplace = { confirmReplace = true },
-                onSaveCopy = viewModel::saveAsCopy,
             )
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -190,9 +183,7 @@ private fun EditorTopBar(
     onClose: () -> Unit,
     onReset: () -> Unit,
     onSaveReplace: () -> Unit,
-    onSaveCopy: () -> Unit,
 ) {
-    var moreExpanded by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -204,20 +195,6 @@ private fun EditorTopBar(
         TextButton(onClick = onReset, enabled = canReset) { Text(stringResource(R.string.editor_reset)) }
         Button(onClick = onSaveReplace, enabled = canSave, modifier = Modifier.padding(end = 8.dp)) {
             Text(stringResource(R.string.editor_save))
-        }
-        Box {
-            IconButton(onClick = { moreExpanded = true }, enabled = canSave) {
-                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.editor_more_options))
-            }
-            DropdownMenu(expanded = moreExpanded, onDismissRequest = { moreExpanded = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.editor_save_copy)) },
-                    onClick = {
-                        moreExpanded = false
-                        onSaveCopy()
-                    }
-                )
-            }
         }
     }
 }
