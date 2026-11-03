@@ -133,6 +133,26 @@ abstract class HashDao {
     }
 }
 
+@Dao
+abstract class PhotoHashDao {
+    @Query("SELECT * FROM photo_hash")
+    abstract suspend fun all(): List<PhotoHashRow>
+
+    @Upsert
+    abstract suspend fun upsertAll(rows: List<PhotoHashRow>)
+
+    @Query("SELECT id FROM photo_hash")
+    abstract suspend fun allIds(): List<Long>
+
+    @Query("DELETE FROM photo_hash WHERE id IN (:ids)")
+    abstract suspend fun delete(ids: List<Long>)
+
+    @Transaction
+    open suspend fun deleteAll(ids: List<Long>) {
+        ids.chunked(DELETE_CHUNK).forEach { delete(it) }
+    }
+}
+
 /** The id and date of an item: all that is needed to lay out the timeline. */
 data class OrderRow(
     val id: Long,

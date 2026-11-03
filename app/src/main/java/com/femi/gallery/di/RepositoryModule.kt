@@ -10,6 +10,7 @@ import com.femi.gallery.data.clip.OnnxClipEmbedder
 import com.femi.gallery.data.duplicates.ContentFileHasher
 import com.femi.gallery.data.video.TransformerVideoTrimRepository
 import com.femi.gallery.data.repository.DuplicateRepositoryImpl
+import com.femi.gallery.data.repository.SimilarPhotoRepositoryImpl
 import com.femi.gallery.data.story.FileStoryEditStore
 import com.femi.gallery.data.edit.BitmapEditor
 import com.femi.gallery.data.label.MlKitImageLabeller
@@ -27,6 +28,7 @@ import com.femi.gallery.domain.repository.ColorIndexRepository
 import com.femi.gallery.domain.duplicates.FileHasher
 import com.femi.gallery.domain.repository.ColorStore
 import com.femi.gallery.domain.repository.DuplicateRepository
+import com.femi.gallery.domain.repository.SimilarPhotoRepository
 import com.femi.gallery.domain.repository.StoryEditStore
 import com.femi.gallery.domain.repository.EditRepository
 import com.femi.gallery.domain.video.VideoTrimRepository
@@ -89,6 +91,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindDuplicateRepository(impl: DuplicateRepositoryImpl): DuplicateRepository
+
+    @Binds
+    abstract fun bindSimilarPhotoRepository(impl: SimilarPhotoRepositoryImpl): SimilarPhotoRepository
 
     @Binds
     abstract fun bindColorIndexRepository(impl: ColorIndexRepositoryImpl): ColorIndexRepository
