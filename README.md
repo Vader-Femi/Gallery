@@ -73,8 +73,10 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Viewer**
 - [x] Full-screen viewer with swipe between photos (stays inside the album, search or story you opened it from)
 - [x] **Pinch / double-tap zoom** with panning that hands back to the pager at the edges
+- [x] **Tiled full-resolution zoom** for very large photos (Telephoto)
 - [x] Instant system thumbnail with the sharp image fading in on top
 - [x] **Video playback** (Media3 / ExoPlayer) with standard controls
+- [x] **Video trim**: "Trim" in the viewer's actions for videos; two handles, a preview of the kept part, and "Save trimmed copy" (Media3 Transformer), saved next to the original with its date taken; the original is never changed
 - [x] Tap to hide/show the interface and system bars
 - [x] **Shared-element transition**: the tapped thumbnail grows into the viewer and the photo shrinks back into the grid; when you close the viewer after swiping, the grid scrolls to the photo you ended on (from Pictures, albums, search and stories)
 - [x] **Details panel**: file name, date, folder, resolution, size, duration, camera, aperture, shutter speed, ISO, focal length and GPS (from EXIF)
@@ -86,7 +88,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Rotate** in 90° steps, **straighten** (-45° to 45°) and **flip**
 - [x] **Adjust** brightness, contrast, saturation, warmth, **sharpen**, **vignette** and **straighten** with live preview; straightening trims the empty corners automatically
 - [x] **Filters**: Vivid, Warm, Cool, Mono, Noir, Sepia, Fade and Dramatic, previewed on your photo
-- [x] **Save copy** next to the original with EXIF metadata preserved (date, camera, GPS, etc.) — the original is never touched
+- [x] **Save as copy or replace original**: the editor now offers both options — when replacing the original, the edited photo is saved directly over the old one, preserving EXIF metadata
 
 **Locked folder**
 - [x] **Move photos and videos into a private Locked folder** that other apps — including other galleries and the system photo picker — cannot see
@@ -107,6 +109,10 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Share** several items at once, **favorite / unfavorite**, **move to trash**
 - [x] **More** menu: move to album, copy to album, lock
 
+**Settings**
+- [x] **Small settings screen** (DataStore): hide albums, sort options, delete empty albums *(zoom level remembered)*
+- [x] **Settings as a Flow behind a repository**: `SettingsRepository` interface in `domain/`, DataStore implementation in `data/`, and `SettingsViewModel` exposing a `StateFlow` fitting clean architecture
+
 **Foundation**
 - [x] Clean architecture + MVVM, Hilt dependency injection, Navigation Compose
 - [x] Photo/video permission flow (including "open settings" when permanently denied)
@@ -119,24 +125,18 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Next up**
 - [ ] **Map extras**: a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
 - [ ] **Slideshow music** (cannot be tested without a device), *(progress bar added; shuffle and speed choice between launches remembered; videos in slideshows added)*
-- [x] **Save as copy or replace original**: the editor now offers both options. When replacing the original, the edited photo is saved directly over the old one, preserving EXIF metadata.
 - [ ] **Editor extras**: draw, text and stickers (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo**, to tune on a real library: the closeness floor and margin (`SemanticSelection.Config`), a strictness setting, "a photo of ..." wrapping for short words, a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
 
 **Later**
-- [ ] **Settings as a Flow behind a repository**: composables read `ThemePreferences` directly today (blocking). A `SettingsRepository` interface in `domain/`, the DataStore implementation in `data/`, and `SettingsViewModel` exposing a `StateFlow` would fit the clean architecture of the rest of the app; measured in patch 80: it is not needed for speed
 - [ ] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details
 - [ ] **Safe swap when importing your own CLIP model**: the import writes over the current model file before it is checked, so an unusable file also deletes the working model; check the new file first (in its `.part` file) and only then replace the old one
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
 - [ ] More on-device ML: copy text from a photo, **people / face groups**, auto scene albums
 - [ ] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
-- [x] **Video trim**: "Trim" in the viewer's actions for videos; two handles, a preview of the kept part, and "Save trimmed copy" (Media3 Transformer), saved next to the original with its date taken; the original is never changed. Tried on the phone: it works, and the video's location survives the export (the `VideoTrim` log tag tells what happened)
 - [ ] Video editor, the rest: speed change and a few basic effects
 - [ ] Find **similar** photos (not byte-identical: bursts, re-saved or resized copies) with perceptual hashing; exact duplicates are done
 - [ ] Motion photo playback, *(set as wallpaper added)*
-- [x] Tiled full-resolution zoom for very large photos
-- [x] Small settings screen (DataStore); hide albums; sort options; delete empty albums *(zoom level remembered)*
-- [x] Select a whole day by tapping its header; drag-to-select
 - [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
