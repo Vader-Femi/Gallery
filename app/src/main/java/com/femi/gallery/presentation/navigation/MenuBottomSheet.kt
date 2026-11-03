@@ -174,12 +174,7 @@ fun MenuBottomSheet(
                             label = stringResource(R.string.menu_stories),
                             onClick = { onItemClick(GalleryRoutes.STORIES) },
                         )
-                        ExpressivePillButton(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.ContentCopy,
-                            label = stringResource(R.string.menu_duplicates),
-                            onClick = { onItemClick(GalleryRoutes.DUPLICATES) },
-                        )
+                        Box(Modifier.weight(1f))
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -187,11 +182,16 @@ fun MenuBottomSheet(
                     ) {
                         ExpressivePillButton(
                             modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.ContentCopy,
+                            label = stringResource(R.string.menu_duplicates),
+                            onClick = { onItemClick(GalleryRoutes.DUPLICATES) },
+                        )
+                        ExpressivePillButton(
+                            modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Compare,
                             label = stringResource(R.string.menu_similar),
                             onClick = { onItemClick(GalleryRoutes.SIMILAR) },
                         )
-                        Box(Modifier.weight(1f))
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
