@@ -234,6 +234,7 @@
     <string name="menu_recycle_bin">Igbe mkpofu</string>
     <string name="menu_settings">Ntọala</string>
     <string name="menu_duplicates">Ihe myirịta</string>
+    <string name="menu_similar">Foto ndị yiri onwe ha</string>
     <string name="duplicates_title">Ihe myirịta</string>
     <string name="duplicates_sampling">Na-eji faịlụ tụnyere (%1$d n’ime %2$d)</string>
     <string name="duplicates_verifying">Na-ekwenye ihe dabara (%1$d n’ime %2$d)</string>
@@ -243,6 +244,14 @@
     <string name="duplicates_copies">Mbipụta %1$d · %2$s nke ọ bụla</string>
     <string name="duplicates_keep">Debe</string>
     <string name="duplicates_remove">Bufee mbipụta %1$d gaa n’ebe mkpofu</string>
+    <string name="similar_title">Foto ndị yiri onwe ha</string>
+    <string name="similar_hashing">Na-elekwasị anya na foto gị (%1$d n\'ime %2$d)</string>
+    <string name="similar_none">Achọtaghị foto ndị yiri onwe ha</string>
+    <string name="similar_summary">Otu %1$d · ruo %2$s nwere ike ịtọpụ</string>
+    <string name="similar_hint">Foto ndị a yiri onwe ha mana ha abụghị otu. Pịa nke ị ga-edebe n\'otu ọ bụla, lelee ha tupu i wepụ ndị ọzọ. \"Debe ha niile\" na-ahapụ otu dị ka ọ dị. Foto ndị ewepụrụ na-aga n\'ihe mkpofu ma enwere ike iweghachi ha.</string>
+    <string name="similar_group">Foto %1$d yiri onwe ha</string>
+    <string name="similar_keep_all">Debe ha niile</string>
+    <string name="similar_remove">Bugharịa foto %1$d na ihe mkpofu</string>
     <string name="menu_settings_coming_soon">Ntọala na-abịa n\'oge adịghị anya</string>
 
     <string name="settings_language">Asụsụ</string>

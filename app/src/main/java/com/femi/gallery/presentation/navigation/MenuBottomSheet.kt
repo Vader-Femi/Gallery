@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.Compare
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -179,6 +180,18 @@ fun MenuBottomSheet(
                             label = stringResource(R.string.menu_duplicates),
                             onClick = { onItemClick(GalleryRoutes.DUPLICATES) },
                         )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        ExpressivePillButton(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.Compare,
+                            label = stringResource(R.string.menu_similar),
+                            onClick = { onItemClick(GalleryRoutes.SIMILAR) },
+                        )
+                        Box(Modifier.weight(1f))
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),

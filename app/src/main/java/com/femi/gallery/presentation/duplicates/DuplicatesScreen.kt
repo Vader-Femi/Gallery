@@ -1,6 +1,7 @@
 package com.femi.gallery.presentation.duplicates
 
 import android.text.format.Formatter
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -62,12 +64,40 @@ import com.femi.gallery.presentation.selection.WriteRequestHandler
 private val ThumbnailSize = 104.dp
 private const val ThumbnailPixels = 256
 
+/** The words one use of the groups screen shows. */
+private class GroupsTexts(
+    @StringRes val title: Int,
+    @StringRes val summary: Int,
+    @StringRes val hint: Int,
+    @StringRes val none: Int,
+    @StringRes val remove: Int,
+    /** Similar photos: a group can be left alone, and a group is not "copies". */
+    val similar: Boolean,
+)
+
+private val DuplicatesTexts = GroupsTexts(
+    title = R.string.duplicates_title,
+    summary = R.string.duplicates_summary,
+    hint = R.string.duplicates_hint,
+    none = R.string.duplicates_none,
+    remove = R.string.duplicates_remove,
+    similar = false,
+)
+
+private val SimilarTexts = GroupsTexts(
+    title = R.string.similar_title,
+    summary = R.string.similar_summary,
+    hint = R.string.similar_hint,
+    none = R.string.similar_none,
+    remove = R.string.similar_remove,
+    similar = true,
+)
+
 /**
  * Identical photos and videos, grouped. In each group one file is marked to keep (a good guess is
  * made, and tapping another file changes it); the button at the bottom moves all the other copies to
  * the recycle bin, where they stay for a while and can be restored.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DuplicatesScreen(
     onBack: () -> Unit,
@@ -75,16 +105,60 @@ fun DuplicatesScreen(
     viewModel: DuplicatesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel::onTrashed)
+    GroupsScreen(
+        texts = DuplicatesTexts,
+        state = state,
+        onBack = onBack,
+        onRemove = viewModel::removeCopies,
+        onKeep = viewModel::keep,
+        onIgnore = null,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Photos that look alike (resized or re-saved copies, the shots of a burst), found across the whole library. Same
+ * layout as the duplicates, but each group can be left alone.
+ */
+@Composable
+fun SimilarPhotosScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: SimilarPhotosViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel::onTrashed)
+    GroupsScreen(
+        texts = SimilarTexts,
+        state = state,
+        onBack = onBack,
+        onRemove = viewModel::removeExtras,
+        onKeep = viewModel::keep,
+        onIgnore = viewModel::ignore,
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun GroupsScreen(
+    texts: GroupsTexts,
+    state: DuplicatesUiState,
+    onBack: () -> Unit,
+    onRemove: () -> Unit,
+    onKeep: (groupIndex: Int, mediaId: Long) -> Unit,
+    onIgnore: ((groupIndex: Int) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
-    WriteRequestHandler(batches = viewModel.selection.batches, onSuccess = viewModel::onTrashed)
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             HugeTopAppBar(
-                title = stringResource(R.string.duplicates_title),
+                title = stringResource(texts.title),
                 onBack = onBack,
                 scrollBehavior = scrollBehavior,
             )
@@ -93,13 +167,13 @@ fun DuplicatesScreen(
             if (!state.scanning && state.copiesToRemove > 0) {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 3.dp) {
                     Button(
-                        onClick = viewModel::removeCopies,
+                        onClick = onRemove,
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                     ) {
-                        Text(stringResource(R.string.duplicates_remove, state.copiesToRemove))
+                        Text(stringResource(texts.remove, state.copiesToRemove))
                     }
                 }
             }
@@ -108,7 +182,7 @@ fun DuplicatesScreen(
         Box(Modifier.fillMaxSize().padding(innerPadding)) {
             when {
                 state.scanning -> Scanning(state.progress)
-                state.groups.isEmpty() -> EmptyState(text = stringResource(R.string.duplicates_none))
+                state.groups.isEmpty() -> EmptyState(text = stringResource(texts.none))
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
@@ -118,21 +192,26 @@ fun DuplicatesScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
                                 text = stringResource(
-                                    R.string.duplicates_summary,
+                                    texts.summary,
                                     state.groups.size,
                                     Formatter.formatShortFileSize(context, state.bytesToFree),
                                 ),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             Text(
-                                text = stringResource(R.string.duplicates_hint),
+                                text = stringResource(texts.hint),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                     itemsIndexed(state.groups, key = { _, group -> group.items.first().id }) { index, group ->
-                        GroupCard(group = group, onKeep = { viewModel.keep(index, it) })
+                        GroupCard(
+                            group = group,
+                            similar = texts.similar,
+                            onKeep = { onKeep(index, it) },
+                            onIgnore = onIgnore?.let { ignore -> { ignore(index) } },
+                        )
                     }
                 }
             }
@@ -156,6 +235,7 @@ private fun Scanning(progress: DuplicateProgress?) {
                     when (progress.phase) {
                         DuplicatePhase.Sampling -> R.string.duplicates_sampling
                         DuplicatePhase.Verifying -> R.string.duplicates_verifying
+                        DuplicatePhase.Hashing -> R.string.similar_hashing
                     },
                     progress.done,
                     progress.total,
@@ -171,7 +251,7 @@ private fun Scanning(progress: DuplicateProgress?) {
 }
 
 @Composable
-private fun GroupCard(group: DuplicateGroup, onKeep: (Long) -> Unit) {
+private fun GroupCard(group: DuplicateGroup, similar: Boolean, onKeep: (Long) -> Unit, onIgnore: (() -> Unit)?) {
     val context = LocalContext.current
     Surface(
         shape = RoundedCornerShape(22.dp),
@@ -179,16 +259,29 @@ private fun GroupCard(group: DuplicateGroup, onKeep: (Long) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                text = stringResource(
-                    R.string.duplicates_copies,
-                    group.items.size,
-                    Formatter.formatShortFileSize(context, group.items.first().sizeBytes),
-                ),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = if (similar) {
+                        stringResource(R.string.similar_group, group.items.size)
+                    } else {
+                        stringResource(
+                            R.string.duplicates_copies,
+                            group.items.size,
+                            Formatter.formatShortFileSize(context, group.items.first().sizeBytes),
+                        )
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                if (onIgnore != null) {
+                    TextButton(onClick = onIgnore) { Text(stringResource(R.string.similar_keep_all)) }
+                }
+            }
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),

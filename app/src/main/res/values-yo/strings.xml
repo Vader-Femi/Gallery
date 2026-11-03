@@ -234,6 +234,7 @@
     <string name="menu_recycle_bin">Àpótí ìdọ̀tí</string>
     <string name="menu_settings">Ètò</string>
     <string name="menu_duplicates">Àwọn ẹ̀dà kan náà</string>
+    <string name="menu_similar">Àwọn fọ́tò tó jọra</string>
     <string name="duplicates_title">Àwọn ẹ̀dà kan náà</string>
     <string name="duplicates_sampling">À ń fi àwọn fáìlì wéra (%1$d nínú %2$d)</string>
     <string name="duplicates_verifying">À ń jẹ́rìí sí àwọn tó jọra (%1$d nínú %2$d)</string>
@@ -243,6 +244,14 @@
     <string name="duplicates_copies">Ẹ̀dà %1$d · %2$s kọ̀ọ̀kan</string>
     <string name="duplicates_keep">Pamọ́</string>
     <string name="duplicates_remove">Gbé ẹ̀dà %1$d lọ sínú apẹ̀rẹ̀ ìdọ̀tí</string>
+    <string name="similar_title">Àwọn fọ́tò tó jọra</string>
+    <string name="similar_hashing">Ń wo àwọn fọ́tò rẹ (%1$d nínú %2$d)</string>
+    <string name="similar_none">Kò sí fọ́tò tó jọra</string>
+    <string name="similar_summary">Ẹgbẹ́ %1$d · tó %2$s ni a lè gbà padà</string>
+    <string name="similar_hint">Àwọn fọ́tò wọ̀nyí jọra ṣùgbọ́n kì í ṣe ọ̀kan náà. Tẹ èyí tí o fẹ́ pamọ́ nínú ẹgbẹ́ kọ̀ọ̀kan, kí o sì ṣàyẹ̀wò wọn kí o tó yọ àwọn yòókù kúrò. \"Pa gbogbo wọn mọ́\" fi ẹgbẹ́ náà sílẹ̀ bí ó ṣe wà. Àwọn fọ́tò tí a yọ kúrò ń lọ sí àpótí ìdọ̀tí, a sì lè dá wọn padà.</string>
+    <string name="similar_group">Fọ́tò %1$d tó jọra</string>
+    <string name="similar_keep_all">Pa gbogbo wọn mọ́</string>
+    <string name="similar_remove">Gbé fọ́tò %1$d lọ sí àpótí ìdọ̀tí</string>
     <string name="menu_settings_coming_soon">Ètò yóò dé láìpẹ́</string>
 
     <string name="settings_language">Èdè</string>

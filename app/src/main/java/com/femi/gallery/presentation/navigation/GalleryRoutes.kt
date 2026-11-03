@@ -23,6 +23,7 @@ object GalleryRoutes {
     const val IMAGES = "images"
     const val SETTINGS = "settings"
     const val DUPLICATES = "duplicates"
+    const val SIMILAR = "similar"
     const val PLACE = "place?query={query}"
     const val STORY = "story/{fromDay}/{toDay}"
     const val SLIDESHOW = "slideshow?query={query}&bucketId={bucketId}"

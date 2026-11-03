@@ -234,6 +234,7 @@
     <string name="menu_recycle_bin">Kwandon shara</string>
     <string name="menu_settings">Saituna</string>
     <string name="menu_duplicates">Kwafi iri ɗaya</string>
+    <string name="menu_similar">Hotuna masu kama</string>
     <string name="duplicates_title">Kwafi iri ɗaya</string>
     <string name="duplicates_sampling">Ana kwatanta fayiloli (%1$d daga %2$d)</string>
     <string name="duplicates_verifying">Ana tabbatar da daidaituwa (%1$d daga %2$d)</string>
@@ -243,6 +244,14 @@
     <string name="duplicates_copies">Kwafi %1$d · %2$s kowanne</string>
     <string name="duplicates_keep">Ajiye</string>
     <string name="duplicates_remove">Mayar da kwafi %1$d zuwa kwandon shara</string>
+    <string name="similar_title">Hotuna masu kama</string>
+    <string name="similar_hashing">Ana duba hotunanka (%1$d cikin %2$d)</string>
+    <string name="similar_none">Ba a sami hotuna masu kama ba</string>
+    <string name="similar_summary">Rukunai %1$d · har zuwa %2$s za a iya samu</string>
+    <string name="similar_hint">Waɗannan hotuna suna kama amma ba ɗaya suke ba. Danna wanda za a ajiye a kowane rukuni, ka duba su kafin ka cire sauran. \"Ajiye duka\" yana barin rukuni yadda yake. Hotunan da aka cire suna zuwa kwandon shara kuma ana iya maido da su.</string>
+    <string name="similar_group">Hotuna %1$d masu kama</string>
+    <string name="similar_keep_all">Ajiye duka</string>
+    <string name="similar_remove">Mayar da hotuna %1$d zuwa kwandon shara</string>
     <string name="menu_settings_coming_soon">Saitunan suna zuwa nan ba da jimawa ba</string>
 
     <string name="settings_language">Harshe</string>

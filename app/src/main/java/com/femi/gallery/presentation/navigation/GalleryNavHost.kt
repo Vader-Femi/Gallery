@@ -28,6 +28,7 @@ import com.femi.gallery.presentation.albums.AlbumViewModel
 import com.femi.gallery.presentation.albums.AlbumsScreen
 import com.femi.gallery.presentation.common.LocalAnimatedVisibilityScope
 import com.femi.gallery.presentation.duplicates.DuplicatesScreen
+import com.femi.gallery.presentation.duplicates.SimilarPhotosScreen
 import com.femi.gallery.presentation.editor.EditorScreen
 import com.femi.gallery.presentation.trim.TrimScreen
 import com.femi.gallery.presentation.trim.TrimViewModel
@@ -328,6 +329,9 @@ fun GalleryNavHost(
         }
         composable(GalleryRoutes.DUPLICATES) {
             DuplicatesScreen(onBack = { navController.popBackStack() })
+        }
+        composable(GalleryRoutes.SIMILAR) {
+            SimilarPhotosScreen(onBack = { navController.popBackStack() })
         }
         composable(GalleryRoutes.SETTINGS) {
             SettingsScreen(

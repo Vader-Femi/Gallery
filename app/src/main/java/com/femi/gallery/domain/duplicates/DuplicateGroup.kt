@@ -33,4 +33,7 @@ enum class DuplicatePhase {
 
     /** Reading the whole of files whose pieces matched, to be sure. */
     Verifying,
+
+    /** Looking at the photos to tell which of them look alike (the search for similar photos). */
+    Hashing,
 }
