@@ -64,6 +64,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -535,7 +536,7 @@ private fun ViewerPage(
 @Composable
 internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
     val context = LocalContext.current
-    val handleTap = remember(onTap) { { onTap() } }
+    val latestOnTap by rememberUpdatedState(onTap)
     val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
 
     val viewerDrag = LocalViewerDrag.current
@@ -565,7 +566,7 @@ internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
         state = zoomableState,
         contentDescription = null,
         modifier = Modifier.fillMaxSize().then(sharedModifier),
-        onClick = { handleTap() }
+        onClick = { latestOnTap() }
     )
 }
 
