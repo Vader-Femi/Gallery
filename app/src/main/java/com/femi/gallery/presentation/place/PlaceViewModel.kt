@@ -1,6 +1,6 @@
 package com.femi.gallery.presentation.place
 
-import android.content.Context
+import com.femi.gallery.domain.repository.SettingsRepository
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,14 +14,13 @@ import com.femi.gallery.domain.usecase.RefreshMediaUseCase
 import com.femi.gallery.presentation.pictures.TimelineZoomState
 import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 /** The photos of one place on the map: everything taken inside the area the route names. */
 @HiltViewModel
 class PlaceViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
@@ -36,7 +35,7 @@ class PlaceViewModel @Inject constructor(
 
     val media: Flow<PagingData<MediaItem>> = getPagedMedia(search = criteria).cachedIn(viewModelScope)
 
-    val timeline = TimelineZoomState(viewModelScope, observeTimeline(search = criteria), context)
+    val timeline = TimelineZoomState(viewModelScope, observeTimeline(search = criteria), settingsRepository)
 
     val selection = selectionFactory.create(
         scope = viewModelScope,

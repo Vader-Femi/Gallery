@@ -4,8 +4,9 @@ import android.content.Context
 import com.femi.gallery.domain.model.TimelineGranularity
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
-import com.femi.gallery.presentation.settings.ThemePreferences
+import com.femi.gallery.domain.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,15 +41,20 @@ enum class TimelineZoom(val granularity: TimelineGranularity, val columns: Int) 
 
 /** Current zoom level plus the sections regrouped to match it. Shared by Pictures and albums. */
 class TimelineZoomState(
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     daySections: Flow<List<TimelineSection>>,
-    context: Context? = null,
+    private val settingsRepository: SettingsRepository,
 ) {
-    private val appContext = context?.applicationContext
-    private val _zoom = MutableStateFlow(
-        appContext?.let { ThemePreferences.getTimelineZoom(it) } ?: TimelineZoom.Default
-    )
+    private val _zoom = MutableStateFlow(settingsRepository.getTimelineZoomSync())
     val zoom: StateFlow<TimelineZoom> = _zoom.asStateFlow()
+
+    init {
+        scope.launch {
+            settingsRepository.timelineZoom.collect {
+                _zoom.value = it
+            }
+        }
+    }
 
     val sections: StateFlow<List<TimelineSection>> =
         combine(daySections, _zoom) { days, zoom -> TimelineGrouper.regroup(days, zoom.granularity) }
@@ -57,7 +63,7 @@ class TimelineZoomState(
     fun zoomIn() {
         _zoom.update { current ->
             val next = current.zoomedIn()
-            appContext?.let { ThemePreferences.setTimelineZoom(it, next) }
+            scope.launch { settingsRepository.setTimelineZoom(next) }
             next
         }
     }
@@ -65,7 +71,7 @@ class TimelineZoomState(
     fun zoomOut() {
         _zoom.update { current ->
             val next = current.zoomedOut()
-            appContext?.let { ThemePreferences.setTimelineZoom(it, next) }
+            scope.launch { settingsRepository.setTimelineZoom(next) }
             next
         }
     }

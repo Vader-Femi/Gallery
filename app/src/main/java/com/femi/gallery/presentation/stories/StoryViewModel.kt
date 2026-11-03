@@ -1,6 +1,6 @@
 package com.femi.gallery.presentation.stories
 
-import android.content.Context
+import com.femi.gallery.domain.repository.SettingsRepository
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,7 +18,6 @@ import com.femi.gallery.domain.usecase.SetStoryCoverUseCase
 import com.femi.gallery.presentation.pictures.TimelineZoomState
 import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +38,7 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class StoryViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
@@ -68,7 +67,7 @@ class StoryViewModel @Inject constructor(
     val media: Flow<PagingData<MediaItem>> =
         _filter.flatMapLatest { getPagedMedia(search = it.criteria(from, to)) }.cachedIn(viewModelScope)
 
-    val timeline = TimelineZoomState(viewModelScope, _filter.flatMapLatest { observeTimeline(search = it.criteria(from, to)) }, context)
+    val timeline = TimelineZoomState(viewModelScope, _filter.flatMapLatest { observeTimeline(search = it.criteria(from, to)) }, settingsRepository)
 
     /** Whether the story has any video; the filter is only offered then. */
     val hasVideos: StateFlow<Boolean> = observeTimeline(search = StoryFilter.Videos.criteria(from, to))
