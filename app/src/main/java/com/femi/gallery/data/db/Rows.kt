@@ -57,6 +57,19 @@ data class HashRow(
 )
 
 /**
+ * The perceptual hash of a photo, for the search for similar photos. Like [HashRow] it is only valid while the file
+ * still has the [size] and [dateAdded] it had when it was made. A null [hash] means "looked at, but too flat or
+ * unreadable to have one", so that the photo is not looked at again.
+ */
+@Entity(tableName = "photo_hash")
+data class PhotoHashRow(
+    @PrimaryKey val id: Long,
+    val size: Long,
+    val dateAdded: Long,
+    val hash: Long?,
+)
+
+/**
  * One photo or video of the library, as MediaStore described it when it was last copied. Together the rows
  * are a local copy of the library (the "mirror"), which can be sorted, grouped and filtered by SQLite
  * instead of being read from MediaStore row by row every time the app starts.
