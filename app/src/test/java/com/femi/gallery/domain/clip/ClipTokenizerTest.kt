@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.util.zip.GZIPInputStream
 
 /**
  * Checks the tokenizer against the original: the expected numbers below were produced by OpenAI's
@@ -14,9 +13,9 @@ class ClipTokenizerTest {
 
     private val tokenizer: ClipTokenizer by lazy {
         // The unit tests run with the app module as the working directory (or the repository root).
-        val candidates = listOf("src/main/assets/clip/bpe_simple_vocab_16e6.txt.gz", "app/src/main/assets/clip/bpe_simple_vocab_16e6.txt.gz")
+        val candidates = listOf("src/main/assets/clip/bpe_simple_vocab_16e6.txt", "app/src/main/assets/clip/bpe_simple_vocab_16e6.txt")
         val file = candidates.map { File(it) }.first { it.exists() }
-        ClipTokenizer(GZIPInputStream(file.inputStream()).bufferedReader().readText())
+        ClipTokenizer(file.readText())
     }
 
     private val golden: List<Pair<String, IntArray>> = listOf(
