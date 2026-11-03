@@ -2,9 +2,13 @@ package com.femi.gallery.presentation.settings
 
 import android.content.Context
 import android.os.Environment
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.femi.gallery.data.work.BackgroundScans
+import com.femi.gallery.domain.mirror.AlbumSortOption
 import com.femi.gallery.domain.model.Album
+import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.domain.usecase.ObserveAlbumsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,11 +27,78 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     observeAlbums: ObserveAlbumsUseCase,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
+
+    val themeMode: StateFlow<Int> = settingsRepository.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+
+    val autoplayVideos: StateFlow<Boolean> = settingsRepository.autoplayVideos
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val muteVideos: StateFlow<Boolean> = settingsRepository.muteVideos
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val backgroundScan: StateFlow<Boolean> = settingsRepository.backgroundScan
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val scanOnlyWhileCharging: StateFlow<Boolean> = settingsRepository.scanOnlyWhileCharging
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val albumSortOption: StateFlow<AlbumSortOption> = settingsRepository.albumSortOption
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AlbumSortOption.Recency)
+
+    val hiddenAlbums: StateFlow<Set<Long>> = settingsRepository.hiddenAlbums
+        .map { set -> set.mapNotNull { it.toLongOrNull() }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     val albums: StateFlow<List<Album>> = observeAlbums()
         .map { list -> list.filter { it.bucketId >= 0 } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun setThemeMode(mode: Int) {
+        viewModelScope.launch {
+            settingsRepository.setThemeMode(mode)
+        }
+    }
+
+    fun setAutoplayVideos(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAutoplayVideos(enabled)
+        }
+    }
+
+    fun setMuteVideos(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setMuteVideos(enabled)
+        }
+    }
+
+    fun setBackgroundScan(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setBackgroundScan(enabled)
+            BackgroundScans.update(context, settingsChanged = true)
+        }
+    }
+
+    fun setScanOnlyWhileCharging(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setScanOnlyWhileCharging(enabled)
+            BackgroundScans.update(context, settingsChanged = true)
+        }
+    }
+
+    fun setAlbumSortOption(option: AlbumSortOption) {
+        viewModelScope.launch {
+            settingsRepository.setAlbumSortOption(option)
+        }
+    }
+
+    fun setHiddenAlbums(hiddenIds: Set<Long>) {
+        viewModelScope.launch {
+            settingsRepository.setHiddenAlbums(hiddenIds.map { it.toString() }.toSet())
+        }
+    }
 
     private val _deletedEmptyAlbumsCount = MutableStateFlow<Int?>(null)
     val deletedEmptyAlbumsCount = _deletedEmptyAlbumsCount.asStateFlow()

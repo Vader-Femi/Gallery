@@ -10,6 +10,7 @@ import com.femi.gallery.domain.model.MediaDetails
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.domain.search.SearchCriteria
 import com.femi.gallery.domain.search.SearchQueryParser
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
@@ -23,8 +24,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -33,9 +36,16 @@ class ViewerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     private val getMediaDetails: GetMediaDetailsUseCase,
+    private val settingsRepository: SettingsRepository,
     selectionFactory: MediaSelectionControllerFactory,
     val lockSession: LockSession,
 ) : ViewModel() {
+
+    val autoplayVideos: StateFlow<Boolean> = settingsRepository.autoplayVideos
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val muteVideos: StateFlow<Boolean> = settingsRepository.muteVideos
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     /** Position of the tapped item in the full, newest-first media list, as the grid had it. */
     val startIndex: Int = savedStateHandle.get<Int>(INDEX_ARG) ?: 0

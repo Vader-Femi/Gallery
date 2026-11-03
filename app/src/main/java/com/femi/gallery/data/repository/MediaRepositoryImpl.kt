@@ -28,7 +28,7 @@ import com.femi.gallery.domain.model.StoryVideos
 import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.repository.StoryEditStore
 import com.femi.gallery.domain.search.SearchCriteria
-import com.femi.gallery.presentation.settings.ThemePreferences
+import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
@@ -63,6 +63,7 @@ class MediaRepositoryImpl @Inject constructor(
     private val exifReader: ExifReader,
     private val lockedStore: LockedStore,
     private val storyEditStore: StoryEditStore,
+    private val settingsRepository: SettingsRepository,
 ) : MediaRepository {
 
     /** Live paging sources (grid and viewer each have one); weakly held so they can be collected. */
@@ -221,7 +222,9 @@ class MediaRepositoryImpl @Inject constructor(
 
     /** The albums hidden in Settings; every list built from the library starts again when they change. */
     private fun hiddenAlbumsChanges(): Flow<Set<Long>> =
-        ThemePreferences.getHiddenAlbumsFlow(context).distinctUntilChanged()
+        settingsRepository.hiddenAlbums
+            .map { set -> set.mapNotNull { it.toLongOrNull() }.toSet() }
+            .distinctUntilChanged()
 
     private fun mediaChanges(): Flow<Unit> = callbackFlow {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {

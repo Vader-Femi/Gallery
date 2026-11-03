@@ -1,11 +1,10 @@
 package com.femi.gallery.data.clip
 
-import android.content.Context
 import android.util.Log
 import com.femi.gallery.domain.clip.DescriptionQuery
 import com.femi.gallery.domain.repository.ImageEmbedder
-import com.femi.gallery.presentation.settings.ThemePreferences
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.femi.gallery.domain.repository.SettingsRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,9 +17,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class SemanticSearch @Inject constructor(
-    @param:ApplicationContext private val context: Context,
     private val embedder: ImageEmbedder,
     private val index: ClipIndexHolder,
+    private val settingsRepository: SettingsRepository,
 ) {
     /** The answers to the last few descriptions, so that reloading a list does not embed the text and compare again. */
     private val answers = object : LinkedHashMap<String, Set<Long>>(8, 0.75f, true) {
@@ -29,7 +28,7 @@ class SemanticSearch @Inject constructor(
 
     /** The photos matching the description made of [words], closest first; empty when this search does not apply. */
     suspend fun idsFor(words: List<String>): Set<Long> {
-        if (!embedder.isAvailable || !ThemePreferences.getSemanticSearch(context)) return emptySet()
+        if (!embedder.isAvailable || !settingsRepository.semanticSearch.first()) return emptySet()
         val phrase = words.joinToString(" ").trim()
         if (!DescriptionQuery.isWorthDescribing(phrase)) return emptySet()
         val clip = index.current()

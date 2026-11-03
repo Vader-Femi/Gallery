@@ -76,7 +76,6 @@ import com.femi.gallery.domain.model.SlideshowOrder
 import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.ImmersiveMode
-import com.femi.gallery.presentation.settings.ThemePreferences
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 import androidx.media3.common.MediaItem as PlayerMediaItem
@@ -96,23 +95,14 @@ fun SlideshowScreen(
     onClose: () -> Unit,
     viewModel: SlideshowViewModel = hiltViewModel(),
 ) {
-    val context = LocalContext.current
     val items = viewModel.media.collectAsLazyPagingItems()
     val shuffledUris by viewModel.shuffled.collectAsStateWithLifecycle()
+    val speed by viewModel.slideshowSpeed.collectAsStateWithLifecycle()
+    val shuffle by viewModel.slideshowShuffle.collectAsStateWithLifecycle()
     var playing by remember { mutableStateOf(true) }
-    var speed by rememberSaveable { mutableStateOf(ThemePreferences.getSlideshowSpeed(context)) }
-    var shuffle by rememberSaveable { mutableStateOf(ThemePreferences.getSlideshowShuffle(context)) }
     var seed by rememberSaveable { mutableLongStateOf(Random.nextLong()) }
 
     ImmersiveMode(enabled = true)
-
-    LaunchedEffect(speed) {
-        ThemePreferences.setSlideshowSpeed(context, speed)
-    }
-
-    LaunchedEffect(shuffle) {
-        ThemePreferences.setSlideshowShuffle(context, shuffle)
-    }
 
     // Turning shuffle on prepares a new random order; turning it off goes back to the list order.
     LaunchedEffect(shuffle, seed) {
@@ -175,8 +165,9 @@ fun SlideshowScreen(
                 FilterChip(
                     selected = shuffle,
                     onClick = {
-                        shuffle = !shuffle
-                        if (shuffle) seed = Random.nextLong()
+                        val nextShuffle = !shuffle
+                        viewModel.setSlideshowShuffle(nextShuffle)
+                        if (nextShuffle) seed = Random.nextLong()
                     },
                     label = {
                         Text(
@@ -203,7 +194,7 @@ fun SlideshowScreen(
                     ),
                 )
                 AssistChip(
-                    onClick = { speed = speed.next() },
+                    onClick = { viewModel.setSlideshowSpeed(speed.next()) },
                     label = {
                         Text(
                             text = stringResource(

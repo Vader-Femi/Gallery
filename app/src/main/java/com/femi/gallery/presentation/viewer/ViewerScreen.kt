@@ -116,7 +116,6 @@ import com.femi.gallery.presentation.common.rememberTransitionSettled
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
-import com.femi.gallery.presentation.settings.ThemePreferences
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -218,8 +217,8 @@ private fun ViewerContent(
             val playerHolder = remember { SharedPlayer(context) }
             DisposableEffect(Unit) { onDispose { playerHolder.release() } }
 
-            val autoPlayDefault = remember { ThemePreferences.getAutoPlayVideos(context) }
-            val muteDefault = remember { ThemePreferences.getMuteVideos(context) }
+            val autoPlayDefault by viewModel.autoplayVideos.collectAsStateWithLifecycle()
+            val muteDefault by viewModel.muteVideos.collectAsStateWithLifecycle()
 
             var activePlayer by remember(activeVideoUri) { mutableStateOf<ExoPlayer?>(null) }
             var isPlaying by remember(activeVideoUri) { mutableStateOf(autoPlayDefault) }
@@ -241,7 +240,7 @@ private fun ViewerContent(
                     activePlayer = null
                     onDispose { }
                 } else {
-                    val autoPlay = ThemePreferences.getAutoPlayVideos(context)
+                    val autoPlay = autoPlayDefault
                     val newPlayer = playerHolder.acquire(!isMuted).apply {
                         setAudioAttributes(AudioAttributes.DEFAULT, !isMuted)
                         setMediaItem(PlayerMediaItem.fromUri(activeVideoUri!!))
@@ -285,7 +284,7 @@ private fun ViewerContent(
                     act.viewerVolumeHandler = {
                         isMuted = false
                         activePlayer?.volume = 1f
-                        if (!isPlaying && ThemePreferences.getAutoPlayVideos(context)) {
+                        if (!isPlaying && autoPlayDefault) {
                             activePlayer?.play()
                         }
                     }

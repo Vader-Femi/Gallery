@@ -8,6 +8,8 @@ import androidx.paging.cachedIn
 import com.femi.gallery.di.DefaultDispatcher
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.SlideshowOrder
+import com.femi.gallery.domain.model.SlideshowSpeed
+import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.domain.search.SearchQueryParser
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
@@ -16,8 +18,10 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -33,8 +37,27 @@ class SlideshowViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     private val getAllMediaRefs: GetAllMediaRefsUseCase,
+    private val settingsRepository: SettingsRepository,
     @DefaultDispatcher private val default: CoroutineDispatcher,
 ) : ViewModel() {
+
+    val slideshowSpeed: StateFlow<SlideshowSpeed> = settingsRepository.slideshowSpeed
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SlideshowSpeed.Default)
+
+    val slideshowShuffle: StateFlow<Boolean> = settingsRepository.slideshowShuffle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setSlideshowSpeed(speed: SlideshowSpeed) {
+        viewModelScope.launch {
+            settingsRepository.setSlideshowSpeed(speed)
+        }
+    }
+
+    fun setSlideshowShuffle(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSlideshowShuffle(enabled)
+        }
+    }
 
     private val criteria = SearchQueryParser
         .parse(savedStateHandle.get<String>(QUERY_ARG).orEmpty())

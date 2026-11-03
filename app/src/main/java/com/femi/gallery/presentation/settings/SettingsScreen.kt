@@ -128,29 +128,27 @@ fun SettingsScreen(
     var selectedTag by remember(currentTag) { mutableStateOf(currentTag) }
     var languageExpanded by remember { mutableStateOf(false) }
 
-    var currentThemeMode by remember { mutableIntStateOf(ThemePreferences.getThemeMode(context)) }
+    val currentThemeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     var themeExpanded by remember { mutableStateOf(false) }
 
-    var autoplayEnabled by remember { mutableStateOf(ThemePreferences.getAutoPlayVideos(context)) }
-    var muteEnabled by remember { mutableStateOf(ThemePreferences.getMuteVideos(context)) }
-    var backgroundScan by remember { mutableStateOf(ThemePreferences.getBackgroundScan(context)) }
-    var scanOnlyCharging by remember { mutableStateOf(ThemePreferences.getScanOnlyWhileCharging(context)) }
+    val autoplayEnabled by viewModel.autoplayVideos.collectAsStateWithLifecycle()
+    val muteEnabled by viewModel.muteVideos.collectAsStateWithLifecycle()
+    val backgroundScan by viewModel.backgroundScan.collectAsStateWithLifecycle()
+    val scanOnlyCharging by viewModel.scanOnlyWhileCharging.collectAsStateWithLifecycle()
 
-    var currentSortOption by remember { mutableStateOf(ThemePreferences.getAlbumSortOption(context)) }
+    val currentSortOption by viewModel.albumSortOption.collectAsStateWithLifecycle()
     var sortExpanded by remember { mutableStateOf(false) }
 
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     var showHideAlbumsDialog by remember { mutableStateOf(false) }
-    var hiddenAlbums by remember { mutableStateOf(ThemePreferences.getHiddenAlbums(context)) }
+    val hiddenAlbums by viewModel.hiddenAlbums.collectAsStateWithLifecycle()
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { _ -> }
 
     val toggleBackgroundScan: (Boolean) -> Unit = { enabled ->
-        backgroundScan = enabled
-        ThemePreferences.setBackgroundScan(context, enabled)
-        BackgroundScans.update(context, settingsChanged = true)
+        viewModel.setBackgroundScan(enabled)
         if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -270,9 +268,8 @@ fun SettingsScreen(
                                 items = themeOptions.map { stringResource(it.nameRes) },
                                 onItemSelected = { index ->
                                     val option = themeOptions[index]
-                                    currentThemeMode = option.mode
                                     themeExpanded = false
-                                    ThemePreferences.setThemeMode(context, option.mode)
+                                    viewModel.setThemeMode(option.mode)
                                 },
                             )
                         }
@@ -307,9 +304,8 @@ fun SettingsScreen(
                                 items = sortOptions.map { stringResource(it.nameRes) },
                                 onItemSelected = { index ->
                                     val option = sortOptions[index]
-                                    currentSortOption = option.option
                                     sortExpanded = false
-                                    ThemePreferences.setAlbumSortOption(context, option.option)
+                                    viewModel.setAlbumSortOption(option.option)
                                 },
                             )
                         }
@@ -341,10 +337,7 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_autoplay_videos),
                         summary = stringResource(R.string.settings_autoplay_videos_summary),
                         checked = autoplayEnabled,
-                        onCheckedChange = {
-                            autoplayEnabled = it
-                            ThemePreferences.setAutoPlayVideos(context, it)
-                        },
+                        onCheckedChange = { viewModel.setAutoplayVideos(it) },
                     )
 
                     // Mute by Default Setting Card
@@ -353,10 +346,7 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_mute_videos),
                         summary = stringResource(R.string.settings_mute_videos_summary),
                         checked = muteEnabled,
-                        onCheckedChange = {
-                            muteEnabled = it
-                            ThemePreferences.setMuteVideos(context, it)
-                        },
+                        onCheckedChange = { viewModel.setMuteVideos(it) },
                     )
                 }
             }
@@ -404,11 +394,7 @@ fun SettingsScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable {
-                                                scanOnlyCharging = !scanOnlyCharging
-                                                ThemePreferences.setScanOnlyWhileCharging(context, scanOnlyCharging)
-                                                BackgroundScans.update(context, settingsChanged = true)
-                                            }
+                                            .clickable { viewModel.setScanOnlyWhileCharging(!scanOnlyCharging) }
                                             .padding(20.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -421,11 +407,7 @@ fun SettingsScreen(
                                         )
                                         Switch(
                                             checked = scanOnlyCharging,
-                                            onCheckedChange = {
-                                                scanOnlyCharging = it
-                                                ThemePreferences.setScanOnlyWhileCharging(context, it)
-                                                BackgroundScans.update(context, settingsChanged = true)
-                                            },
+                                            onCheckedChange = { viewModel.setScanOnlyWhileCharging(it) },
                                         )
                                     }
                                 }
@@ -455,8 +437,7 @@ fun SettingsScreen(
                                         } else {
                                             newHidden.add(album.bucketId)
                                         }
-                                        hiddenAlbums = newHidden
-                                        ThemePreferences.setHiddenAlbums(context, newHidden)
+                                        viewModel.setHiddenAlbums(newHidden)
                                     }
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically

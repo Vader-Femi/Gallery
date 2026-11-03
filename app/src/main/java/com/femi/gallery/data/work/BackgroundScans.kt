@@ -8,7 +8,8 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.femi.gallery.presentation.settings.ThemePreferences
+import com.femi.gallery.data.repository.SettingsRepositoryImpl
+import com.femi.gallery.domain.repository.SettingsRepository
 import java.util.concurrent.TimeUnit
 
 /**
@@ -26,9 +27,10 @@ object BackgroundScans {
      * Brings the queue in line with the settings. With [settingsChanged] the jobs are replaced so their
      * conditions match the new settings; otherwise a job that is already queued is left alone.
      */
-    fun update(context: Context, settingsChanged: Boolean = false) {
+    fun update(context: Context, settingsRepository: SettingsRepository? = null, settingsChanged: Boolean = false) {
+        val repo = settingsRepository ?: SettingsRepositoryImpl(context)
         val work = WorkManager.getInstance(context.applicationContext)
-        if (!ThemePreferences.getBackgroundScan(context)) {
+        if (!repo.getBackgroundScanSync()) {
             work.cancelUniqueWork(NOW)
             work.cancelUniqueWork(DAILY)
             return
@@ -36,7 +38,7 @@ object BackgroundScans {
 
         val constraints = Constraints.Builder()
             .setRequiresBatteryNotLow(true)
-            .setRequiresCharging(ThemePreferences.getScanOnlyWhileCharging(context))
+            .setRequiresCharging(repo.getScanOnlyWhileChargingSync())
             .build()
 
         work.enqueueUniqueWork(

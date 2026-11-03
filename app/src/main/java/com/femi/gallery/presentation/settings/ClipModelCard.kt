@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,13 +48,12 @@ import com.femi.gallery.domain.clip.ClipScanStatus
  */
 @Composable
 fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
-    val context = LocalContext.current
     val status by viewModel.status.collectAsStateWithLifecycle()
     val isInitializing by viewModel.isInitializing.collectAsStateWithLifecycle()
     val card by viewModel.card.collectAsStateWithLifecycle()
     val scan by viewModel.scan.collectAsStateWithLifecycle()
+    val searchEnabled by viewModel.semanticSearch.collectAsStateWithLifecycle()
     val isBusy = card.busy || isInitializing
-    var searchEnabled by remember { mutableStateOf(ThemePreferences.getSemanticSearch(context)) }
     var showInfoDialog by remember { mutableStateOf(false) }
 
     if (showInfoDialog) {
@@ -165,10 +163,7 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
                     }
                     Switch(
                         checked = searchEnabled,
-                        onCheckedChange = {
-                            searchEnabled = it
-                            ThemePreferences.setSemanticSearch(context, it)
-                        },
+                        onCheckedChange = { viewModel.setSemanticSearch(it) },
                     )
                 }
 

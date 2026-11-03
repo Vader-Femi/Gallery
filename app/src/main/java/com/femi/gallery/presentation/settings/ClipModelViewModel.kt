@@ -10,11 +10,14 @@ import com.femi.gallery.domain.clip.ClipScanState
 import com.femi.gallery.domain.repository.ClipIndexRepository
 import com.femi.gallery.domain.repository.ClipInstallResult
 import com.femi.gallery.domain.repository.ClipModelManager
+import com.femi.gallery.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -33,12 +36,22 @@ data class ClipCardState(
 class ClipModelViewModel @Inject constructor(
     private val manager: ClipModelManager,
     private val clip: ClipIndexRepository,
+    private val settingsRepository: SettingsRepository,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     val status: StateFlow<ClipModelStatus> = manager.status
     val isInitializing: StateFlow<Boolean> = manager.isInitializing
     val scan: StateFlow<ClipScanState> = clip.scan
+
+    val semanticSearch: StateFlow<Boolean> = settingsRepository.semanticSearch
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setSemanticSearch(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSemanticSearch(enabled)
+        }
+    }
 
     private val _card = MutableStateFlow(ClipCardState())
     val card: StateFlow<ClipCardState> = _card.asStateFlow()

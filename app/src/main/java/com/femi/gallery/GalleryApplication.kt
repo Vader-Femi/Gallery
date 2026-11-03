@@ -7,7 +7,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import com.femi.gallery.core.lifecycle.AppForeground
 import com.femi.gallery.data.image.MediaThumbnailFetcher
-import com.femi.gallery.presentation.settings.ThemePreferences
+import com.femi.gallery.data.repository.SettingsRepositoryImpl
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
@@ -18,7 +18,7 @@ class GalleryApplication : Application(), SingletonImageLoader.Factory {
         AppForeground.register(this)
         // The theme must be set before the first screen, so this one settings read blocks the main thread; measured
         // on a release build it takes about 11 to 14 ms the first time and 1 ms after that.
-        val themeMode = ThemePreferences.getThemeMode(this)
+        val themeMode = SettingsRepositoryImpl(this).getThemeModeSync()
         AppCompatDelegate.setDefaultNightMode(themeMode)
     }
 

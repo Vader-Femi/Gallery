@@ -27,7 +27,7 @@ import com.femi.gallery.domain.model.MediaOrdering
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.HiddenAlbums
 import com.femi.gallery.domain.model.SpecialAlbums
-import com.femi.gallery.presentation.settings.ThemePreferences
+import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.domain.model.WriteLimits
 import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.search.SearchCriteria
@@ -52,6 +52,7 @@ class MediaStoreDataSource @Inject constructor(
     private val photoPlaceIndexHolder: PhotoPlaceIndexHolder,
     private val semanticSearch: SemanticSearch,
     private val mirror: MediaMirror,
+    private val settingsRepository: SettingsRepository,
 ) {
     private val resolver: ContentResolver get() = context.contentResolver
 
@@ -174,7 +175,7 @@ class MediaStoreDataSource @Inject constructor(
 
     /** The albums the person hid in Settings; their photos are left out of everything but the album list. */
     private suspend fun hiddenAlbums(): Set<Long> = try {
-        ThemePreferences.getHiddenAlbumsFlow(context).first()
+        settingsRepository.hiddenAlbums.first().mapNotNull { it.toLongOrNull() }.toSet()
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
