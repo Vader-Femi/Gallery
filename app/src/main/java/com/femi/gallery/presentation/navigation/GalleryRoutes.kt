@@ -27,6 +27,7 @@ object GalleryRoutes {
     const val STORY = "story/{fromDay}/{toDay}"
     const val SLIDESHOW = "slideshow?query={query}&bucketId={bucketId}"
     const val EDITOR = "editor?uri={uri}"
+    const val TRIM = "trim?uri={uri}"
     const val VIEWER = "viewer/{index}?mediaId={mediaId}&bucketId={bucketId}&query={query}"
 
     fun album(bucketId: Long) = "album/$bucketId"
@@ -44,6 +45,9 @@ object GalleryRoutes {
 
     /** The photo editor for the photo at content [uri]. */
     fun editor(uri: String) = "editor?uri=${Uri.encode(uri)}"
+
+    /** The video trimmer for the video at content [uri]. */
+    fun trim(uri: String) = "trim?uri=${Uri.encode(uri)}"
 
     /**
      * Opens the viewer at [mediaIndex] within the library, within one album if [bucketId] is set,

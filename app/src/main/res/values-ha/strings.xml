@@ -119,6 +119,7 @@
     <string name="viewer_share">Raba</string>
     <string name="viewer_info">Bayani</string>
     <string name="viewer_edit">Gyara</string>
+    <string name="viewer_trim">Yanke</string>
     <string name="viewer_seek">Nemi</string>
     <string name="viewer_close_seek_bar">Rufe mashaya neman</string>
     <string name="viewer_play">Murna</string>
@@ -337,4 +338,22 @@
     <string name="editor_replace_body">Za a maye hoton asali da gyare-gyarenka. Ba za a iya mayar da shi ba. Zaɓi “Ajiye a matsayin kwafi” don adana na asali.</string>
     <string name="editor_replace_confirm">Maye</string>
     <string name="editor_more_options">Ƙarin zaɓuɓɓuka</string>
+    <string name="trim_title">Yanke bidiyo</string>
+    <string name="trim_close">Rufe mai yankewa</string>
+    <string name="trim_play">Kunna</string>
+    <string name="trim_pause">Dakata</string>
+    <string name="trim_save">Ajiye kwafin da aka yanke</string>
+    <string name="trim_start_handle">Farkon bidiyon</string>
+    <string name="trim_end_handle">Ƙarshen bidiyon</string>
+    <string name="trim_move_earlier">Mayar da baya daƙiƙa 1</string>
+    <string name="trim_move_later">Ci gaba daƙiƙa 1</string>
+    <string name="trim_length">Tsawo %1$s</string>
+    <string name="trim_exporting">Ana ajiye kwafin da aka yanke… %1$d%%</string>
+    <string name="trim_done">An ajiye shi a matsayin %1$s</string>
+    <string name="trim_failed_title">Ba a iya yanke bidiyon ba</string>
+    <string name="trim_failed_source">Ba a iya karanta bidiyon ba.</string>
+    <string name="trim_failed_space">Babu isasshen sarari a waya.</string>
+    <string name="trim_failed_unsupported">Wannan wayar ba za ta iya sarrafa wannan bidiyon ba.</string>
+    <string name="trim_failed_other">Wani abu ya faru. Bidiyon asali bai canza ba.</string>
+    <string name="trim_ok">To</string>
 </resources>

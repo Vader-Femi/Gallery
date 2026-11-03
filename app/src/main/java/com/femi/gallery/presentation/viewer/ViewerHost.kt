@@ -91,6 +91,7 @@ class ViewerSession(internal val navController: NavHostController) {
 fun ViewerHost(
     session: ViewerSession,
     onEdit: (uri: String) -> Unit,
+    onTrim: (uri: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val navController = session.navController
@@ -177,6 +178,7 @@ fun ViewerHost(
                 onBack = session::close,
                 drag = session.drag,
                 onEdit = onEdit,
+                onTrim = onTrim,
                 // Tells the grid under the viewer which photo we are on.
                 onViewedChange = session::onViewed,
             )

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Edit
@@ -130,6 +131,7 @@ private const val ThumbnailRequestSize = 512
 fun ViewerScreen(
     onBack: () -> Unit,
     onEdit: (uri: String) -> Unit,
+    onTrim: (uri: String) -> Unit,
     /** Reports the photo shown, so the grid behind can scroll to it when the viewer closes. */
     onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit = { _, _ -> },
     /** How far the photo has been pulled away; shared with the Back gesture, which is handled outside. */
@@ -139,10 +141,10 @@ fun ViewerScreen(
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, onEdit, onViewedChange, drag, viewModel)
+            ViewerContent(onBack, onEdit, onTrim, onViewedChange, drag, viewModel)
         }
     } else {
-        ViewerContent(onBack, onEdit, onViewedChange, drag, viewModel)
+        ViewerContent(onBack, onEdit, onTrim, onViewedChange, drag, viewModel)
     }
 }
 
@@ -150,6 +152,7 @@ fun ViewerScreen(
 private fun ViewerContent(
     onBack: () -> Unit,
     onEdit: (uri: String) -> Unit,
+    onTrim: (uri: String) -> Unit,
     onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit,
     drag: ViewerDragState,
     viewModel: ViewerViewModel,
@@ -424,6 +427,11 @@ private fun ViewerContent(
                                     onEdit(current.uri)
                                 }
                             },
+                            if (current.isVideo) {
+                                ViewerAction(Icons.Outlined.ContentCut, stringResource(R.string.viewer_trim)) {
+                                    onTrim(current.uri)
+                                }
+                            } else null,
                             if (!current.isVideo) {
                                 ViewerAction(Icons.Outlined.Wallpaper, stringResource(R.string.action_set_as_wallpaper)) {
                                     setWallpaper(context, current)

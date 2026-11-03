@@ -130,7 +130,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
 - [ ] More on-device ML: copy text from a photo, **people / face groups**, auto scene albums
 - [ ] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
-- [ ] Video editor: trim, speed and basic effects
+- [x] **Video trim**: "Trim" in the viewer's actions for videos; two handles, a preview of the kept part, and "Save trimmed copy" (Media3 Transformer), saved next to the original with its date taken; the original is never changed. Written without a device: check it on the phone (see the `VideoTrim` log tag)
+- [ ] Video editor, the rest: speed change and a few basic effects
 - [ ] Find **similar** photos (not byte-identical: bursts, re-saved or resized copies) with perceptual hashing; exact duplicates are done
 - [ ] Motion photo playback, *(set as wallpaper added)*
 - [x] Tiled full-resolution zoom for very large photos
@@ -217,6 +218,7 @@ app/src/main/java/com/femi/gallery/
 │   ├── launch/               How the app was opened (launcher, "Open with", picker)
 │   ├── picker/               Photo picker for other apps
 │   ├── editor/               Editor screen, crop overlay, ViewModel
+│   ├── trim/                 Video trim screen, range bar, ViewModel
 │   ├── locked/               Biometric prompt and the lock gate
 │   ├── selection/            Selection state, actions, album picker, system confirmations
 │   ├── navigation/           Routes, destinations, NavHost
@@ -384,6 +386,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 74 | Ask before replacing the original | The editor's Save button now opens a dialog first: "Replace" (overwrites), "Save as copy" or "Cancel", with a warning that replacing cannot be undone. Three new strings in the five languages (Hausa, Igbo, Pidgin and Yoruba best-effort). The README to-do item about the confirmation is done |
 | 75 | Video trim: the rules | `domain/video/TrimMath` (pure, 11 tests): the two handles can never cross or go outside the video (at least 500 ms are kept), bar position to time and back, the last key frame at or before a position (a clip can only be copied without re-encoding from a key frame) and how much that adds, the name of the trimmed copy (`name_trim.mp4`, `name_trim_2.mp4`... when taken) and time formatting. No screen yet; the export and the screen come in the next patches |
 | 76 | Video trim: the export | `TransformerVideoTrimRepository` (Media3 Transformer 1.11.1, new dependency `media3-transformer`) exports the chosen range as an MP4 into the cache, then adds it to the library in the original's folder (`AlbumPaths.forMedia`, name from `TrimMath.outputName`) with the original's date taken; the original is never touched. Trim optimization is on (copies the video between key frames and re-encodes only the first stretch; Transformer falls back to a full export on its own). Progress and cancel come through a `Flow<TrimEvent>`; cancelling the collector cancels the export and removes the temporary file. It checks free space first. `keyFrames()` reads the sync samples with `MediaExtractor`. Everything is logged under `VideoTrim` (time taken, bytes, `optimizationResult`, encoders used, and whether the **location** was kept: unverified, check the log). Use cases `TrimVideoUseCase` and `VideoKeyFramesUseCase`. No screen yet. `tools/verify` has Media3 stubs written from the 1.11.1 sources, so the repository is type-checked, but Transformer's behaviour is not tested |
+| 77 | Video trim: the screen | A "Trim" action for videos in the viewer opens `TrimScreen` (route `trim?uri=`): a preview that plays only the kept part (it stops at the end handle and returns to the start handle), `TrimRangeBar` with two handles (48 dp touch areas, accessibility actions "move 1 second earlier/later", values read out as state, colours from the theme), the kept length, play/pause and "Save trimmed copy". Saving shows a progress dialog with Cancel (Back also cancels; leaving the screen cancels and removes the temporary file), keeps the screen on while it runs, then shows "Saved as ..." and closes; failures give a message by reason (unreadable, no space, unsupported, other) and leave the original untouched. `TrimViewModel` (type-checked) holds the range with `TrimMath`; 19 strings in the five languages (four best-effort, please check). The screen itself is not compiled or run here |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

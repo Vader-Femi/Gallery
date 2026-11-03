@@ -119,6 +119,7 @@
     <string name="viewer_share">Pín</string>
     <string name="viewer_info">Àlàyé</string>
     <string name="viewer_edit">Ṣàtúnṣe</string>
+    <string name="viewer_trim">Gé</string>
     <string name="viewer_seek">Wá</string>
     <string name="viewer_close_seek_bar">Pa àlà wíwá rẹ́</string>
     <string name="viewer_play">Gbé kà</string>
@@ -337,4 +338,22 @@
     <string name="editor_replace_body">A ó fi àtúnṣe rẹ rọ́pò fọ́tò àtilẹ̀bá. A kò lè dá a padà. Yan “Fi pamọ́ bí ẹ̀dà” láti pa ti àtilẹ̀bá mọ́.</string>
     <string name="editor_replace_confirm">Rọ́pò</string>
     <string name="editor_more_options">Àwọn àṣàyàn míì</string>
+    <string name="trim_title">Gé fídíò</string>
+    <string name="trim_close">Pa olùgé mọ́</string>
+    <string name="trim_play">Ṣeré</string>
+    <string name="trim_pause">Dúró</string>
+    <string name="trim_save">Fi ẹ̀dà tí a gé pamọ́</string>
+    <string name="trim_start_handle">Ibẹ̀rẹ̀ fídíò</string>
+    <string name="trim_end_handle">Òpin fídíò</string>
+    <string name="trim_move_earlier">Padà sẹ́yìn ìṣẹ́jú-aaya 1</string>
+    <string name="trim_move_later">Lọ síwájú ìṣẹ́jú-aaya 1</string>
+    <string name="trim_length">Gígùn %1$s</string>
+    <string name="trim_exporting">Ń fi ẹ̀dà tí a gé pamọ́… %1$d%%</string>
+    <string name="trim_done">A fi pamọ́ bí %1$s</string>
+    <string name="trim_failed_title">Kò ṣeé ṣe láti gé fídíò náà</string>
+    <string name="trim_failed_source">Kò ṣeé ka fídíò náà.</string>
+    <string name="trim_failed_space">Kò sí àyè tó tó lórí fóònù.</string>
+    <string name="trim_failed_unsupported">Fóònù yìí kò lè ṣiṣẹ́ lórí fídíò yìí.</string>
+    <string name="trim_failed_other">Nǹkan kan ṣẹlẹ̀. Fídíò àtilẹ̀bá kò yípadà.</string>
+    <string name="trim_ok">Ó dára</string>
 </resources>

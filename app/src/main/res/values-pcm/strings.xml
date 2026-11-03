@@ -119,6 +119,7 @@
     <string name="viewer_share">Share</string>
     <string name="viewer_info">Details</string>
     <string name="viewer_edit">Edit</string>
+    <string name="viewer_trim">Cut am</string>
     <string name="viewer_seek">Seek</string>
     <string name="viewer_close_seek_bar">Close seek bar</string>
     <string name="viewer_play">Play</string>
@@ -337,4 +338,22 @@
     <string name="editor_replace_body">Di original photo go change to wetin you edit. You no fit bring am back. Choose “Save am as copy” if you wan keep di original.</string>
     <string name="editor_replace_confirm">Change am</string>
     <string name="editor_more_options">More options</string>
+    <string name="trim_title">Cut video</string>
+    <string name="trim_close">Close di cutter</string>
+    <string name="trim_play">Play</string>
+    <string name="trim_pause">Pause</string>
+    <string name="trim_save">Save di cut copy</string>
+    <string name="trim_start_handle">Where di clip start</string>
+    <string name="trim_end_handle">Where di clip end</string>
+    <string name="trim_move_earlier">Go back 1 second</string>
+    <string name="trim_move_later">Go front 1 second</string>
+    <string name="trim_length">Length %1$s</string>
+    <string name="trim_exporting">Dey save di cut copy… %1$d%%</string>
+    <string name="trim_done">E don save as %1$s</string>
+    <string name="trim_failed_title">E no fit cut di video</string>
+    <string name="trim_failed_source">E no fit read di video.</string>
+    <string name="trim_failed_space">Space no reach for di phone.</string>
+    <string name="trim_failed_unsupported">Dis phone no fit work on dis video.</string>
+    <string name="trim_failed_other">Something go wrong. Di original video neva change.</string>
+    <string name="trim_ok">OK</string>
 </resources>
