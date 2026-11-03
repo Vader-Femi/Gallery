@@ -1,6 +1,6 @@
 package com.femi.gallery.presentation.picker
 
-import android.content.Context
+import com.femi.gallery.domain.repository.SettingsRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -13,7 +13,6 @@ import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
 import com.femi.gallery.presentation.pictures.TimelineZoomState
 import com.femi.gallery.presentation.selection.SelectionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +24,7 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PickerViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
 ) : ViewModel() {
@@ -39,7 +38,7 @@ class PickerViewModel @Inject constructor(
     val timeline = TimelineZoomState(
         scope = viewModelScope,
         daySections = filter.flatMapLatest { observeTimeline(search = it.toCriteria()) },
-        context = context,
+        settingsRepository = settingsRepository,
     )
 
     /** What the user has ticked when the other app allows several results. */

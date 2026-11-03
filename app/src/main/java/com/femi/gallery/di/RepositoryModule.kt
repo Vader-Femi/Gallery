@@ -44,6 +44,8 @@ import com.femi.gallery.domain.repository.MediaRepository
 import com.femi.gallery.domain.repository.TextIndexRepository
 import com.femi.gallery.domain.repository.TextRecognizer
 import com.femi.gallery.domain.repository.TextStore
+import com.femi.gallery.domain.repository.SettingsRepository
+import com.femi.gallery.data.repository.SettingsRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -55,6 +57,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindMediaRepository(impl: MediaRepositoryImpl): MediaRepository
+
+    @Binds
+    abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
 
     @Binds
     abstract fun bindEditRepository(impl: BitmapEditor): EditRepository
