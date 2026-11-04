@@ -133,7 +133,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 ### Still to do
 
 **Next up**
-- [ ] **Map extras**: a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
+- [ ] **Map extras**: a map with streets (offline vector tiles you import once) (fling, smooth zoom, animated "show all", and round-bubble morph into the viewer are done)
 - [ ] **Editor extras**: draw, text and stickers (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo**, to tune on a real library: a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
 

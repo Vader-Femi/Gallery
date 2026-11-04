@@ -121,6 +121,7 @@ import com.femi.gallery.MainActivity
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.toRef
+import com.femi.gallery.presentation.common.BubbleMorphOverlayClip
 import com.femi.gallery.presentation.common.GridThumbnails
 import com.femi.gallery.presentation.common.findActivity
 import com.femi.gallery.presentation.common.mediaSharedBounds
@@ -129,6 +130,8 @@ import com.femi.gallery.presentation.common.rememberTransitionSettled
 import com.femi.gallery.presentation.locked.LockedGate
 import com.femi.gallery.presentation.selection.SelectionHost
 import com.femi.gallery.presentation.selection.lockWithScreenLockCheck
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -149,15 +152,16 @@ fun ViewerScreen(
     onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit = { _, _ -> },
     /** How far the photo has been pulled away; shared with the Back gesture, which is handled outside. */
     drag: ViewerDragState = remember { ViewerDragState() },
+    isMapOrigin: Boolean = false,
     viewModel: ViewerViewModel = hiltViewModel(),
 ) {
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, onEdit, onTrim, onViewedChange, drag, viewModel)
+            ViewerContent(onBack, onEdit, onTrim, onViewedChange, drag, isMapOrigin, viewModel)
         }
     } else {
-        ViewerContent(onBack, onEdit, onTrim, onViewedChange, drag, viewModel)
+        ViewerContent(onBack, onEdit, onTrim, onViewedChange, drag, isMapOrigin, viewModel)
     }
 }
 
@@ -168,6 +172,7 @@ private fun ViewerContent(
     onTrim: (uri: String) -> Unit,
     onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit,
     drag: ViewerDragState,
+    isMapOrigin: Boolean,
     viewModel: ViewerViewModel,
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
@@ -369,6 +374,7 @@ private fun ViewerContent(
                                 activePlayer = if (pagerState.settledPage == page && pageItem?.uri == activeVideoUri) activePlayer else null,
                                 playerProvided = true,
                                 imageRevision = imageRevision,
+                                isMapOrigin = isMapOrigin,
                             )
                         }
                     }
@@ -597,6 +603,7 @@ private fun ViewerContent(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun ViewerPage(
     item: MediaItem?,
@@ -609,24 +616,41 @@ private fun ViewerPage(
     /** True when the caller supplies the player (the viewer does, once it has prepared one); no page then makes its own. */
     playerProvided: Boolean = false,
     imageRevision: Long = 0L,
+    isMapOrigin: Boolean = false,
 ) {
+    val clipInOverlay = if (isMapOrigin) BubbleMorphOverlayClip else null
     when {
         item == null -> Box(Modifier.fillMaxSize())
-        item.isVideo -> VideoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) }, activePlayer = activePlayer, ownsPlayer = !playerProvided)
-        else -> PhotoPage(item, isCurrent, imageRevision = imageRevision, onTap = { onChromeChange(!chromeVisible) })
+        item.isVideo -> VideoPage(
+            item,
+            isCurrent,
+            onTap = { onChromeChange(!chromeVisible) },
+            activePlayer = activePlayer,
+            ownsPlayer = !playerProvided,
+            clipInOverlay = clipInOverlay,
+        )
+        else -> PhotoPage(
+            item,
+            isCurrent,
+            imageRevision = imageRevision,
+            onTap = { onChromeChange(!chromeVisible) },
+            clipInOverlay = clipInOverlay,
+        )
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun PhotoPage(
     item: MediaItem,
     isCurrent: Boolean,
     imageRevision: Long = 0L,
+    clipInOverlay: SharedTransitionScope.OverlayClip? = null,
     onTap: () -> Unit,
 ) {
     val context = LocalContext.current
     val latestOnTap by rememberUpdatedState(onTap)
-    val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
+    val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id, clipInOverlay = clipInOverlay) else Modifier
 
     val viewerDrag = LocalViewerDrag.current
 
@@ -663,6 +687,7 @@ internal fun PhotoPage(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun VideoPage(
     item: MediaItem,
@@ -671,10 +696,11 @@ internal fun VideoPage(
     activePlayer: ExoPlayer? = null,
     /** Whether the page may make a player of its own when none is given (the external viewer relies on that). */
     ownsPlayer: Boolean = true,
+    clipInOverlay: SharedTransitionScope.OverlayClip? = null,
 ) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
-    val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
+    val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id, clipInOverlay = clipInOverlay) else Modifier
     val settled = rememberTransitionSettled()
 
     ZoomableBox(

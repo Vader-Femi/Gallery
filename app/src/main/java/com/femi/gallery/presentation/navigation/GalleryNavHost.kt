@@ -272,18 +272,24 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        composable(GalleryRoutes.MAP) { entry ->
+        sharedComposable(GalleryRoutes.MAP) { entry ->
             MapScreen(
                 onBack = { navController.popBackStack() },
                 onOpenCluster = { cluster ->
                     val query = cluster.box.toQuery()
                     if (cluster.count == 1) {
                         // One photo: straight to the viewer, which then holds just that photo.
-                        viewerSession.open(GalleryRoutes.viewer(0, cluster.coverId, query = query), origin = entry.id)
+                        viewerSession.open(
+                            route = GalleryRoutes.viewer(0, cluster.coverId, query = query),
+                            origin = entry.id,
+                            originRoute = GalleryRoutes.MAP,
+                        )
                     } else {
                         navController.navigate(GalleryRoutes.place(query))
                     }
                 },
+                viewed = viewerSession.viewedFor(entry.id),
+                onViewedConsumed = viewerSession::consumeViewed,
             )
         }
         sharedComposable(

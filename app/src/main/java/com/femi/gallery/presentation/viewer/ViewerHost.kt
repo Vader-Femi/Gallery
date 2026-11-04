@@ -57,10 +57,15 @@ class ViewerSession(internal val navController: NavHostController) {
     /** The screen that opened the viewer; only that grid follows along. */
     private var origin: String? = null
 
+    /** The route of the screen that opened the viewer (e.g. GalleryRoutes.MAP). */
+    var originRoute by mutableStateOf<String?>(null)
+        private set
+
     /** Opens the viewer at [route] (see [GalleryRoutes.viewer]) over the screen identified by [origin]. */
-    fun open(route: String, origin: String) {
+    fun open(route: String, origin: String, originRoute: String? = null) {
         if (navController.currentDestination?.route == GalleryRoutes.VIEWER) return // a double tap
         this.origin = origin
+        this.originRoute = originRoute
         viewed = null
         drag.reset()
         navController.navigate(route)
@@ -179,6 +184,7 @@ fun ViewerHost(
                 drag = session.drag,
                 onEdit = onEdit,
                 onTrim = onTrim,
+                isMapOrigin = session.originRoute == GalleryRoutes.MAP,
                 // Tells the grid under the viewer which photo we are on.
                 onViewedChange = session::onViewed,
             )

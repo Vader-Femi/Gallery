@@ -62,6 +62,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -85,6 +86,10 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.femi.gallery.R
+import com.femi.gallery.domain.model.MediaPositions
+import com.femi.gallery.presentation.common.BubbleMorphOverlayClip
+import com.femi.gallery.presentation.common.GridThumbnails
+import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.common.gridSharedBounds
 import com.femi.gallery.domain.geo.GeoBox
 import com.femi.gallery.domain.geo.GeoCluster
@@ -122,6 +127,8 @@ fun MapScreen(
     onBack: () -> Unit,
     onOpenCluster: (GeoCluster) -> Unit,
     modifier: Modifier = Modifier,
+    viewed: ViewedMedia? = null,
+    onViewedConsumed: () -> Unit = {},
     viewModel: MapViewModel = hiltViewModel(),
 ) {
     val media by viewModel.media.collectAsStateWithLifecycle()
@@ -165,6 +172,8 @@ fun MapScreen(
                 onTransform = viewModel::updateViewport,
                 motion = motion,
                 onClusterClick = onOpenCluster,
+                viewed = viewed,
+                onViewedConsumed = onViewedConsumed,
             )
         }
 
@@ -264,6 +273,8 @@ private fun MapCanvas(
     onTransform: ((MapViewport) -> MapViewport) -> Unit,
     motion: MapMotion,
     onClusterClick: (GeoCluster) -> Unit,
+    viewed: ViewedMedia? = null,
+    onViewedConsumed: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val latestViewport by rememberUpdatedState(viewport)
@@ -314,6 +325,13 @@ private fun MapCanvas(
         val halfBubble = with(density) { BubbleSize.toPx() } / 2
         // The bubble that was tapped: its photo grows out of it, and flies back into it when closed.
         var openedBubble by remember { mutableLongStateOf(-1L) }
+        LaunchedEffect(viewed) {
+            val target = viewed ?: return@LaunchedEffect
+            if (target.id != MediaPositions.NO_ID) {
+                openedBubble = target.id
+            }
+            onViewedConsumed()
+        }
         for (cluster in clusters) {
             key(cluster.coverId) {
                 val x = viewport.screenX(cluster.longitude, w).toFloat()
@@ -340,17 +358,26 @@ private fun ClusterBubble(
     modifier: Modifier = Modifier,
 ) {
     val cover = remember(cluster.coverId, cluster.coverUri) { cluster.coverUri }
-    val sharedModifier = if (shared) Modifier.gridSharedBounds(cluster.coverId) else Modifier
+    val sharedModifier = if (shared) {
+        Modifier.gridSharedBounds(cluster.coverId, clipInOverlay = BubbleMorphOverlayClip)
+    } else {
+        Modifier
+    }
     Box(modifier.size(BubbleSize).then(sharedModifier).clickable(onClick = onClick)) {
         AsyncImage(
             model = cover,
             contentDescription = null,
             contentScale = ContentScale.Crop,
+            onSuccess = { result ->
+                GridThumbnails.remember(cluster.coverId, result.result.memoryCacheKey, result.painter.intrinsicSize)
+            },
             modifier = Modifier
                 .fillMaxSize()
-                .clip(CircleShape)
+                .clip(if (shared) RectangleShape else CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                .then(
+                    if (shared) Modifier else Modifier.border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                ),
         )
         if (cluster.count > 1) {
             // Fix 12: CircleShape is the semantic token; equivalent to RoundedCornerShape(50)

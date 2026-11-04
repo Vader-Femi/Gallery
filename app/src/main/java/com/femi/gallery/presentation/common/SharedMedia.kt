@@ -18,7 +18,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 
 /**
  * How long a photo takes to travel between its grid cell and the viewer. The screen that is leaving
@@ -32,6 +39,37 @@ const val PhotoCloseMillis = PhotoTravelMillis + 40
 
 private val PhotoBoundsTransform = BoundsTransform { _, _ ->
     tween<Rect>(durationMillis = PhotoTravelMillis, easing = FastOutSlowInEasing)
+}
+
+/**
+ * An overlay clip that morphs between a circular bubble (56 dp) and a full rectangular photo
+ * during shared bounds transitions between the Map and the Viewer.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+val BubbleMorphOverlayClip: SharedTransitionScope.OverlayClip = object : SharedTransitionScope.OverlayClip {
+    override fun getClipPath(
+        sharedContentState: SharedTransitionScope.SharedContentState,
+        bounds: Rect,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Path {
+        val path = Path()
+        val bubblePx = with(density) { 56.dp.toPx() }
+        val minDim = minOf(bounds.width, bounds.height)
+        val maxRadius = minDim / 2f
+
+        // Progress of expansion: 0f at bubble size (or smaller), smoothly reaching 1f as width expands.
+        val progress = ((bounds.width - bubblePx) / (bubblePx * 2.5f)).coerceIn(0f, 1f)
+        val radius = maxRadius * (1f - progress)
+
+        val roundRect = RoundRect(
+            rect = Rect(Offset.Zero, bounds.size),
+            cornerRadius = CornerRadius(radius, radius),
+        )
+        path.addRoundRect(roundRect)
+        path.translate(bounds.topLeft)
+        return path
+    }
 }
 
 /** The scope that lets a thumbnail in a grid and the photo in the viewer animate as one element. */
@@ -50,7 +88,10 @@ val LocalAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope?> 
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun Modifier.mediaSharedBounds(mediaId: Long): Modifier {
+fun Modifier.mediaSharedBounds(
+    mediaId: Long,
+    clipInOverlay: SharedTransitionScope.OverlayClip? = null,
+): Modifier {
     val transitionScope = LocalSharedTransitionScope.current
     val visibilityScope = LocalAnimatedVisibilityScope.current
     if (transitionScope == null || visibilityScope == null || mediaId <= 0L) {
@@ -65,12 +106,22 @@ fun Modifier.mediaSharedBounds(mediaId: Long): Modifier {
     }
     LaunchedEffect(mediaId) { Log.d(SharedLogTag, "viewer photo $mediaId is shared") }
     return with(transitionScope) {
-        this@mediaSharedBounds.sharedBounds(
-            sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
-            animatedVisibilityScope = visibilityScope,
-            boundsTransform = PhotoBoundsTransform,
-            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-        )
+        if (clipInOverlay != null) {
+            this@mediaSharedBounds.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
+                animatedVisibilityScope = visibilityScope,
+                boundsTransform = PhotoBoundsTransform,
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                clipInOverlayDuringTransition = clipInOverlay,
+            )
+        } else {
+            this@mediaSharedBounds.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
+                animatedVisibilityScope = visibilityScope,
+                boundsTransform = PhotoBoundsTransform,
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            )
+        }
     }
 }
 
@@ -89,8 +140,11 @@ val LocalViewerShowing = compositionLocalOf<Boolean?> { null }
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun Modifier.gridSharedBounds(mediaId: Long): Modifier {
-    val viewerShowing = LocalViewerShowing.current ?: return mediaSharedBounds(mediaId)
+fun Modifier.gridSharedBounds(
+    mediaId: Long,
+    clipInOverlay: SharedTransitionScope.OverlayClip? = null,
+): Modifier {
+    val viewerShowing = LocalViewerShowing.current ?: return mediaSharedBounds(mediaId, clipInOverlay)
     val transitionScope = LocalSharedTransitionScope.current
     if (transitionScope == null || mediaId <= 0L) {
         LaunchedEffect(mediaId) {
@@ -108,12 +162,22 @@ fun Modifier.gridSharedBounds(mediaId: Long): Modifier {
     val transition = rememberTransition(state, label = "grid photo visibility")
     val visibilityScope = remember(transition) { PhotoVisibilityScope(transition) }
     return with(transitionScope) {
-        this@gridSharedBounds.sharedBounds(
-            sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
-            animatedVisibilityScope = visibilityScope,
-            boundsTransform = PhotoBoundsTransform,
-            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-        )
+        if (clipInOverlay != null) {
+            this@gridSharedBounds.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
+                animatedVisibilityScope = visibilityScope,
+                boundsTransform = PhotoBoundsTransform,
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                clipInOverlayDuringTransition = clipInOverlay,
+            )
+        } else {
+            this@gridSharedBounds.sharedBounds(
+                sharedContentState = rememberSharedContentState(key = "media-$mediaId"),
+                animatedVisibilityScope = visibilityScope,
+                boundsTransform = PhotoBoundsTransform,
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            )
+        }
     }
 }
 
