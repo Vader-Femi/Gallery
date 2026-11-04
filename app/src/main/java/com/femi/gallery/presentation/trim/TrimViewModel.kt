@@ -28,10 +28,11 @@ data class TrimUiState(
     /** 0 until the player knows the length of the video. */
     val durationMs: Long = 0L,
     val range: TrimRange = TrimRange(0L, 0L),
+    val speed: Float = 1f,
     val export: TrimExport = TrimExport.Idle,
 ) {
     val isReady: Boolean get() = durationMs > 0L
-    val canSave: Boolean get() = isReady && !range.isWholeVideo(durationMs) && export !is TrimExport.Running
+    val canSave: Boolean get() = isReady && (!range.isWholeVideo(durationMs) || speed != 1f) && export !is TrimExport.Running
 }
 
 @HiltViewModel
@@ -57,12 +58,18 @@ class TrimViewModel @Inject constructor(
 
     fun setEnd(endMs: Long) = _state.update { it.copy(range = TrimMath.withEnd(it.range, endMs, it.durationMs)) }
 
+    fun setSpeed(speed: Float) {
+        if (speed in TrimMath.SupportedSpeeds) {
+            _state.update { it.copy(speed = speed) }
+        }
+    }
+
     fun save() {
         val current = _state.value
         if (!current.canSave) return
         exportJob = viewModelScope.launch {
             _state.update { it.copy(export = TrimExport.Running(0)) }
-            trimVideo(uri, current.range).collect { event ->
+            trimVideo(uri, current.range, current.speed).collect { event ->
                 _state.update {
                     it.copy(
                         export = when (event) {

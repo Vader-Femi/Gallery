@@ -28,10 +28,10 @@ enum class TrimFailure {
 
 interface VideoTrimRepository {
     /**
-     * Exports the part [range] of the video [uri] as a new MP4 next to the original (the original is never changed).
+     * Exports the part [range] of the video [uri] at [speed] as a new MP4 next to the original (the original is never changed).
      * The flow ends after [TrimEvent.Done] or [TrimEvent.Failed]; cancelling the collector cancels the export.
      */
-    fun trim(uri: String, range: TrimRange): Flow<TrimEvent>
+    fun trim(uri: String, range: TrimRange, speed: Float = 1f): Flow<TrimEvent>
 
     /** The times (ms, sorted) of the key frames of the video's picture track; empty when they cannot be read. */
     suspend fun keyFrames(uri: String): LongArray

@@ -58,21 +58,40 @@ object TrimMath {
         return if (found >= 0) keyFramesMs[found] else keyFramesMs[0].coerceAtMost(positionMs)
     }
 
+    /** The speeds supported by the video editor. */
+    val SupportedSpeeds = listOf(0.5f, 1f, 2f)
+
     /** How much of the start of the clip is added by moving it back to a key frame. */
     fun extraAtStart(range: TrimRange, keyFramesMs: LongArray): Long =
         range.startMs - keyFrameAtOrBefore(range.startMs, keyFramesMs).coerceAtMost(range.startMs)
 
     /**
-     * The name of the trimmed copy: the original's name without its extension, "_trim" and ".mp4" (the exporter
-     * always writes MP4), and "_trim_2", "_trim_3" and so on when that name is already [taken] (any letter case).
+     * The name of the edited copy: the original's name without its extension, suffix and ".mp4" (the exporter
+     * always writes MP4), and with counter "_2", "_3" and so on when that name is already [taken] (any letter case).
      */
-    fun outputName(originalName: String, taken: Set<String>): String {
+    fun outputName(
+        originalName: String,
+        taken: Set<String>,
+        speed: Float = 1f,
+        isTrimmed: Boolean = true,
+    ): String {
         val base = originalName.substringBeforeLast('.', originalName).ifBlank { "video" }
         val used = taken.mapTo(HashSet()) { it.lowercase() }
-        var candidate = "${base}_trim.mp4"
+        val suffix = when {
+            isTrimmed && speed != 1f -> {
+                val speedStr = if (speed == speed.toLong().toFloat()) "${speed.toInt()}x" else "${speed}x"
+                "_trim_$speedStr"
+            }
+            speed != 1f -> {
+                val speedStr = if (speed == speed.toLong().toFloat()) "${speed.toInt()}x" else "${speed}x"
+                "_$speedStr"
+            }
+            else -> "_trim"
+        }
+        var candidate = "${base}${suffix}.mp4"
         var n = 2
         while (candidate.lowercase() in used) {
-            candidate = "${base}_trim_$n.mp4"
+            candidate = "${base}${suffix}_$n.mp4"
             n++
         }
         return candidate

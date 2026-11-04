@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class TrimVideoUseCase @Inject constructor(private val repository: VideoTrimRepository) {
-    operator fun invoke(uri: String, range: TrimRange): Flow<TrimEvent> = repository.trim(uri, range)
+    operator fun invoke(uri: String, range: TrimRange, speed: Float = 1f): Flow<TrimEvent> = repository.trim(uri, range, speed)
 }
 
 class VideoKeyFramesUseCase @Inject constructor(private val repository: VideoTrimRepository) {

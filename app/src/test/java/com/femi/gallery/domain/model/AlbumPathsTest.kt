@@ -61,5 +61,9 @@ class AlbumPathsTest {
         assertEquals("Movies/Trips/", AlbumPaths.forMedia("Pictures/Trips/", isVideo = true))
         assertEquals("Pictures/Edits/", AlbumPaths.forMedia("Movies/Edits/", isVideo = false))
         assertEquals("DCIM/Trips/", AlbumPaths.forMedia("DCIM/Trips/", isVideo = true))
+        assertEquals("Movies/WhatsApp Video/", AlbumPaths.forMedia("Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Video/", isVideo = true))
+        assertEquals("Pictures/WhatsApp Images/", AlbumPaths.forMedia("Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images/", isVideo = false))
+        assertEquals("Movies/", AlbumPaths.forMedia("Android/", isVideo = true))
+        assertEquals("Pictures/", AlbumPaths.forMedia("", isVideo = false))
     }
 }

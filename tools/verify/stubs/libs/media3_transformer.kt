@@ -8,9 +8,17 @@ class ProgressHolder { @JvmField var progress: Int = 0 }
 
 class EditedMediaItem private constructor() {
     class Builder(mediaItem: MediaItem) {
+        fun setSpeed(parameters: androidx.media3.common.SpeedParameters): Builder = this
+        fun setSpeed(provider: androidx.media3.common.audio.SpeedProvider): Builder = this
+        fun setEffects(effects: Effects): Builder = this
         fun build(): EditedMediaItem = EditedMediaItem()
     }
 }
+
+class Effects(
+    val audioProcessors: List<Any> = emptyList(),
+    val videoEffects: List<Any> = emptyList(),
+)
 
 class ExportResult {
     @JvmField val fileSizeBytes: Long = 0

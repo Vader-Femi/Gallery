@@ -470,7 +470,7 @@ private fun ViewerContent(
                                     label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
                                 ) { viewModel.actions.toggleFavorite(listOf(ref)) },
                                 if (current.isVideo) {
-                                    ViewerAction(Icons.Outlined.ContentCut, stringResource(R.string.viewer_trim)) {
+                                    ViewerAction(Icons.Outlined.Edit, stringResource(R.string.viewer_edit)) {
                                         onTrim(current.uri)
                                     }
                                 } else null,

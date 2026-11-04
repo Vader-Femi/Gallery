@@ -17,3 +17,10 @@ class MediaItem private constructor() {
         fun build(): MediaItem = MediaItem()
     }
 }
+
+object C {
+    const val TIME_UNSET: Long = -Long.MAX_VALUE
+}
+
+class SpeedParameters(val speedProvider: androidx.media3.common.audio.SpeedProvider, val shouldMaintainPitch: Boolean = false)
+

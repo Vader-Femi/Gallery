@@ -1,6 +1,9 @@
 package com.femi.gallery.data.exif
 
 import android.content.Context
+import android.media.MediaExtractor
+import android.media.MediaFormat
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
@@ -20,7 +23,7 @@ class ExifReader @Inject constructor(
     @param:IoDispatcher private val io: CoroutineDispatcher,
 ) {
     suspend fun read(item: MediaItem): MediaDetails = withContext(io) {
-        if (item.isVideo) return@withContext MediaDetails(item)
+        if (item.isVideo) return@withContext readVideoDetails(item)
         try {
             openStream(Uri.parse(item.uri))?.use { stream ->
                 val exif = ExifInterface(stream)
@@ -59,6 +62,80 @@ class ExifReader @Inject constructor(
             make == null -> model
             model.startsWith(make, ignoreCase = true) -> model
             else -> "$make $model"
+        }
+    }
+
+    private fun readVideoDetails(item: MediaItem): MediaDetails {
+        val uri = Uri.parse(item.uri)
+        var fps: Double? = null
+        var lat: Double? = null
+        var lon: Double? = null
+
+        val extractor = MediaExtractor()
+        try {
+            extractor.setDataSource(context, uri, null)
+            for (i in 0 until extractor.trackCount) {
+                val format = extractor.getTrackFormat(i)
+                val mime = format.getString(MediaFormat.KEY_MIME)
+                if (mime?.startsWith("video/") == true) {
+                    val rate = runCatching { format.getInteger(MediaFormat.KEY_FRAME_RATE).toDouble() }.getOrNull()
+                        ?: runCatching { format.getFloat(MediaFormat.KEY_FRAME_RATE).toDouble() }.getOrNull()
+                    if (rate != null && rate > 0.0) {
+                        fps = rate
+                        break
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        } finally {
+            extractor.release()
+        }
+
+        try {
+            MediaMetadataRetriever().use { retriever ->
+                retriever.setDataSource(context, uri)
+
+                if (fps == null) {
+                    val captureRate = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toDoubleOrNull()
+                    if (captureRate != null && captureRate > 0.0) {
+                        fps = captureRate
+                    } else {
+                        val frameCount = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT)?.toLongOrNull()
+                        val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                            ?: item.durationMillis
+                        if (frameCount != null && frameCount > 0 && durationMs > 0) {
+                            fps = (frameCount * 1000.0) / durationMs
+                        }
+                    }
+                }
+
+                val locationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)
+                if (locationStr != null) {
+                    parseIso6709(locationStr)?.let { (latitude, longitude) ->
+                        lat = latitude
+                        lon = longitude
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        }
+
+        return MediaDetails(
+            item = item,
+            fps = fps,
+            latitude = lat,
+            longitude = lon,
+        )
+    }
+
+    private companion object {
+        val ISO_6709_REGEX = Regex("([+-][0-9]+(?:\\.[0-9]+)?)([+-][0-9]+(?:\\.[0-9]+)?)")
+
+        fun parseIso6709(location: String): Pair<Double, Double>? {
+            val match = ISO_6709_REGEX.find(location) ?: return null
+            val lat = match.groupValues[1].toDoubleOrNull() ?: return null
+            val lon = match.groupValues[2].toDoubleOrNull() ?: return null
+            return lat to lon
         }
     }
 }

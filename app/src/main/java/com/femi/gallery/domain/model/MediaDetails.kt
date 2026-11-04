@@ -10,6 +10,7 @@ data class MediaDetails(
     val focalLengthMm: Double? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val fps: Double? = null,
     val detectedText: String? = null,
     val canRevert: Boolean = false,
 )

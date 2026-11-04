@@ -92,6 +92,15 @@ class TrimMathTest {
     }
 
     @Test
+    fun outputNameWithSpeed() {
+        assertEquals("VID_1_0.5x.mp4", TrimMath.outputName("VID_1.mp4", emptySet(), speed = 0.5f, isTrimmed = false))
+        assertEquals("VID_1_2x.mp4", TrimMath.outputName("VID_1.mp4", emptySet(), speed = 2f, isTrimmed = false))
+        assertEquals("VID_1_trim_2x.mp4", TrimMath.outputName("VID_1.mp4", emptySet(), speed = 2f, isTrimmed = true))
+        assertEquals("VID_1_trim_0.5x.mp4", TrimMath.outputName("VID_1.mp4", emptySet(), speed = 0.5f, isTrimmed = true))
+        assertEquals("VID_1_2x_2.mp4", TrimMath.outputName("VID_1.mp4", setOf("vid_1_2x.mp4"), speed = 2f, isTrimmed = false))
+    }
+
+    @Test
     fun timesAreFormatted() {
         assertEquals("0:07", TrimMath.format(7_400))
         assertEquals("1:05", TrimMath.format(65_000))

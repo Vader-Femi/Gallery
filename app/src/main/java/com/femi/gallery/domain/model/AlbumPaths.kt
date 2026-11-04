@@ -46,7 +46,8 @@ object AlbumPaths {
 
     /**
      * The same album folder for a photo or a video: `Pictures/Trips/` is not allowed for videos,
-     * so they go to `Movies/Trips/` instead (and the other way round).
+     * so they go to `Movies/Trips/` instead (and the other way round). Any path outside the allowed
+     * primary directories (such as `Android/...` or `Download/...`) is routed into `Movies/` or `Pictures/`.
      */
     fun forMedia(path: String, isVideo: Boolean): String {
         val allowed = if (isVideo) VIDEO_ROOTS else IMAGE_ROOTS
@@ -55,7 +56,12 @@ object AlbumPaths {
             top in allowed -> path
             top == "Pictures" && isVideo -> "Movies/" + path.substringAfter('/')
             top == "Movies" && !isVideo -> "Pictures/" + path.substringAfter('/')
-            else -> path
+            else -> {
+                val root = if (isVideo) "Movies" else "Pictures"
+                val rawSubfolder = path.trimEnd('/').substringAfterLast('/', missingDelimiterValue = "")
+                val cleanSubfolder = sanitizeName(rawSubfolder)
+                if (cleanSubfolder != null && cleanSubfolder != top) "$root/$cleanSubfolder/" else "$root/"
+            }
         }
     }
 }

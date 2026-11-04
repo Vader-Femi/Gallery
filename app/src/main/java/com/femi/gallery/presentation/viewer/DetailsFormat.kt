@@ -42,3 +42,11 @@ fun formatVideoTime(millis: Long): String {
         String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }
+
+/** 29.97 / 30.0 -> "30 fps", 59.94 / 60.0 -> "60 fps", 23.976 -> "24 fps", 14.5 -> "14.5 fps". */
+fun formatFps(fps: Double): String =
+    if (kotlin.math.abs(fps - fps.roundToInt()) < 0.1) {
+        "${fps.roundToInt()} fps"
+    } else {
+        String.format(Locale.US, "%.1f fps", fps)
+    }

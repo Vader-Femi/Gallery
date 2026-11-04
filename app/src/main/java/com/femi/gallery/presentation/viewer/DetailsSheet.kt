@@ -91,6 +91,9 @@ fun DetailsSheet(
             if (item.isVideo && item.durationMillis > 0) {
                 DetailRow(stringResource(R.string.details_duration), formatDuration(item.durationMillis))
             }
+            if (item.isVideo && details.fps != null && details.fps > 0.0) {
+                DetailRow(stringResource(R.string.details_framerate), formatFps(details.fps))
+            }
             details.camera?.let { DetailRow(stringResource(R.string.details_camera), it) }
 
             val settings = listOfNotNull(

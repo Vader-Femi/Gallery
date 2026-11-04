@@ -24,6 +24,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -103,6 +106,9 @@ fun TrimScreen(
 
     // The preview plays only the kept part: at the end handle it stops and goes back to the start handle.
     val range by rememberUpdatedState(state.range)
+    LaunchedEffect(player, state.speed) {
+        player.playbackParameters = androidx.media3.common.PlaybackParameters(state.speed)
+    }
     LaunchedEffect(player) {
         while (true) {
             positionMs = player.currentPosition.coerceAtLeast(0L)
@@ -193,6 +199,31 @@ fun TrimScreen(
                         )
                         Text(TrimMath.format(state.range.endMs, tenths = true), style = MaterialTheme.typography.labelLarge)
                     }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.trim_speed),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        SingleChoiceSegmentedButtonRow {
+                            TrimMath.SupportedSpeeds.forEachIndexed { index, speed ->
+                                SegmentedButton(
+                                    selected = state.speed == speed,
+                                    onClick = { viewModel.setSpeed(speed) },
+                                    shape = SegmentedButtonDefaults.itemShape(index = index, count = TrimMath.SupportedSpeeds.size),
+                                    enabled = state.isReady && !exporting,
+                                    icon = {},
+                                ) {
+                                    val label = if (speed == speed.toLong().toFloat()) "${speed.toInt()}x" else "${speed}x"
+                                    Text(label, style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        }
+                    }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -225,7 +256,10 @@ fun TrimScreen(
                             viewModel.save()
                         },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringResource(R.string.trim_save)) }
+                    ) {
+                        val isTrimmed = !state.range.isWholeVideo(state.durationMs)
+                        Text(stringResource(if (isTrimmed) R.string.trim_save else R.string.trim_save_copy))
+                    }
                 }
             }
         }
