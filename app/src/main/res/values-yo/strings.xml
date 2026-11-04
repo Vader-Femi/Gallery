@@ -166,6 +166,8 @@
     <string name="text_copied">A ti ṣe ẹ̀dà ọ̀rọ̀</string>
     <string name="text_none_found">Kò sí ọ̀rọ̀ nínú fọ́tò yìí</string>
     <string name="text_none_found_video">Kò sí ọ̀rọ̀ nínú fídíò yìí</string>
+    <string name="action_revert_original">Dá padà sí ti àkọ́kọ́</string>
+    <string name="toast_reverted">Fọ́tò àkọ́kọ́ ti padà</string>
 
     <string name="external_open_gallery">Ṣí Gallery</string>
     <string name="picker_title_any">Yan fọ́tò tàbí fídíò kan</string>

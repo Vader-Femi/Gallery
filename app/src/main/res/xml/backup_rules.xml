@@ -3,6 +3,7 @@
 <full-backup-content>
     <exclude domain="file" path="locked/" />
     <exclude domain="file" path="models/" />
+    <exclude domain="file" path="revert_backups/" />
     <exclude domain="file" path="locations.bin" />
     <exclude domain="file" path="texts.bin" />
     <exclude domain="file" path="labels.bin" />

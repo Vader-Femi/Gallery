@@ -166,6 +166,8 @@
     <string name="text_copied">An kwafi rubutu</string>
     <string name="text_none_found">Babu rubutu a cikin wannan hoton</string>
     <string name="text_none_found_video">Babu rubutu a cikin wannan bidiyon</string>
+    <string name="action_revert_original">Mayar da na asali</string>
+    <string name="toast_reverted">An mayar da hoton asali</string>
 
     <string name="external_open_gallery">Buɗe Hotuna</string>
     <string name="picker_title_any">Zaɓi hoto ko bidiyo</string>

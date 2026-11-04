@@ -296,6 +296,26 @@ class MediaSelectionController(
             channel.send(WriteBatch(kind, refs.size, requests))
         }
     }
+
+    /** Requests system write permission for [uris], then runs [onApproved] or [onDeclined]. */
+    fun requestWrite(uris: List<String>, onApproved: () -> Unit, onDeclined: (() -> Unit)? = null) {
+        scope.launch {
+            val requests = requestWriteAccess(uris)
+            if (requests.isEmpty()) {
+                onApproved()
+            } else {
+                channel.send(
+                    WriteBatch(
+                        kind = WriteKind.Move,
+                        itemCount = uris.size,
+                        requests = requests,
+                        onApproved = onApproved,
+                        onDeclined = { onDeclined?.invoke() },
+                    ),
+                )
+            }
+        }
+    }
 }
 
 /** Builds controllers with all their use cases, so ViewModels only inject this one class. */

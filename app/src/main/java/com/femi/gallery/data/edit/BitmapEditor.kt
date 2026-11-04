@@ -61,6 +61,15 @@ class BitmapEditor @Inject constructor(
         runCatching { overwrite(Uri.parse(uri), state) }.getOrDefault(false)
     }
 
+    override suspend fun canRevert(uri: String): Boolean = withContext(io) {
+        val file = backupFileFor(Uri.parse(uri))
+        file != null && file.exists() && file.length() > 0
+    }
+
+    override suspend fun revertOriginal(uri: String): Boolean = withContext(io) {
+        runCatching { restoreBackup(Uri.parse(uri)) }.getOrDefault(false)
+    }
+
     /** Decodes with the photo's orientation applied, scaled so the longest side is at most [maxSize]. */
     private fun decode(uri: Uri, maxSize: Int): Bitmap {
         val source = ImageDecoder.createSource(context.contentResolver, uri)
@@ -334,6 +343,21 @@ class BitmapEditor @Inject constructor(
             return false
         }
 
+        // Preserve the original untouched bytes in app-private storage (filesDir/revert_backups/{id}.bin)
+        // If an untouched backup already exists from a previous edit, keep that one rather than overwriting
+        // it with an intermediate edit.
+        val revertFile = backupFileFor(uri)
+        val hadRevertBackup = revertFile?.exists() == true && revertFile.length() > 0
+        var createdRevertBackup = false
+        if (!hadRevertBackup && revertFile != null) {
+            val dir = revertFile.parentFile
+            if (dir != null && !dir.exists()) dir.mkdirs()
+            if (dir != null) pruneBackupsIfExceeded(dir, backup.length())
+            createdRevertBackup = runCatching {
+                backup.inputStream().use { input -> revertFile.outputStream().use { input.copyTo(it) } } > 0
+            }.getOrDefault(false)
+        }
+
         return try {
             val output = resolver.openOutputStream(uri, "wt") ?: error("Cannot write $uri")
             output.use { it.write(encoded) }
@@ -354,6 +378,7 @@ class BitmapEditor @Inject constructor(
             }
 
             backup.delete()
+            coil3.SingletonImageLoader.get(context).memoryCache?.clear()
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to overwrite $uri; putting the original back", e)
@@ -361,7 +386,59 @@ class BitmapEditor @Inject constructor(
                 resolver.openOutputStream(uri, "wt")?.use { out -> backup.inputStream().use { it.copyTo(out) } } != null
             }.getOrDefault(false)
             if (restored) backup.delete() else Log.e(TAG, "The original of $uri could not be restored; the backup stays in ${backup.path}")
+            if (createdRevertBackup) revertFile?.delete()
             false
+        }
+    }
+
+    private fun restoreBackup(uri: Uri): Boolean {
+        val backup = backupFileFor(uri)
+        if (backup == null || !backup.exists() || backup.length() == 0L) {
+            Log.w(TAG, "No revert backup found for $uri")
+            return false
+        }
+        val resolver = context.contentResolver
+        return try {
+            val output = resolver.openOutputStream(uri, "wt") ?: error("Cannot write $uri")
+            output.use { out ->
+                backup.inputStream().use { it.copyTo(out) }
+            }
+            resolver.update(
+                uri,
+                ContentValues().apply { put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis() / 1000L) },
+                null,
+                null,
+            )
+            backup.delete()
+            coil3.SingletonImageLoader.get(context).memoryCache?.clear()
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to restore original for $uri", e)
+            false
+        }
+    }
+
+    private fun backupDir(): File = File(context.filesDir, REVERT_BACKUPS_DIR).also {
+        if (!it.exists()) it.mkdirs()
+    }
+
+    private fun backupFileFor(uri: Uri): File? {
+        val id = runCatching { ContentUris.parseId(uri) }.getOrNull()
+        val name = if (id != null && id >= 0) "$id.bin" else "${uri.toString().hashCode()}.bin"
+        return File(backupDir(), name)
+    }
+
+    private fun pruneBackupsIfExceeded(dir: File, neededBytes: Long) {
+        val files = dir.listFiles()?.toList() ?: return
+        var totalSize = files.sumOf { it.length() }
+        if (totalSize + neededBytes <= MAX_BACKUPS_BYTES) return
+        val sortedByAge = files.sortedBy { it.lastModified() }
+        for (f in sortedByAge) {
+            if (totalSize + neededBytes <= MAX_BACKUPS_BYTES) break
+            val size = f.length()
+            if (f.delete()) {
+                totalSize -= size
+            }
         }
     }
 
@@ -386,6 +463,8 @@ class BitmapEditor @Inject constructor(
 
     private companion object {
         const val TAG = "BitmapEditor"
+        const val REVERT_BACKUPS_DIR = "revert_backups"
+        const val MAX_BACKUPS_BYTES = 500L * 1024L * 1024L // 500 MB
         /** Longest side of a saved edit; a 50 MP photo would need ~200 MB of memory at full size. */
         const val MAX_SAVE_SIZE = 4096
         const val JPEG_QUALITY = 95

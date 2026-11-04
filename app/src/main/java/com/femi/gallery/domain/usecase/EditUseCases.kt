@@ -43,3 +43,15 @@ class ApplyEditEffectsUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(bitmap: Bitmap, state: EditState): Bitmap = repository.applyEffects(bitmap, state)
 }
+
+class CanRevertOriginalUseCase @Inject constructor(
+    private val repository: EditRepository,
+) {
+    suspend operator fun invoke(uri: String): Boolean = repository.canRevert(uri)
+}
+
+class RevertOriginalUseCase @Inject constructor(
+    private val repository: EditRepository,
+) {
+    suspend operator fun invoke(uri: String): Boolean = repository.revertOriginal(uri)
+}

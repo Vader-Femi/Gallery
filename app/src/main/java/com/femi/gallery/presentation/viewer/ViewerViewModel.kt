@@ -13,10 +13,12 @@ import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.domain.search.SearchCriteria
 import com.femi.gallery.domain.search.SearchQueryParser
+import com.femi.gallery.domain.usecase.CanRevertOriginalUseCase
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetMediaDetailsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
 import com.femi.gallery.domain.usecase.GetPhotoTextUseCase
+import com.femi.gallery.domain.usecase.RevertOriginalUseCase
 import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
@@ -38,6 +40,8 @@ class ViewerViewModel @Inject constructor(
     getPagedMedia: GetPagedMediaUseCase,
     private val getMediaDetails: GetMediaDetailsUseCase,
     private val getPhotoText: GetPhotoTextUseCase,
+    private val canRevertOriginal: CanRevertOriginalUseCase,
+    private val revertOriginalUseCase: RevertOriginalUseCase,
     private val settingsRepository: SettingsRepository,
     selectionFactory: MediaSelectionControllerFactory,
     val lockSession: LockSession,
@@ -113,7 +117,26 @@ class ViewerViewModel @Inject constructor(
         detailsJob = viewModelScope.launch {
             val base = getMediaDetails(item)
             val text = getPhotoText(item.id)
-            _details.value = base.copy(detectedText = text)
+            val canRevert = if (!item.isVideo) canRevertOriginal(item.uri) else false
+            _details.value = base.copy(detectedText = text, canRevert = canRevert)
+        }
+    }
+
+    fun revertOriginal(item: MediaItem, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            actions.requestWrite(
+                uris = listOf(item.uri),
+                onApproved = {
+                    viewModelScope.launch {
+                        val ok = revertOriginalUseCase(item.uri)
+                        if (ok) {
+                            showDetails(item)
+                        }
+                        onDone(ok)
+                    }
+                },
+                onDeclined = { onDone(false) },
+            )
         }
     }
 

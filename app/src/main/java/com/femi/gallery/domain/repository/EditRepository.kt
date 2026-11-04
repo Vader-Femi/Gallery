@@ -22,4 +22,10 @@ interface EditRepository {
 
     /** Renders [state] onto the original photo and overwrites the original file. */
     suspend fun replaceOriginal(uri: String, state: EditState): Boolean
+
+    /** Whether an untouched original backup exists for [uri] after a previous "Replace original". */
+    suspend fun canRevert(uri: String): Boolean
+
+    /** Restores the untouched original photo from the backup and removes the backup. */
+    suspend fun revertOriginal(uri: String): Boolean
 }

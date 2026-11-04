@@ -135,7 +135,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] **Describe a photo**, to tune on a real library: a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
 
 **Later**
-- [ ] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details
+- [x] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
 - [x] **Copy text from photo**: on-device ML Kit OCR extraction with clipboard copying from the viewer overflow menu and details sheet
 - [ ] More on-device ML: **people / face groups**, auto scene albums

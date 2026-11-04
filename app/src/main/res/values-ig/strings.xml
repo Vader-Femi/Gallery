@@ -166,6 +166,8 @@
     <string name="text_copied">Edetụla ederede na clipboard</string>
     <string name="text_none_found">Ọ dịghị ederede achọtara na foto a</string>
     <string name="text_none_found_video">Ọ dịghị ederede achọtara na vidiyo a</string>
+    <string name="action_revert_original">Weghachi na nke mbụ</string>
+    <string name="toast_reverted">Eweghachila nke mbụ</string>
 
     <string name="external_open_gallery">Mepee Gallery</string>
     <string name="picker_title_any">Họrọ foto ma ọ bụ vidiyo</string>

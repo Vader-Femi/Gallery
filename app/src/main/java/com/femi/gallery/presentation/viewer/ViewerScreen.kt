@@ -574,6 +574,18 @@ private fun ViewerContent(
             details = it,
             onDismiss = viewModel::hideDetails,
             onSetWallpaper = if (!it.item.isVideo) { { setWallpaper(context, it.item) } } else null,
+            onRevertOriginal = if (it.canRevert) {
+                {
+                    viewModel.revertOriginal(it.item) { success ->
+                        if (success) {
+                            Toast.makeText(context, R.string.toast_reverted, Toast.LENGTH_SHORT).show()
+                            viewModel.hideDetails()
+                        } else {
+                            Toast.makeText(context, R.string.toast_failed, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else null,
             scrollToBottom = scrollToText,
         )
     }

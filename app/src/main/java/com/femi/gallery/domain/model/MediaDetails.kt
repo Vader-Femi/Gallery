@@ -11,4 +11,5 @@ data class MediaDetails(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val detectedText: String? = null,
+    val canRevert: Boolean = false,
 )
