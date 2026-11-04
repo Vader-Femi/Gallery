@@ -136,4 +136,25 @@ class SearchQueryParserTest {
         val box = GeoBox(-33.9, 151.1, -33.8, 151.3)
         assertEquals(box, parse(box.toQuery()).area)
     }
+
+    @Test
+    fun idsQueryParsesSpecificIds() {
+        val ids = listOf(101L, 202L, 303L)
+        val query = SearchQueryParser.idsQuery(ids)
+        val criteria = SearchQueryParser.parse(query)
+        assertEquals(ids, criteria.specificIds)
+    }
+
+    @Test
+    fun multiTermQueryWithPrepositionFiltersStopWords() {
+        val criteria = parse("John in red shirt")
+        assertEquals(listOf("john", "red", "shirt"), criteria.terms)
+    }
+
+    @Test
+    fun singleStopWordIsRetainedWhenSoleQuery() {
+        val criteria = parse("the")
+        assertEquals(listOf("the"), criteria.terms)
+        assertFalse(criteria.isEmpty)
+    }
 }

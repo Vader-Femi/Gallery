@@ -28,7 +28,7 @@ data class MirrorQuery(
         /** The mirror's version of a request for [bucketId] and [search], or null when MediaStore has to answer it. */
         fun from(bucketId: Long?, search: SearchCriteria?, hidden: Set<Long> = emptySet()): MirrorQuery? {
             if (bucketId == SpecialAlbums.TRASH || bucketId == SpecialAlbums.LOCKED) return null
-            if (search != null && (search.terms.isNotEmpty() || search.area != null)) return null
+            if (search != null && (search.terms.isNotEmpty() || search.area != null || search.specificIds != null)) return null
             val favoritesAlbum = bucketId == SpecialAlbums.FAVORITES
             return MirrorQuery(
                 bucketId = if (favoritesAlbum) null else bucketId,

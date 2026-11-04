@@ -50,4 +50,13 @@ object DatabaseModule {
 
     @Provides
     fun provideClipDao(database: GalleryDatabase): ClipDao = database.clipDao()
+
+    @Provides
+    fun providePersonDao(database: GalleryDatabase): com.femi.gallery.data.db.PersonDao = database.personDao()
+
+    @Provides
+    fun provideFaceDao(database: GalleryDatabase): com.femi.gallery.data.db.FaceDao = database.faceDao()
+
+    @Provides
+    fun provideFaceScanDao(database: GalleryDatabase): com.femi.gallery.data.db.FaceScanDao = database.faceScanDao()
 }

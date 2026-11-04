@@ -115,6 +115,22 @@ class OnnxClipEmbedder @Inject constructor(
         }
     }
 
+    override suspend fun embedBitmap(bitmap: Bitmap): FloatArray? = withContext(io) {
+        try {
+            val model = imageModel() ?: return@withContext null
+            val scaled = Bitmap.createScaledBitmap(bitmap, model.size, model.size, true)
+            val pixels = IntArray(model.size * model.size)
+            scaled.getPixels(pixels, 0, model.size, 0, 0, model.size, model.size)
+            if (scaled !== bitmap) scaled.recycle()
+            embedPixels(pixels, model)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not embed bitmap", e)
+            null
+        }
+    }
+
     override suspend fun embedText(text: String): FloatArray? = withContext(io) {
         try {
             val model = textModel() ?: return@withContext null

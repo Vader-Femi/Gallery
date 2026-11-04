@@ -15,5 +15,6 @@ interface ImageEmbedder {
     val signature: Long
 
     suspend fun embed(mediaId: Long): FloatArray?
+    suspend fun embedBitmap(bitmap: android.graphics.Bitmap): FloatArray?
     suspend fun embedText(text: String): FloatArray?
 }

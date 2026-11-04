@@ -23,13 +23,21 @@ import androidx.room.RoomDatabase
         MetaRow::class,
         ClipRow::class,
         PhotoHashRow::class,
+        PersonRow::class,
+        FaceRow::class,
+        FaceScanRow::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
-    // Versions 2, 3 and 4 only added tables (the library mirror; the photos' embeddings; the hashes for similar
-    // photos), which Room can migrate by itself from the exported schemas, which is why the schemas belong in
-    // version control.
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
+    // Versions 2, 3, 4 and 5 only added tables (the library mirror; the photos' embeddings; the hashes for similar
+    // photos; the face clusters and people), which Room can migrate by itself from the exported schemas, which is
+    // why the schemas belong in version control.
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5),
+    ],
 )
 abstract class GalleryDatabase : RoomDatabase() {
     abstract fun textDao(): TextDao
@@ -40,6 +48,9 @@ abstract class GalleryDatabase : RoomDatabase() {
     abstract fun mediaDao(): MediaDao
     abstract fun clipDao(): ClipDao
     abstract fun photoHashDao(): PhotoHashDao
+    abstract fun personDao(): PersonDao
+    abstract fun faceDao(): FaceDao
+    abstract fun faceScanDao(): FaceScanDao
 
     companion object {
         const val FILE_NAME = "gallery.db"

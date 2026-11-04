@@ -24,6 +24,8 @@ object GalleryRoutes {
     const val SETTINGS = "settings"
     const val DUPLICATES = "duplicates"
     const val SIMILAR = "similar"
+    const val PEOPLE = "people"
+    const val PERSON = "person/{personId}"
     const val PLACE = "place?query={query}"
     const val STORY = "story/{fromDay}/{toDay}"
     const val SLIDESHOW = "slideshow?query={query}&bucketId={bucketId}"
@@ -32,6 +34,8 @@ object GalleryRoutes {
     const val VIEWER = "viewer/{index}?mediaId={mediaId}&bucketId={bucketId}&query={query}"
 
     fun album(bucketId: Long) = "album/$bucketId"
+
+    fun person(personId: Long) = "person/$personId"
 
     fun search(query: String = ""): String = if (query.isBlank()) SEARCH else "search?query=${Uri.encode(query)}"
 

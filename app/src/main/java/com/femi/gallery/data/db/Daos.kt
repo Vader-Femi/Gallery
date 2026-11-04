@@ -1,9 +1,12 @@
 package com.femi.gallery.data.db
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
 
 /*
  * One DAO per table. The scan tables all work the same way: read everything, then write the changes
@@ -240,5 +243,102 @@ abstract class MediaDao {
     companion object {
         const val GENERATION = "mediastore_generation"
         private const val WRITE_CHUNK = 500
+    }
+}
+
+@Dao
+abstract class PersonDao {
+    @Query("SELECT * FROM person ORDER BY photoCount DESC, name ASC")
+    abstract fun flowAll(): Flow<List<PersonRow>>
+
+    @Query("SELECT * FROM person ORDER BY photoCount DESC, name ASC")
+    abstract suspend fun all(): List<PersonRow>
+
+    @Query("SELECT * FROM person WHERE id = :id")
+    abstract suspend fun get(id: Long): PersonRow?
+
+    @Query("SELECT * FROM person WHERE id = :id")
+    abstract fun flow(id: Long): Flow<PersonRow?>
+
+    @Insert
+    abstract suspend fun insert(person: PersonRow): Long
+
+    @Update
+    abstract suspend fun update(person: PersonRow)
+
+    @Query("UPDATE person SET name = :name WHERE id = :id")
+    abstract suspend fun updateName(id: Long, name: String)
+
+    @Query("UPDATE person SET photoCount = :count WHERE id = :id")
+    abstract suspend fun updatePhotoCount(id: Long, count: Int)
+
+    @Query("DELETE FROM person WHERE id = :id")
+    abstract suspend fun delete(id: Long)
+
+    @Query("DELETE FROM person")
+    abstract suspend fun deleteAll()
+
+    @Query("SELECT * FROM person WHERE LOWER(name) LIKE '%' || LOWER(:query) || '%'")
+    abstract suspend fun searchByName(query: String): List<PersonRow>
+
+    @Query("""
+        SELECT DISTINCT f.mediaId FROM face f 
+        INNER JOIN person p ON f.personId = p.id 
+        WHERE LOWER(p.name) LIKE '%' || LOWER(:query) || '%'
+    """)
+    abstract suspend fun mediaIdsForName(query: String): List<Long>
+}
+
+@Dao
+abstract class FaceDao {
+    @Query("SELECT * FROM face")
+    abstract suspend fun all(): List<FaceRow>
+
+    @Query("SELECT * FROM face WHERE mediaId = :mediaId")
+    abstract suspend fun getForMedia(mediaId: Long): List<FaceRow>
+
+    @Query("SELECT * FROM face WHERE personId = :personId")
+    abstract suspend fun getForPerson(personId: Long): List<FaceRow>
+
+    @Query("SELECT DISTINCT mediaId FROM face WHERE personId = :personId")
+    abstract suspend fun mediaIdsForPerson(personId: Long): List<Long>
+
+    @Query("SELECT DISTINCT mediaId FROM face WHERE personId = :personId")
+    abstract fun flowMediaIdsForPerson(personId: Long): Flow<List<Long>>
+
+    @Insert
+    abstract suspend fun insert(faces: List<FaceRow>)
+
+    @Query("DELETE FROM face WHERE mediaId IN (:mediaIds)")
+    abstract suspend fun deleteForMedia(mediaIds: List<Long>)
+
+    @Query("DELETE FROM face WHERE personId = :personId")
+    abstract suspend fun deleteForPerson(personId: Long)
+
+    @Query("SELECT COUNT(DISTINCT mediaId) FROM face WHERE personId = :personId")
+    abstract suspend fun countPhotosForPerson(personId: Long): Int
+
+    @Query("DELETE FROM face")
+    abstract suspend fun deleteAll()
+}
+
+@Dao
+abstract class FaceScanDao {
+    @Query("SELECT * FROM scan_face")
+    abstract suspend fun all(): List<FaceScanRow>
+
+    @Upsert
+    abstract suspend fun upsert(rows: List<FaceScanRow>)
+
+    @Query("DELETE FROM scan_face WHERE id IN (:ids)")
+    abstract suspend fun delete(ids: List<Long>)
+
+    @Query("DELETE FROM scan_face")
+    abstract suspend fun deleteAll()
+
+    @Transaction
+    open suspend fun apply(changed: List<FaceScanRow>, removedIds: List<Long>) {
+        upsert(changed)
+        removedIds.chunked(DELETE_CHUNK).forEach { delete(it) }
     }
 }

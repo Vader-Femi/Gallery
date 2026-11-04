@@ -302,6 +302,7 @@
     <string name="similar_hint">Foto ndị a yiri onwe ha mana ha abụghị otu. Pịa nke ị ga-edebe n\'otu ọ bụla, lelee ha tupu i wepụ ndị ọzọ. \"Debe ha niile\" na-ahapụ otu dị ka ọ dị. Foto ndị ewepụrụ na-aga n\'ihe mkpofu ma enwere ike iweghachi ha.</string>
     <string name="similar_group">Foto %1$d yiri onwe ha</string>
     <string name="similar_keep_all">Debe ha niile</string>
+    <string name="similar_compare">Nyochaa</string>
     <string name="similar_remove">Bugharịa foto %1$d na ihe mkpofu</string>
     <string name="menu_settings_coming_soon">Ntọala na-abịa n\'oge adịghị anya</string>
 
@@ -429,4 +430,21 @@
     <string name="settings_strictness_relaxed">Ezuru</string>
     <string name="settings_strictness_normal">Nkịtị</string>
     <string name="settings_strictness_strict">Siri ike</string>
+
+    <!-- People & Face Groups -->
+    <string name="menu_people">Ndị mmadụ</string>
+    <string name="album_people">Ndị mmadụ</string>
+    <string name="people_title">Ndị mmadụ na Ihu</string>
+    <string name="people_empty_title">Ahụbeghị ndị mmadụ</string>
+    <string name="people_empty_desc">A ga-enyocha foto iji chọpụta ma chịkọta ihu ndị mmadụ.</string>
+    <string name="people_scan_button">Nyochaa maka ihu</string>
+    <string name="people_rescan_all">Nyochaa ihu niile ọzọ</string>
+    <string name="people_scan_progress">Na-enyocha ihu: %1$d n\'ime %2$d</string>
+    <string name="people_rename_title">Nye onye ahụ aha</string>
+    <string name="people_rename_hint">Tinye aha</string>
+    <string name="people_rename_confirm">Chekwaa</string>
+    <string name="people_delete_title">Wepụ onye a</string>
+    <string name="people_delete_confirm">Wepụ</string>
+    <string name="people_delete_message">Wepụ otu onye a? Agaghị ehichapụ foto ndị ahụ n\'onwe ha.</string>
+    <string name="people_photos_count">Foto %1$d</string>
 </resources>

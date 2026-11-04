@@ -333,6 +333,7 @@
     <string name="similar_hint">These photos look alike but are not identical. Tap the one to keep in each group and check them before you remove the others. \"Keep all\" leaves a group alone. Removed photos go to the recycle bin and can be restored.</string>
     <string name="similar_group">%1$d similar photos</string>
     <string name="similar_keep_all">Keep all</string>
+    <string name="similar_compare">Compare</string>
     <string name="similar_remove">Move %1$d photos to recycle bin</string>
     <string name="menu_settings_coming_soon">Settings coming soon</string>
 
@@ -431,5 +432,22 @@
     <string name="settings_delete_empty_albums_summary">Find and delete empty folders in your storage</string>
     <string name="settings_delete_empty_albums_deleted">Deleted %1$d empty albums.</string>
     <string name="settings_delete_empty_albums_none">No empty albums found.</string>
+
+    <!-- People & Face Groups -->
+    <string name="menu_people">People</string>
+    <string name="album_people">People</string>
+    <string name="people_title">People &amp; Faces</string>
+    <string name="people_empty_title">No people found yet</string>
+    <string name="people_empty_desc">Photos will be scanned to detect and cluster faces into people.</string>
+    <string name="people_scan_button">Scan for faces</string>
+    <string name="people_rescan_all">Reset &amp; re-scan all faces</string>
+    <string name="people_scan_progress">Scanning faces: %1$d of %2$d</string>
+    <string name="people_rename_title">Name person</string>
+    <string name="people_rename_hint">Enter a name</string>
+    <string name="people_rename_confirm">Save</string>
+    <string name="people_delete_title">Remove person</string>
+    <string name="people_delete_confirm">Remove</string>
+    <string name="people_delete_message">Remove this person group? The photos themselves will not be deleted.</string>
+    <string name="people_photos_count">%1$d photos</string>
 </resources>
 

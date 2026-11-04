@@ -24,4 +24,7 @@ object SpecialAlbums {
 
     /** Photos moved into the app-private, biometric-protected Locked folder. */
     const val LOCKED = Long.MIN_VALUE + 3
+
+    /** Grouped and named people faces. */
+    const val PEOPLE = Long.MIN_VALUE + 4
 }

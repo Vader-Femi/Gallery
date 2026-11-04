@@ -126,4 +126,13 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindMotionPhotoRepository(impl: com.femi.gallery.data.motion.MotionPhotoRepositoryImpl): com.femi.gallery.domain.repository.MotionPhotoRepository
+
+    @Binds
+    abstract fun bindFaceDetector(impl: com.femi.gallery.data.face.MlKitFaceDetector): com.femi.gallery.domain.repository.FaceDetector
+
+    @Binds
+    abstract fun bindFaceIndexRepository(impl: com.femi.gallery.data.repository.FaceIndexRepositoryImpl): com.femi.gallery.domain.repository.FaceIndexRepository
+
+    @Binds
+    abstract fun bindPersonIndex(impl: com.femi.gallery.data.face.PersonIndexImpl): com.femi.gallery.domain.face.PersonIndex
 }

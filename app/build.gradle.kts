@@ -85,6 +85,8 @@ dependencies {
     implementation(libs.mlkit.text.recognition)
     // Names objects and scenes in photos (bundled model, offline).
     implementation(libs.mlkit.image.labeling)
+    // Detects faces in photos for people grouping.
+    implementation(libs.mlkit.face.detection)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)
     implementation(libs.telephoto.zoomable.image.coil3)

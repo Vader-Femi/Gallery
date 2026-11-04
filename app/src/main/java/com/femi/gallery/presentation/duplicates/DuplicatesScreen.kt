@@ -2,19 +2,23 @@ package com.femi.gallery.presentation.duplicates
 
 import android.text.format.Formatter
 import androidx.annotation.StringRes
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -24,12 +28,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Compare
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -101,6 +107,7 @@ private val SimilarTexts = GroupsTexts(
 @Composable
 fun DuplicatesScreen(
     onBack: () -> Unit,
+    onCompare: (group: DuplicateGroup, initialMediaId: Long) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     viewModel: DuplicatesViewModel = hiltViewModel(),
 ) {
@@ -112,6 +119,7 @@ fun DuplicatesScreen(
         onBack = onBack,
         onRemove = viewModel::removeCopies,
         onKeep = viewModel::keep,
+        onCompare = onCompare,
         onIgnore = null,
         modifier = modifier,
     )
@@ -124,6 +132,7 @@ fun DuplicatesScreen(
 @Composable
 fun SimilarPhotosScreen(
     onBack: () -> Unit,
+    onCompare: (group: DuplicateGroup, initialMediaId: Long) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     viewModel: SimilarPhotosViewModel = hiltViewModel(),
 ) {
@@ -135,6 +144,7 @@ fun SimilarPhotosScreen(
         onBack = onBack,
         onRemove = viewModel::removeExtras,
         onKeep = viewModel::keep,
+        onCompare = onCompare,
         onIgnore = viewModel::ignore,
         modifier = modifier,
     )
@@ -148,6 +158,7 @@ private fun GroupsScreen(
     onBack: () -> Unit,
     onRemove: () -> Unit,
     onKeep: (groupIndex: Int, mediaId: Long) -> Unit,
+    onCompare: (group: DuplicateGroup, initialMediaId: Long) -> Unit,
     onIgnore: ((groupIndex: Int) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
@@ -210,6 +221,7 @@ private fun GroupsScreen(
                             group = group,
                             similar = texts.similar,
                             onKeep = { onKeep(index, it) },
+                            onCompare = { initialMediaId -> onCompare(group, initialMediaId) },
                             onIgnore = onIgnore?.let { ignore -> { ignore(index) } },
                         )
                     }
@@ -251,7 +263,13 @@ private fun Scanning(progress: DuplicateProgress?) {
 }
 
 @Composable
-private fun GroupCard(group: DuplicateGroup, similar: Boolean, onKeep: (Long) -> Unit, onIgnore: (() -> Unit)?) {
+private fun GroupCard(
+    group: DuplicateGroup,
+    similar: Boolean,
+    onKeep: (Long) -> Unit,
+    onCompare: (initialMediaId: Long) -> Unit,
+    onIgnore: (() -> Unit)?,
+) {
     val context = LocalContext.current
     Surface(
         shape = RoundedCornerShape(22.dp),
@@ -278,8 +296,26 @@ private fun GroupCard(group: DuplicateGroup, similar: Boolean, onKeep: (Long) ->
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),
                 )
-                if (onIgnore != null) {
-                    TextButton(onClick = onIgnore) { Text(stringResource(R.string.similar_keep_all)) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = { onCompare(group.keepId.takeIf { it != 0L } ?: group.items.first().id) },
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                        modifier = Modifier.height(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Compare,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.similar_compare), style = MaterialTheme.typography.labelMedium)
+                    }
+                    if (onIgnore != null) {
+                        TextButton(onClick = onIgnore) { Text(stringResource(R.string.similar_keep_all)) }
+                    }
                 }
             }
             LazyRow(
@@ -287,15 +323,21 @@ private fun GroupCard(group: DuplicateGroup, similar: Boolean, onKeep: (Long) ->
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(group.items, key = { it.id }) { item ->
-                    Copy(item = item, kept = item.id == group.keepId, onClick = { onKeep(item.id) })
+                    Copy(
+                        item = item,
+                        kept = item.id == group.keepId,
+                        onClick = { onKeep(item.id) },
+                        onLongClick = { onCompare(item.id) },
+                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Copy(item: MediaItem, kept: Boolean, onClick: () -> Unit) {
+private fun Copy(item: MediaItem, kept: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
     val context = LocalContext.current
     val request = remember(item.uri) { ImageRequest.Builder(context).data(item.uri).size(ThumbnailPixels).build() }
     val shape = RoundedCornerShape(14.dp)
@@ -305,7 +347,7 @@ private fun Copy(item: MediaItem, kept: Boolean, onClick: () -> Unit) {
                 .size(ThumbnailSize)
                 .clip(shape)
                 .then(if (kept) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
-                .clickable(onClick = onClick),
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         ) {
             AsyncImage(
                 model = request,

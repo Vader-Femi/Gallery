@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Compare
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
@@ -174,7 +175,12 @@ fun MenuBottomSheet(
                             label = stringResource(R.string.menu_stories),
                             onClick = { onItemClick(GalleryRoutes.STORIES) },
                         )
-                        Box(Modifier.weight(1f))
+                        ExpressivePillButton(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.Face,
+                            label = stringResource(R.string.menu_people),
+                            onClick = { onItemClick(GalleryRoutes.PEOPLE) },
+                        )
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),

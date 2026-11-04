@@ -13,9 +13,11 @@ data class SearchCriteria(
     val favoritesOnly: Boolean = false,
     /** Only photos taken inside this part of the map. */
     val area: GeoBox? = null,
+    /** Specific media item IDs to restrict results to. */
+    val specificIds: List<Long>? = null,
 ) {
     val isEmpty: Boolean
-        get() = terms.isEmpty() && dateRanges.isEmpty() && mediaType == null && !favoritesOnly && area == null
+        get() = terms.isEmpty() && dateRanges.isEmpty() && mediaType == null && !favoritesOnly && area == null && specificIds == null
 
     companion object {
         val None = SearchCriteria()

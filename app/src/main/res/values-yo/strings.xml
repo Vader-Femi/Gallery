@@ -302,6 +302,7 @@
     <string name="similar_hint">Àwọn fọ́tò wọ̀nyí jọra ṣùgbọ́n kì í ṣe ọ̀kan náà. Tẹ èyí tí o fẹ́ pamọ́ nínú ẹgbẹ́ kọ̀ọ̀kan, kí o sì ṣàyẹ̀wò wọn kí o tó yọ àwọn yòókù kúrò. \"Pa gbogbo wọn mọ́\" fi ẹgbẹ́ náà sílẹ̀ bí ó ṣe wà. Àwọn fọ́tò tí a yọ kúrò ń lọ sí àpótí ìdọ̀tí, a sì lè dá wọn padà.</string>
     <string name="similar_group">Fọ́tò %1$d tó jọra</string>
     <string name="similar_keep_all">Pa gbogbo wọn mọ́</string>
+    <string name="similar_compare">Fi wé</string>
     <string name="similar_remove">Gbé fọ́tò %1$d lọ sí àpótí ìdọ̀tí</string>
     <string name="menu_settings_coming_soon">Ètò yóò dé láìpẹ́</string>
 
@@ -429,4 +430,21 @@
     <string name="settings_strictness_relaxed">Ifọkanbalẹ</string>
     <string name="settings_strictness_normal">Ti Deede</string>
     <string name="settings_strictness_strict">Ti o muna</string>
+
+    <!-- People & Face Groups -->
+    <string name="menu_people">Àwọn ènìyàn</string>
+    <string name="album_people">Àwọn ènìyàn</string>
+    <string name="people_title">Àwọn ènìyàn &amp; Ojú</string>
+    <string name="people_empty_title">Kò tíì sí ènìyàn tí a rí</string>
+    <string name="people_empty_desc">A óò ṣàyẹ̀wò àwọn fọ́tò láti mọ àti láti kó àwọn ojú ènìyàn jọ.</string>
+    <string name="people_scan_button">Ṣàyẹ̀wò fún àwọn ojú</string>
+    <string name="people_rescan_all">Tun gbogbo awọn oju ṣayẹwo</string>
+    <string name="people_scan_progress">Ṣíṣàyẹ̀wò àwọn ojú: %1$d nínú %2$d</string>
+    <string name="people_rename_title">Sọ orúkọ ènìyàn</string>
+    <string name="people_rename_hint">Tẹ orúkọ sii</string>
+    <string name="people_rename_confirm">Fi pamọ́</string>
+    <string name="people_delete_title">Yọ ènìyàn yìí kúrò</string>
+    <string name="people_delete_confirm">Yọ kúrò</string>
+    <string name="people_delete_message">Yọ ẹgbẹ́ ènìyàn yìí kúrò? Àwọn fọ́tò gangan kò ní parẹ́.</string>
+    <string name="people_photos_count">Fọ́tò %1$d</string>
 </resources>

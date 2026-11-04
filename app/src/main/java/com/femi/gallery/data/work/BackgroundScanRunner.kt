@@ -26,6 +26,7 @@ class BackgroundScanRunner @Inject constructor(
     private val colors: ColorIndexRepository,
     private val labels: LabelIndexRepository,
     private val clip: ClipIndexRepository,
+    private val faces: com.femi.gallery.domain.repository.FaceIndexRepository,
 ) {
     enum class Outcome {
         /** Every scan finished. */
@@ -41,15 +42,17 @@ class BackgroundScanRunner @Inject constructor(
         colors.startScan()
         labels.startScan()
         clip.startScan()
+        faces.startScan()
 
         val startedAt = SystemClock.elapsedRealtime()
         try {
             while (true) {
-                val running = locations.isRunning || text.isRunning || colors.isRunning || labels.isRunning || clip.isRunning
+                val running = locations.isRunning || text.isRunning || colors.isRunning || labels.isRunning || clip.isRunning || faces.isRunning
 
                 val scanned = text.scan.value.scanned + colors.scan.value.scanned + labels.scan.value.scanned + locations.scan.value.scanned +
-                    clip.scan.value.scanned
-                val total = text.scan.value.total + colors.scan.value.total + labels.scan.value.total + locations.scan.value.total + clip.scan.value.total
+                    clip.scan.value.scanned + faces.scan.value.scanned
+                val total = text.scan.value.total + colors.scan.value.total + labels.scan.value.total + locations.scan.value.total + clip.scan.value.total +
+                    faces.scan.value.total
                 if (total > 0) {
                     onProgress(scanned, total)
                 }
@@ -78,6 +81,7 @@ class BackgroundScanRunner @Inject constructor(
         colors.stopScan()
         labels.stopScan()
         clip.stopScan()
+        faces.stopScan()
     }
 
     private companion object {

@@ -43,8 +43,21 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Search**
 - [x] Search button on the Pictures tab opens a search screen with suggestion chips
-- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **text written in photos** (on-device OCR), **colours** (`red`, `blue`, `dark`, also `navy`, `violet`, `beige`, ...), **objects and scenes** found by ML Kit's bundled image labeller (`dog`, `beach`, `food`, `car`, ...; everyday words like `puppy` or `dinner` work too), **place names** offline (`paris`, `sao paulo`; accents ignored), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable
+- [x] Understands **file and folder names** (`whatsapp`, `screenshot`, `img_20`), **text written in photos** (on-device OCR), **colours** (`red`, `blue`, `dark`, also `navy`, `violet`, `beige`, ...), **objects and scenes** found by ML Kit's bundled image labeller (`dog`, `beach`, `food`, `car`, ...; everyday words like `puppy` or `dinner` work too), **people's names** from on-device face groups (`john`, `alice`), compound multi-modal queries (`john in red shirt`), **place names** offline (`paris`, `sao paulo`; accents ignored), **dates** (`today`, `yesterday`, `2025`, `october`, `october 2025`, `oct 15`, `from:2026-10-01 to:2026-10-05`), **types** (`videos`, `photos`) and `favorites` — all combinable
 - [x] Results use the same timeline, zoom, selection and viewer (swiping stays inside the results)
+
+**People & Face Groups (On-Device ML)**
+- [x] On-device Google ML Kit Face Detection scans photos in the background (or on demand) with zero cloud dependency
+- [x] Extracts facial landmarks, geometric proportions, and multi-region spatial color/texture representations
+- [x] Automatically clusters matching faces into People groups with adaptive centroid learning
+- [x] **People pill** in the Menu bottom sheet (directly beside Stories) and **People album** in the Albums tab
+- [x] **People & Faces Screen**: visual grid with circular face-cropped avatars, photo counts, renaming, and removal
+- [x] **Person Screen**: full timeline grid of all photos of that person, with 1-tap full-resolution image viewer swiping
+- [x] **Compound Search**: search for a person's name alone (`John`) or combined with colors, labels, and descriptions (`John in red shirt`)
+
+**Similar Photos & Duplicates**
+- [x] Perceptual hash indexing for similar photo detection and content hashing for exact duplicate detection
+- [x] **Compare in Viewer**: "Compare" button on each row in Similar and Duplicate Photos opens the full-screen image viewer scoped directly to that group's photos for instant high-resolution swipe comparison
 
 **Albums**
 - [x] Albums tab with device folders (cover + item count), **Camera pinned first**
@@ -139,7 +152,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Later**
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
-- [ ] More on-device ML: **people / face groups**, auto scene albums
+- [ ] Auto scene albums
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
 

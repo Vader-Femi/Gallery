@@ -302,6 +302,7 @@
     <string name="similar_hint">Waɗannan hotuna suna kama amma ba ɗaya suke ba. Danna wanda za a ajiye a kowane rukuni, ka duba su kafin ka cire sauran. \"Ajiye duka\" yana barin rukuni yadda yake. Hotunan da aka cire suna zuwa kwandon shara kuma ana iya maido da su.</string>
     <string name="similar_group">Hotuna %1$d masu kama</string>
     <string name="similar_keep_all">Ajiye duka</string>
+    <string name="similar_compare">Kwatanta</string>
     <string name="similar_remove">Mayar da hotuna %1$d zuwa kwandon shara</string>
     <string name="menu_settings_coming_soon">Saitunan suna zuwa nan ba da jimawa ba</string>
 
@@ -430,4 +431,21 @@
     <string name="settings_strictness_relaxed">Sako-sako</string>
     <string name="settings_strictness_normal">Na al\'ada</string>
     <string name="settings_strictness_strict">Mai tsanani</string>
+
+    <!-- People & Face Groups -->
+    <string name="menu_people">Mutane</string>
+    <string name="album_people">Mutane</string>
+    <string name="people_title">Mutane da Fuskoki</string>
+    <string name="people_empty_title">Ba a sami mutane ba tukuna</string>
+    <string name="people_empty_desc">Za a bincika hotuna don gano fuskoki da tattara su zuwa rukunin mutane.</string>
+    <string name="people_scan_button">Bincika fuskoki</string>
+    <string name="people_rescan_all">Sake bincika duk fuskoki</string>
+    <string name="people_scan_progress">Ana bincika fuskoki: %1$d daga %2$d</string>
+    <string name="people_rename_title">Saka wa mutum suna</string>
+    <string name="people_rename_hint">Shigar da suna</string>
+    <string name="people_rename_confirm">Ajiye</string>
+    <string name="people_delete_title">Cire mutum</string>
+    <string name="people_delete_confirm">Cire</string>
+    <string name="people_delete_message">Cire wannan rukunin mutum? Hotunan kansu ba za a goge su ba.</string>
+    <string name="people_photos_count">Hotuna %1$d</string>
 </resources>

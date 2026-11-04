@@ -116,3 +116,38 @@ data class ClipRow(
     val modified: Long,
     val embedding: ByteArray,
 )
+
+/** A detected or user-named person clustering similar faces. */
+@Entity(tableName = "person")
+data class PersonRow(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val coverMediaId: Long,
+    val coverCrop: String = "",
+    val photoCount: Int = 0,
+    val centroid: ByteArray = ByteArray(0),
+)
+
+/** A detected face bounding box in a photo, clustered to a [PersonRow]. */
+@Entity(
+    tableName = "face",
+    indices = [
+        Index(value = ["mediaId"]),
+        Index(value = ["personId"]),
+    ],
+)
+data class FaceRow(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val mediaId: Long,
+    val personId: Long,
+    val bounds: String,
+    val feature: ByteArray = ByteArray(0),
+)
+
+/** Which photos have been scanned for faces and when. */
+@Entity(tableName = "scan_face")
+data class FaceScanRow(
+    @PrimaryKey val id: Long,
+    val modified: Long,
+    val faceCount: Int,
+)

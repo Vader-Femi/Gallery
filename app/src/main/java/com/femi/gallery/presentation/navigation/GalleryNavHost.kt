@@ -23,9 +23,12 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.presentation.albums.AlbumScreen
 import com.femi.gallery.presentation.albums.AlbumViewModel
 import com.femi.gallery.presentation.albums.AlbumsScreen
+import com.femi.gallery.presentation.people.PeopleScreen
+import com.femi.gallery.presentation.people.PersonScreen
 import com.femi.gallery.presentation.common.LocalAnimatedVisibilityScope
 import com.femi.gallery.presentation.duplicates.DuplicatesScreen
 import com.femi.gallery.presentation.duplicates.SimilarPhotosScreen
@@ -202,7 +205,13 @@ fun GalleryNavHost(
         }
         composable(GalleryDestination.Albums.route) {
             AlbumsScreen(
-                onAlbumClick = { bucketId -> navController.navigate(GalleryRoutes.album(bucketId)) },
+                onAlbumClick = { bucketId ->
+                    if (bucketId == SpecialAlbums.PEOPLE) {
+                        navController.navigate(GalleryRoutes.PEOPLE)
+                    } else {
+                        navController.navigate(GalleryRoutes.album(bucketId))
+                    }
+                },
             )
         }
         sharedComposable(
@@ -333,11 +342,59 @@ fun GalleryNavHost(
         ) {
             TrimScreen(onClose = { navController.popBackStack() })
         }
-        composable(GalleryRoutes.DUPLICATES) {
-            DuplicatesScreen(onBack = { navController.popBackStack() })
+        composable(GalleryRoutes.DUPLICATES) { entry ->
+            DuplicatesScreen(
+                onBack = { navController.popBackStack() },
+                onCompare = { group, initialMediaId ->
+                    viewerSession.open(
+                        route = GalleryRoutes.viewer(
+                            mediaIndex = 0,
+                            mediaId = initialMediaId,
+                            query = com.femi.gallery.domain.search.SearchQueryParser.idsQuery(group.items.map { it.id }),
+                        ),
+                        origin = entry.id,
+                    )
+                },
+            )
         }
-        composable(GalleryRoutes.SIMILAR) {
-            SimilarPhotosScreen(onBack = { navController.popBackStack() })
+        composable(GalleryRoutes.SIMILAR) { entry ->
+            SimilarPhotosScreen(
+                onBack = { navController.popBackStack() },
+                onCompare = { group, initialMediaId ->
+                    viewerSession.open(
+                        route = GalleryRoutes.viewer(
+                            mediaIndex = 0,
+                            mediaId = initialMediaId,
+                            query = com.femi.gallery.domain.search.SearchQueryParser.idsQuery(group.items.map { it.id }),
+                        ),
+                        origin = entry.id,
+                    )
+                },
+            )
+        }
+        composable(GalleryRoutes.PEOPLE) {
+            PeopleScreen(
+                onBack = { navController.popBackStack() },
+                onPersonClick = { personId -> navController.navigate(GalleryRoutes.person(personId)) },
+            )
+        }
+        sharedComposable(
+            route = GalleryRoutes.PERSON,
+            arguments = listOf(navArgument("personId") { type = NavType.LongType }),
+        ) { entry ->
+            PersonScreen(
+                onBack = { navController.popBackStack() },
+                onMediaClick = { mediaIndex, mediaId, ids ->
+                    viewerSession.open(
+                        route = GalleryRoutes.viewer(
+                            mediaIndex = mediaIndex,
+                            mediaId = mediaId,
+                            query = com.femi.gallery.domain.search.SearchQueryParser.idsQuery(ids),
+                        ),
+                        origin = entry.id,
+                    )
+                },
+            )
         }
         composable(GalleryRoutes.SETTINGS) {
             SettingsScreen(

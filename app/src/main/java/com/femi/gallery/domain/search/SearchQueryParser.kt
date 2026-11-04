@@ -41,6 +41,7 @@ object SearchQueryParser {
     private val videoWords = setOf("video", "videos")
     private val photoWords = setOf("photo", "photos", "picture", "pictures", "image", "images")
     private val favoriteWords = setOf("favorite", "favorites", "favourite", "favourites")
+    private val stopWords = setOf("in", "with", "on", "at", "by", "a", "an", "the", "and", "or", "of")
     private val spaceRegex = Regex("\\s+")
 
     fun parse(
@@ -48,6 +49,12 @@ object SearchQueryParser {
         today: LocalDate = LocalDate.now(),
         zone: ZoneId = ZoneId.systemDefault(),
     ): SearchCriteria {
+        val trimmed = query.trim()
+        if (trimmed.startsWith("ids:", ignoreCase = true)) {
+            val ids = trimmed.substring(4).split(',').mapNotNull { it.trim().toLongOrNull() }
+            return SearchCriteria(specificIds = ids)
+        }
+
         val tokens = query.lowercase()
             .replace('%', ' ')
             .split(spaceRegex)
@@ -126,7 +133,13 @@ object SearchQueryParser {
             else -> emptyList()
         }
 
-        val terms = tokens.filterIndexed { i, _ -> !consumed[i] }
+        val rawTerms = tokens.filterIndexed { i, _ -> !consumed[i] }
+        val terms = if (rawTerms.size > 1) {
+            val filtered = rawTerms.filter { it !in stopWords }
+            if (filtered.isNotEmpty()) filtered else rawTerms
+        } else {
+            rawTerms
+        }
 
         return SearchCriteria(
             terms = terms,
@@ -146,6 +159,9 @@ object SearchQueryParser {
 
     /** The search text that [parse] turns back into [betweenDays]; lets a story travel as a query string. */
     fun betweenDaysQuery(from: LocalDate, to: LocalDate): String = "from:$from to:$to"
+
+    /** The search text that restricts results to specific media IDs. */
+    fun idsQuery(ids: Collection<Long>): String = "ids:${ids.joinToString(",")}"
 
     private fun isYear(token: String): Boolean =
         token.length == 4 && token.all { it.isDigit() } && token.toInt() in 1990..2100

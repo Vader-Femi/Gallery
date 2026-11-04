@@ -302,6 +302,7 @@
     <string name="similar_hint">Dis photos resemble each other but dem no be di same. Tap di one wey you wan keep for each group, and check dem well before you remove di rest. \"Keep all\" go leave di group as e be. Di photos wey you remove go enter recycle bin and you fit bring dem back.</string>
     <string name="similar_group">%1$d photos wey resemble</string>
     <string name="similar_keep_all">Keep all</string>
+    <string name="similar_compare">Compare</string>
     <string name="similar_remove">Move %1$d photos go recycle bin</string>
     <string name="menu_settings_coming_soon">Settings features dey come soon</string>
 
@@ -429,4 +430,21 @@
     <string name="settings_strictness_relaxed">Relaxed</string>
     <string name="settings_strictness_normal">Normal</string>
     <string name="settings_strictness_strict">Strict</string>
+
+    <!-- People & Face Groups -->
+    <string name="menu_people">People</string>
+    <string name="album_people">People</string>
+    <string name="people_title">People &amp; Faces</string>
+    <string name="people_empty_title">No people found yet</string>
+    <string name="people_empty_desc">Photos go dey scanned to find and group faces into people.</string>
+    <string name="people_scan_button">Scan for faces</string>
+    <string name="people_rescan_all">Reset &amp; scan all faces again</string>
+    <string name="people_scan_progress">Scanning faces: %1$d of %2$d</string>
+    <string name="people_rename_title">Name person</string>
+    <string name="people_rename_hint">Enter person name</string>
+    <string name="people_rename_confirm">Save</string>
+    <string name="people_delete_title">Remove person</string>
+    <string name="people_delete_confirm">Remove</string>
+    <string name="people_delete_message">Remove dis person group? Di real photos no go delete.</string>
+    <string name="people_photos_count">%1$d photos</string>
 </resources>

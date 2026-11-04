@@ -51,6 +51,7 @@ class MediaStoreDataSource @Inject constructor(
     private val labelIndex: LabelIndexHolder,
     private val photoPlaceIndexHolder: PhotoPlaceIndexHolder,
     private val semanticSearch: SemanticSearch,
+    private val personIndex: com.femi.gallery.domain.face.PersonIndex,
     private val mirror: MediaMirror,
     private val settingsRepository: SettingsRepository,
 ) {
@@ -106,7 +107,9 @@ class MediaStoreDataSource @Inject constructor(
         } ?: MediaOrder.Empty
         // Where a photo was taken is not in MediaStore, so an area is applied here, from the scan results.
         val area = search?.area
-        if (area == null) order else order.retainIds(locationIndex.current().idsIn(area))
+        val afterArea = if (area == null) order else order.retainIds(locationIndex.current().idsIn(area))
+        val specific = search?.specificIds
+        if (specific == null) afterArea else afterArea.retainIds(specific.toSet())
     }
 
     /** [block] on the mirror once it is up to date, or null when it cannot answer (not copied yet, no access, any error). */
@@ -447,6 +450,13 @@ class MediaStoreDataSource @Inject constructor(
             )
         }
         if (search.favoritesOnly) selection.append(" AND ${MediaStore.MediaColumns.IS_FAVORITE} = 1")
+        if (search.specificIds != null) {
+            if (search.specificIds.isEmpty()) {
+                selection.append(" AND 1=0")
+            } else {
+                selection.append(" AND ${MediaStore.MediaColumns._ID} IN (${search.specificIds.joinToString(",")})")
+            }
+        }
     }
 
     suspend fun createDeleteRequests(uris: List<String>): List<IntentSender> = withContext(io) {
@@ -554,7 +564,7 @@ class MediaStoreDataSource @Inject constructor(
         val described = semanticSearch.idsFor(terms)
         return terms.associateWith { term ->
             textIndex.idsMatching(term) + colorIndex.idsMatching(term) + labelIndex.idsMatching(term) +
-                photoPlaceIndexHolder.idsMatching(term) + described
+                photoPlaceIndexHolder.idsMatching(term) + personIndex.idsMatching(term) + described
         }
     }
 
