@@ -60,12 +60,14 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Story title and cover**: rename a story and pick any photo or video as its cover from the story's menu (stored in `story_edits.bin`, private to the app). The edit follows the story when a trip grows by a few days; an "On this day" memory never takes over the title of a longer trip
 - [x] **Videos in stories**: a video count on the story card, and All / Pictures / Videos chips inside a story (shown when it has videos; the viewer opens exactly what the grid shows)
 - [x] **Slideshow from any album** (play button in the album's top bar; not offered for the recycle bin or the Locked folder), plus **shuffle** and **speed** (slow, normal, fast) buttons that appear while the slideshow is paused. Shuffle covers the whole album (a loading indicator shows while it is prepared) and keeps its order until you turn it off and on again
+- [x] **Slideshow music**: bundled ambient theme track, custom song picker from device audio, and automatic audio ducking during video slides *(progress bar, shuffle, speed choice remembered between launches, and videos in slideshows)*
 - [x] **Duplicate finder** (Menu > Duplicates): finds photos and videos that are byte-for-byte the same, reading as little as possible (same size first, then three small pieces of each file, then the whole file only for the survivors). In each group the copy to keep is suggested (favorite, then a file under DCIM, then the earliest, then the shorter name); tap another to change it, and one button moves all other copies to the recycle bin through the normal system confirmation
 - [x] **Index database** (`gallery.db`, Room): the text read from photos, labels, colours, locations and the duplicate finder's file fingerprints are kept in one database instead of separate files. A scan writes only the rows that changed, in one transaction (before, every checkpoint rewrote a whole file), and the duplicate search no longer reads files again after the app was closed. The old files are imported once and deleted, so nothing is scanned twice. The database is excluded from backups (it holds text from photos and locations)
 - [x] **Describe-a-photo groundwork** (needs the model files of the next step before it does anything): a Kotlin port of OpenAI's CLIP tokenizer (checked against OpenAI's own Python on 36 phrases, including punctuation, accents, curly quotes and a text long enough to be cut), the preprocessing a CLIP image model expects, embeddings kept as one byte per number (about 25 MB for 50,000 photos) in the database (`scan_clip`), and `SemanticSearch`. Search stays what it was: every word is still matched by name, album, text in the photo, colour, label and place, and the photos that look like the whole description are only **added** to each word's matches. A photo found only by what it shows is therefore found, and nothing that was found before is lost. Switch in Settings (on by default)
 - [x] **Describe a photo**: Settings > Describe a photo. The app has no internet access, so you copy two model files onto the phone once (an image model and a text model of the same CLIP model; they never leave it), and the photos are then read in the background (also in the background job, with its notification). A model that cannot be used, or two that do not belong together (different embedding sizes), is refused when you choose the file. Replacing a model discards the embeddings made by the old one and reads the photos again. **Which files:** CLIP ViT-B/32 exported to ONNX works well; at the time of writing the Hugging Face repository `Xenova/clip-vit-base-patch32` has `onnx/vision_model_quantized.onnx` (about 88 MB) and `onnx/text_model_quantized.onnx` (about 64 MB).
 - [x] **Safe swap when importing your own CLIP model**: the import writes over the current model file before it is checked, so an unusable file also deletes the working model; the new file is checked first (in its `.part` file) and only then replaces the old one.
 - [x] **Describe a photo strictness**: a strictness setting (Relaxed, Normal, Strict) that adjusts closeness floor and margin thresholds (`SemanticSelection.Config`) for AI searches.
+- [x] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
 - [x] **Library mirror** (the `media` table in the index database): a local copy of the library (one row per photo or video, with its URI, dates, size, album and favorite flag). The timeline order, the album list, the favorites, photo-only and video-only lists, date ranges (stories) and the rows of every page are read from it with SQL instead of from MediaStore row by row. It is kept in step through MediaStore's generation number: if the number has not changed since the last time, nothing is done at all; otherwise only the rows changed since then are read, and the item counts are compared so that deleted and trashed items are dropped. The first copy is made in the background while MediaStore keeps answering. Searches for words, places and map areas, and the recycle bin, still go to MediaStore
 - [x] **Scans keep going in the background** (WorkManager): the places, text, colour and label scans carry on after you leave the app, and a daily job reads new photos even if you do not open it. They wait for the battery not to be low, and Settings can restrict them to while charging or turn them off. A job gives up after about eight minutes (the system allows ten) and is started again; the scans save their progress as they go, so it carries on from there. A scan you are watching in the app is never stopped by the job
 - [x] Cards with a cover from the middle of the event, a date title (`Sat, Oct 3`, `Oct 30 – Nov 2`, `Dec 30, 2025 – Jan 2, 2026`) and the number of photos and videos
@@ -83,6 +85,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] Tap to hide/show the interface and system bars
 - [x] **Shared-element transition**: the tapped thumbnail grows into the viewer and the photo shrinks back into the grid; when you close the viewer after swiping, the grid scrolls to the photo you ended on (from Pictures, albums, search and stories)
 - [x] **Details panel**: file name, date, folder, resolution, size, duration, camera, aperture, shutter speed, ISO, focal length and GPS (from EXIF)
+- [x] **Copy text from photo**: on-device ML Kit OCR extraction with clipboard copying from the viewer overflow menu and details sheet
 - [x] Share, favorite, edit, lock and move to trash (streamlined into primary actions and a "More" overflow menu)
 
 **Photo editor**
@@ -92,6 +95,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Adjust** brightness, contrast, saturation, warmth, **sharpen**, **vignette** and **straighten** with live preview; straightening trims the empty corners automatically
 - [x] **Filters**: Vivid, Warm, Cool, Mono, Noir, Sepia, Fade and Dramatic, previewed on your photo
 - [x] **Save as copy or replace original**: the editor now offers both options — when replacing the original, the edited photo is saved directly over the old one, preserving EXIF metadata
+- [x] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details
 
 **Locked folder**
 - [x] **Move photos and videos into a private Locked folder** that other apps — including other galleries and the system photo picker — cannot see
@@ -130,16 +134,12 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [ ] **Map extras**: a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
-- [x] **Slideshow music**: bundled ambient theme track, custom song picker from device audio, and automatic audio ducking during video slides *(progress bar, shuffle, speed choice remembered between launches, and videos in slideshows)*
 - [ ] **Editor extras**: draw, text and stickers (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo**, to tune on a real library: a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
 
 **Later**
-- [x] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
-- [x] **Copy text from photo**: on-device ML Kit OCR extraction with clipboard copying from the viewer overflow menu and details sheet
 - [ ] More on-device ML: **people / face groups**, auto scene albums
-- [x] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
 - [ ] Video editor, the rest: speed change and a few basic effects
 - [ ] Motion photo playback, *(set as wallpaper added)*
 - [ ] Tablet / landscape layouts
