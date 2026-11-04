@@ -87,18 +87,30 @@ class OnnxClipEmbedder @Inject constructor(
     override suspend fun embed(mediaId: Long): FloatArray? = withContext(io) {
         try {
             val model = imageModel() ?: return@withContext null
-            val pixels = loadPixels(mediaId, model.size) ?: return@withContext null
-            val data = ClipPreprocess.toTensor(pixels, model.size)
-            val shape = longArrayOf(1, 3, model.size.toLong(), model.size.toLong())
-            OnnxTensor.createTensor(environment, FloatBuffer.wrap(data), shape).use { input ->
-                model.session.run(mapOf(model.inputName to input)).use { result ->
-                    ClipQuantizer.normalize(vectorOf(result.get(model.outputIndex).value))
+            val photoPixels = loadPhotoPixels(mediaId, model.size)
+            if (photoPixels != null) {
+                return@withContext embedPixels(photoPixels, model)
+            }
+            val videoFrames = loadVideoFrames(mediaId, model.size)
+            if (videoFrames.isEmpty()) return@withContext null
+            if (videoFrames.size == 1) {
+                return@withContext embedPixels(videoFrames[0], model)
+            }
+            // Multi-keyframe video: mean-pool (average) embeddings across sampled timestamps and re-normalize
+            val vectors = videoFrames.map { embedPixels(it, model) }
+            if (vectors.isEmpty()) return@withContext null
+            val dim = vectors[0].size
+            val sum = FloatArray(dim)
+            for (vec in vectors) {
+                for (d in 0 until dim) {
+                    sum[d] += vec[d]
                 }
             }
+            ClipQuantizer.normalize(sum)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Could not embed photo $mediaId", e)
+            Log.w(TAG, "Could not embed media $mediaId", e)
             null
         }
     }
@@ -284,8 +296,18 @@ class OnnxClipEmbedder @Inject constructor(
         else -> throw IllegalStateException("The output is not a vector")
     }
 
-    /** The photo or video keyframe as the model wants it: scaled until its shorter side fits, cropped in the middle, as packed pixels. */
-    private fun loadPixels(mediaId: Long, size: Int): IntArray? {
+    private fun embedPixels(pixels: IntArray, model: ImageModel): FloatArray {
+        val data = ClipPreprocess.toTensor(pixels, model.size)
+        val shape = longArrayOf(1, 3, model.size.toLong(), model.size.toLong())
+        return OnnxTensor.createTensor(environment, FloatBuffer.wrap(data), shape).use { input ->
+            model.session.run(mapOf(model.inputName to input)).use { result ->
+                ClipQuantizer.normalize(vectorOf(result.get(model.outputIndex).value))
+            }
+        }
+    }
+
+    /** The photo as the model wants it: scaled until its shorter side fits, cropped in the middle, as packed pixels. */
+    private fun loadPhotoPixels(mediaId: Long, size: Int): IntArray? {
         val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, mediaId)
         val decoded: Bitmap = try {
             ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, imageUri)) { decoder, info, _ ->
@@ -294,52 +316,72 @@ class OnnxClipEmbedder @Inject constructor(
                 decoder.setTargetSize(w, h)
             }
         } catch (_: Exception) {
-            // Not a readable image; try extracting a video keyframe from the middle of the video.
-            loadVideoKeyframe(mediaId, size)
-        } ?: return null
-
-        val scaled = if (decoded.width < size || decoded.height < size) {
-            Bitmap.createScaledBitmap(decoded, maxOf(size, decoded.width), maxOf(size, decoded.height), true)
-        } else {
-            decoded
+            return null
         }
-        val (left, top) = ClipPreprocess.cropOrigin(scaled.width, scaled.height, size)
-        val square = Bitmap.createBitmap(scaled, left, top, size, size)
-        val pixels = IntArray(size * size)
-        square.getPixels(pixels, 0, size, 0, 0, size, size)
-        if (square !== scaled) square.recycle()
-        if (scaled !== decoded) scaled.recycle()
-        decoded.recycle()
-        return pixels
+        return toCroppedPixels(decoded, size)
     }
 
-    /** Extracts a keyframe from the middle of the video with [mediaId] using MediaMetadataRetriever. */
-    private fun loadVideoKeyframe(mediaId: Long, size: Int): Bitmap? {
+    /**
+     * Extracts keyframes across the video with [mediaId] using MediaMetadataRetriever.
+     * For short videos (< 3s), samples 1 frame from the middle.
+     * For longer videos (>= 3s), samples 3 keyframes at 20%, 50%, and 80% to cover the whole clip.
+     */
+    private fun loadVideoFrames(mediaId: Long, size: Int): List<IntArray> {
         val videoUri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, mediaId)
         val retriever = MediaMetadataRetriever()
         return try {
             retriever.setDataSource(context, videoUri)
             val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
             val durationMs = durationStr?.toLongOrNull() ?: 0L
-            val targetTimeUs = if (durationMs > 0) (durationMs / 2) * 1000L else 0L
-            val raw = retriever.getScaledFrameAtTime(targetTimeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, size, size)
-                ?: retriever.getFrameAtTime(targetTimeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                ?: return null
-            val (w, h) = ClipPreprocess.scaledSize(raw.width, raw.height, size)
-            if (raw.width != w || raw.height != h) {
-                val scaled = Bitmap.createScaledBitmap(raw, w, h, true)
-                if (scaled !== raw) raw.recycle()
-                scaled
-            } else {
-                raw
+            val targetTimesUs = when {
+                durationMs <= 0L -> listOf(0L)
+                durationMs < 3000L -> listOf((durationMs / 2) * 1000L)
+                else -> listOf(
+                    (durationMs * 2 / 10) * 1000L,
+                    (durationMs * 5 / 10) * 1000L,
+                    (durationMs * 8 / 10) * 1000L,
+                )
+            }
+            targetTimesUs.mapNotNull { timeUs ->
+                extractSingleFrame(retriever, timeUs, size)
             }
         } catch (_: Exception) {
-            null
+            emptyList()
         } finally {
             try {
                 retriever.release()
             } catch (_: Exception) {}
         }
+    }
+
+    private fun extractSingleFrame(retriever: MediaMetadataRetriever, timeUs: Long, size: Int): IntArray? {
+        val raw = retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, size, size)
+            ?: retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+            ?: retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
+            ?: return null
+        val (w, h) = ClipPreprocess.scaledSize(raw.width, raw.height, size)
+        val scaled = if (raw.width != w || raw.height != h) {
+            Bitmap.createScaledBitmap(raw, w, h, true).also { if (it !== raw) raw.recycle() }
+        } else {
+            raw
+        }
+        return toCroppedPixels(scaled, size)
+    }
+
+    private fun toCroppedPixels(bitmap: Bitmap, size: Int): IntArray {
+        val scaled = if (bitmap.width < size || bitmap.height < size) {
+            Bitmap.createScaledBitmap(bitmap, maxOf(size, bitmap.width), maxOf(size, bitmap.height), true)
+        } else {
+            bitmap
+        }
+        val (left, top) = ClipPreprocess.cropOrigin(scaled.width, scaled.height, size)
+        val square = Bitmap.createBitmap(scaled, left, top, size, size)
+        val pixels = IntArray(size * size)
+        square.getPixels(pixels, 0, size, 0, 0, size, size)
+        if (square !== scaled) square.recycle()
+        if (scaled !== bitmap) scaled.recycle()
+        bitmap.recycle()
+        return pixels
     }
 
     private companion object {
