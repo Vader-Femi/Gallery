@@ -128,7 +128,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] **Map extras**: a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
 - [ ] **Slideshow music** (cannot be tested without a device), *(progress bar added; shuffle and speed choice between launches remembered; videos in slideshows added)*
 - [ ] **Editor extras**: draw, text and stickers (straighten, sharpen, vignette and keeping the camera details are done)
-- [ ] **Describe a photo**, to tune on a real library: the closeness floor and margin (`SemanticSelection.Config`), a strictness setting, "a photo of ..." wrapping for short words, a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
+- [ ] **Describe a photo**, to tune on a real library: the closeness floor and margin (`SemanticSelection.Config`), a strictness setting, a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
 
 **Later**
 - [ ] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details

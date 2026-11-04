@@ -36,10 +36,19 @@ class SemanticSearch @Inject constructor(
 
         val key = "${index.version}|$phrase"
         synchronized(answers) { answers[key]?.let { return it } }
-        val query = embedder.embedText(phrase) ?: return emptySet()
+        
+        // "a photo of ..." wrapping for short words: CLIP often understands a short word better 
+        // when presented as a sentence instead of a naked noun.
+        val searchPhrase = if (words.size == 1 && phrase.length >= 3 && !phrase.startsWith("a ") && !phrase.startsWith("an ")) {
+            "a photo of a $phrase"
+        } else {
+            phrase
+        }
+        
+        val query = embedder.embedText(searchPhrase) ?: return emptySet()
         val scores = clip.scores(query)
         val found = clip.search(query).toSet()
-        Log.d(TAG, "\"$phrase\": ${found.size} photos, best ${scores?.maxOrNull()}")
+        Log.d(TAG, "\"$searchPhrase\": ${found.size} photos, best ${scores?.maxOrNull()}")
         synchronized(answers) { answers[key] = found }
         return found
     }
