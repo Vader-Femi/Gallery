@@ -88,19 +88,38 @@ class ViewerViewModel @Inject constructor(
     val details: StateFlow<MediaDetails?> = _details.asStateFlow()
     private var detailsJob: Job? = null
 
-    fun showDetails(item: MediaItem) {
+    private val _currentHasText = MutableStateFlow(false)
+    val currentHasText: StateFlow<Boolean> = _currentHasText.asStateFlow()
+
+    private val _scrollToText = MutableStateFlow(false)
+    val scrollToText: StateFlow<Boolean> = _scrollToText.asStateFlow()
+
+    private var checkTextJob: Job? = null
+
+    fun checkTextFor(item: MediaItem?) {
+        checkTextJob?.cancel()
+        _currentHasText.value = false
+        if (item == null) return
+        checkTextJob = viewModelScope.launch {
+            val text = getPhotoText(item.id)
+            _currentHasText.value = !text.isNullOrBlank()
+        }
+    }
+
+    fun showDetails(item: MediaItem, scrollToText: Boolean = false) {
         detailsJob?.cancel()
+        _scrollToText.value = scrollToText
         _details.value = MediaDetails(item) // file info is available instantly, EXIF follows
         detailsJob = viewModelScope.launch {
             val base = getMediaDetails(item)
-            val text = if (!item.isVideo) getPhotoText(item.id) else null
+            val text = getPhotoText(item.id)
             _details.value = base.copy(detectedText = text)
         }
     }
 
     fun copyPhotoText(item: MediaItem, onResult: (String?) -> Unit) {
         viewModelScope.launch {
-            val text = if (!item.isVideo) getPhotoText(item.id) else null
+            val text = getPhotoText(item.id)
             onResult(text)
         }
     }
@@ -108,6 +127,7 @@ class ViewerViewModel @Inject constructor(
     fun hideDetails() {
         detailsJob?.cancel()
         _details.value = null
+        _scrollToText.value = false
     }
 
     companion object {

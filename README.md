@@ -139,7 +139,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
 - [x] **Copy text from photo**: on-device ML Kit OCR extraction with clipboard copying from the viewer overflow menu and details sheet
 - [ ] More on-device ML: **people / face groups**, auto scene albums
-- [ ] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
+- [x] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
 - [ ] Video editor, the rest: speed change and a few basic effects
 - [ ] Motion photo playback, *(set as wallpaper added)*
 - [ ] Tablet / landscape layouts

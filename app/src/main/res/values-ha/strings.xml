@@ -162,8 +162,10 @@
     <string name="action_set_as_wallpaper">Saita a matsayin fuskar bangare</string>
     <string name="action_copy_text">Kwafi rubutu</string>
     <string name="details_detected_text">Rubutun da ke cikin hoto</string>
+    <string name="details_detected_text_video">Rubutun da ke cikin bidiyo</string>
     <string name="text_copied">An kwafi rubutu</string>
     <string name="text_none_found">Babu rubutu a cikin wannan hoton</string>
+    <string name="text_none_found_video">Babu rubutu a cikin wannan bidiyon</string>
 
     <string name="external_open_gallery">Buɗe Hotuna</string>
     <string name="picker_title_any">Zaɓi hoto ko bidiyo</string>

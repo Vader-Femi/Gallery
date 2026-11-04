@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -27,12 +28,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.MediaDetails
@@ -48,9 +49,11 @@ fun DetailsSheet(
     details: MediaDetails,
     onDismiss: () -> Unit,
     onSetWallpaper: (() -> Unit)? = null,
+    scrollToBottom: Boolean = false,
 ) {
     val context = LocalContext.current
     val item = details.item
+    val scrollState = rememberScrollState()
     val formatter = remember {
         DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
     }
@@ -58,11 +61,17 @@ fun DetailsSheet(
         formatter.format(Instant.ofEpochMilli(item.dateTakenMillis).atZone(ZoneId.systemDefault()))
     }
 
+    LaunchedEffect(scrollToBottom, details.detectedText) {
+        if (scrollToBottom && !details.detectedText.isNullOrBlank()) {
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 8.dp),
         ) {
@@ -105,7 +114,7 @@ fun DetailsSheet(
             if (!details.detectedText.isNullOrBlank()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.details_detected_text),
+                    text = stringResource(if (item.isVideo) R.string.details_detected_text_video else R.string.details_detected_text),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -116,17 +125,18 @@ fun DetailsSheet(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = details.detectedText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 8,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        SelectionContainer {
+                            Text(
+                                text = details.detectedText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                         Spacer(Modifier.height(8.dp))
                         OutlinedButton(
                             onClick = {
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Photo text", details.detectedText))
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Media text", details.detectedText))
                                 Toast.makeText(context, R.string.text_copied, Toast.LENGTH_SHORT).show()
                             },
                             modifier = Modifier.align(Alignment.End),

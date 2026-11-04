@@ -4,6 +4,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.media.MediaMetadataRetriever
 import android.provider.MediaStore
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.repository.TextRecognizer
@@ -50,7 +51,7 @@ class MlKitTextRecognizer @Inject constructor(
     }
 
     /**
-     * The photo as a bitmap, upright (the decoder applies the rotation) and at most [MAX_SIDE] pixels
+     * The photo or video keyframe as a bitmap, upright (the decoder applies the rotation) and at most [MAX_SIDE] pixels
      * on its longer side: big enough to read the small print of a screenshot, small enough to be fast.
      * Null when the photo is gone.
      *
@@ -72,10 +73,27 @@ class MlKitTextRecognizer @Inject constructor(
                 }
             }
         } catch (e: FileNotFoundException) {
-            null
+            decodeVideo(mediaId)
         } catch (e: IOException) {
-            // Damaged, or a format the decoder does not know.
-            throw UnreadableImageException(e)
+            decodeVideo(mediaId) ?: throw UnreadableImageException(e)
+        }
+    }
+
+    private fun decodeVideo(mediaId: Long): Bitmap? {
+        val uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, mediaId)
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, uri)
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val durationMs = durationStr?.toLongOrNull() ?: 0L
+            val targetTimeUs = if (durationMs > 0) (durationMs / 2) * 1000L else 0L
+            retriever.getFrameAtTime(targetTimeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+        } catch (_: Exception) {
+            null
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {}
         }
     }
 

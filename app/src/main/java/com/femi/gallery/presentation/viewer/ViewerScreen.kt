@@ -14,6 +14,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -60,6 +62,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -88,8 +91,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -168,6 +173,8 @@ private fun ViewerContent(
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     val backgroundColor = if (chromeVisible) MaterialTheme.colorScheme.background else Color.Black
     val details by viewModel.details.collectAsStateWithLifecycle()
+    val currentHasText by viewModel.currentHasText.collectAsStateWithLifecycle()
+    val scrollToText by viewModel.scrollToText.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     ImmersiveMode(enabled = !chromeVisible)
@@ -205,6 +212,9 @@ private fun ViewerContent(
             }
 
             val current = items.peekOrNull(pagerState.currentPage)
+            LaunchedEffect(current?.id) {
+                viewModel.checkTextFor(current)
+            }
 
             // A video is only prepared once the pager has rested on it for a moment. Swiping quickly past
             // several videos therefore prepares none of them (preparing one is heavy work on the main thread).
@@ -458,19 +468,18 @@ private fun ViewerContent(
                                         setWallpaper(context, current)
                                     }
                                 } else null,
-                                if (!current.isVideo) {
-                                    ViewerAction(Icons.Outlined.ContentCopy, stringResource(R.string.action_copy_text)) {
-                                        viewModel.copyPhotoText(current) { text ->
-                                            if (!text.isNullOrBlank()) {
-                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                clipboard.setPrimaryClip(ClipData.newPlainText("Photo text", text))
-                                                Toast.makeText(context, R.string.text_copied, Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                Toast.makeText(context, R.string.text_none_found, Toast.LENGTH_SHORT).show()
-                                            }
+                                ViewerAction(Icons.Outlined.ContentCopy, stringResource(R.string.action_copy_text)) {
+                                    viewModel.copyPhotoText(current) { text ->
+                                        if (!text.isNullOrBlank()) {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                            clipboard.setPrimaryClip(ClipData.newPlainText("Media text", text))
+                                            Toast.makeText(context, R.string.text_copied, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            val msg = if (current.isVideo) R.string.text_none_found_video else R.string.text_none_found
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                         }
                                     }
-                                } else null,
+                                },
                                 ViewerAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
                                     lockWithScreenLockCheck(context) { viewModel.actions.lock(listOf(ref)) }
                                 },
@@ -480,7 +489,32 @@ private fun ViewerContent(
                     }
                     val cachedPrimary = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions.first }
                     val cachedOverflow = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions.second }
-                    Column {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        AnimatedVisibility(
+                            visible = currentHasText,
+                            enter = fadeIn() + scaleIn(),
+                            exit = fadeOut() + scaleOut(),
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .padding(end = 16.dp, bottom = 8.dp),
+                        ) {
+                            Surface(
+                                onClick = { viewModel.showDetails(current, scrollToText = true) },
+                                shape = CircleShape,
+                                color = Color(0xFFFFD600),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.size(38.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "T",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        color = Color(0xFF1C1B1F),
+                                    )
+                                }
+                            }
+                        }
                         if (current.isVideo && activePlayer != null) {
                             VideoControlsOverlay(
                                 isPlaying = isPlaying,
@@ -540,6 +574,7 @@ private fun ViewerContent(
             details = it,
             onDismiss = viewModel::hideDetails,
             onSetWallpaper = if (!it.item.isVideo) { { setWallpaper(context, it.item) } } else null,
+            scrollToBottom = scrollToText,
         )
     }
 }

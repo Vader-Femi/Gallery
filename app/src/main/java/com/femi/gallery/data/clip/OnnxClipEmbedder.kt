@@ -8,6 +8,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.media.MediaMetadataRetriever
 import android.provider.MediaStore
 import android.util.Log
 import com.femi.gallery.di.IoDispatcher
@@ -283,18 +284,20 @@ class OnnxClipEmbedder @Inject constructor(
         else -> throw IllegalStateException("The output is not a vector")
     }
 
-    /** The photo as the model wants it: scaled until its shorter side fits, cropped in the middle, as packed pixels. */
+    /** The photo or video keyframe as the model wants it: scaled until its shorter side fits, cropped in the middle, as packed pixels. */
     private fun loadPixels(mediaId: Long, size: Int): IntArray? {
-        val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, mediaId)
+        val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, mediaId)
         val decoded: Bitmap = try {
-            ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { decoder, info, _ ->
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, imageUri)) { decoder, info, _ ->
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                 val (w, h) = ClipPreprocess.scaledSize(info.size.width, info.size.height, size)
                 decoder.setTargetSize(w, h)
             }
-        } catch (e: IOException) {
-            return null // gone, damaged, or a format the decoder does not know
-        }
+        } catch (_: Exception) {
+            // Not a readable image; try extracting a video keyframe from the middle of the video.
+            loadVideoKeyframe(mediaId, size)
+        } ?: return null
+
         val scaled = if (decoded.width < size || decoded.height < size) {
             Bitmap.createScaledBitmap(decoded, maxOf(size, decoded.width), maxOf(size, decoded.height), true)
         } else {
@@ -308,6 +311,35 @@ class OnnxClipEmbedder @Inject constructor(
         if (scaled !== decoded) scaled.recycle()
         decoded.recycle()
         return pixels
+    }
+
+    /** Extracts a keyframe from the middle of the video with [mediaId] using MediaMetadataRetriever. */
+    private fun loadVideoKeyframe(mediaId: Long, size: Int): Bitmap? {
+        val videoUri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, mediaId)
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, videoUri)
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val durationMs = durationStr?.toLongOrNull() ?: 0L
+            val targetTimeUs = if (durationMs > 0) (durationMs / 2) * 1000L else 0L
+            val raw = retriever.getScaledFrameAtTime(targetTimeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, size, size)
+                ?: retriever.getFrameAtTime(targetTimeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                ?: return null
+            val (w, h) = ClipPreprocess.scaledSize(raw.width, raw.height, size)
+            if (raw.width != w || raw.height != h) {
+                val scaled = Bitmap.createScaledBitmap(raw, w, h, true)
+                if (scaled !== raw) raw.recycle()
+                scaled
+            } else {
+                raw
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {}
+        }
     }
 
     private companion object {

@@ -162,8 +162,10 @@
     <string name="action_set_as_wallpaper">Use as wallpaper</string>
     <string name="action_copy_text">Copy text</string>
     <string name="details_detected_text">Text inside photo</string>
+    <string name="details_detected_text_video">Text inside video</string>
     <string name="text_copied">Text don copy</string>
     <string name="text_none_found">No text inside this photo</string>
+    <string name="text_none_found_video">No text inside this video</string>
 
     <string name="external_open_gallery">Open Gallery</string>
     <string name="picker_title_any">Choose photo or video</string>
