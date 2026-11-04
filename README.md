@@ -130,7 +130,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Later**
 - [ ] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details
-- [ ] **Safe swap when importing your own CLIP model**: the import writes over the current model file before it is checked, so an unusable file also deletes the working model; check the new file first (in its `.part` file) and only then replace the old one
+- [x] **Safe swap when importing your own CLIP model**: the import writes over the current model file before it is checked, so an unusable file also deletes the working model; check the new file first (in its `.part` file) and only then replace the old one
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
 - [ ] More on-device ML: copy text from a photo, **people / face groups**, auto scene albums
 - [ ] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too

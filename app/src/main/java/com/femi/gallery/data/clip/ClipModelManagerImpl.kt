@@ -27,11 +27,11 @@ class ClipModelManagerImpl @Inject constructor(
     override val isInitializing: StateFlow<Boolean> = files.isCopying
 
     override suspend fun install(kind: ClipModelKind, source: String): ClipInstallResult {
-        if (!files.import(kind, Uri.parse(source))) return ClipInstallResult.Unusable
+        if (!files.stageImport(kind, Uri.parse(source))) return ClipInstallResult.Unusable
 
-        val own = embedder.check(kind)
+        val own = embedder.check(kind, files.stagedFile(kind))
         if (own !is OnnxClipEmbedder.Check.Ok) {
-            files.delete(kind)
+            files.deleteStaged(kind)
             return ClipInstallResult.Unusable
         }
 
@@ -39,10 +39,16 @@ class ClipModelManagerImpl @Inject constructor(
         if (files.file(otherKind).length() > 0) {
             val other = embedder.check(otherKind)
             if (other is OnnxClipEmbedder.Check.Ok && other.dimension != own.dimension) {
-                files.delete(kind)
+                files.deleteStaged(kind)
                 return ClipInstallResult.Mismatch
             }
         }
+        
+        if (!files.commitImport(kind)) {
+            files.deleteStaged(kind)
+            return ClipInstallResult.Unusable
+        }
+        
         return ClipInstallResult.Installed
     }
 

@@ -146,10 +146,12 @@ class ClipModelFiles @Inject constructor(
             return ClipModelSignature.of(image.length(), image.lastModified(), text.length(), text.lastModified())
         }
 
-    /** Copies the file at [source] in as the [kind] model. False if it could not be read or written. */
-    suspend fun import(kind: ClipModelKind, source: Uri): Boolean = withContext(io) { changes.withLock {
+    fun stagedFile(kind: ClipModelKind): File = File(directory, fileName(kind) + PART_SUFFIX)
+
+    /** Copies the file at [source] in as a temporary staged model. False if it could not be read or written. */
+    suspend fun stageImport(kind: ClipModelKind, source: Uri): Boolean = withContext(io) {
         val target = file(kind)
-        val temporary = File(target.parentFile, fileName(kind) + PART_SUFFIX)
+        val temporary = stagedFile(kind)
         try {
             target.parentFile?.mkdirs()
             val input = context.contentResolver.openInputStream(source) ?: return@withContext false
@@ -158,11 +160,6 @@ class ClipModelFiles @Inject constructor(
                 temporary.delete()
                 return@withContext false
             }
-            if (!temporary.renameTo(target)) {
-                target.delete()
-                if (!temporary.renameTo(target)) return@withContext false
-            }
-            refresh()
             true
         } catch (e: IOException) {
             temporary.delete()
@@ -171,7 +168,24 @@ class ClipModelFiles @Inject constructor(
             temporary.delete()
             false
         }
+    }
+
+    /** Renames the staged model to be the active one. */
+    suspend fun commitImport(kind: ClipModelKind): Boolean = withContext(io) { changes.withLock {
+        val target = file(kind)
+        val temporary = stagedFile(kind)
+        if (!temporary.exists()) return@withContext false
+        if (!temporary.renameTo(target)) {
+            target.delete()
+            if (!temporary.renameTo(target)) return@withContext false
+        }
+        refresh()
+        true
     } }
+
+    suspend fun deleteStaged(kind: ClipModelKind) = withContext(io) {
+        stagedFile(kind).delete()
+    }
 
     suspend fun delete(kind: ClipModelKind) = withContext(io) {
         changes.withLock {

@@ -133,13 +133,13 @@ class OnnxClipEmbedder @Inject constructor(
      * Opens the [kind] model and runs it once on a blank input, to find out whether it can be used and how long its
      * embeddings are. Used when a file is installed, so the person is told at once instead of at the first search.
      */
-    suspend fun check(kind: ClipModelKind): Check = withContext(io) {
+    suspend fun check(kind: ClipModelKind, file: java.io.File = files.file(kind)): Check = withContext(io) {
         try {
             lock.withLock {
                 closeLocked()
                 when (kind) {
                     ClipModelKind.Image -> {
-                        val model = openImage() ?: return@withLock Check.Unusable("not a picture model")
+                        val model = openImage(file) ?: return@withLock Check.Unusable("not a picture model")
                         val size = model.size
                         val blank = FloatArray(3 * size * size)
                         OnnxTensor.createTensor(environment, FloatBuffer.wrap(blank), longArrayOf(1, 3, size.toLong(), size.toLong())).use { input ->
@@ -149,7 +149,7 @@ class OnnxClipEmbedder @Inject constructor(
                         }
                     }
                     ClipModelKind.Text -> {
-                        val model = openText() ?: return@withLock Check.Unusable("not a text model")
+                        val model = openText(file) ?: return@withLock Check.Unusable("not a text model")
                         // "start" and "end" and nothing else: the shortest description there is.
                         val ids = IntArray(model.length)
                         ids[0] = ClipTokenizer.START_ID
@@ -228,16 +228,16 @@ class OnnxClipEmbedder @Inject constructor(
         setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
     }
 
-    private fun openImage(): ImageModel? {
-        val session = environment.createSession(files.file(ClipModelKind.Image).absolutePath, options())
+    private fun openImage(file: java.io.File = files.file(ClipModelKind.Image)): ImageModel? {
+        val session = environment.createSession(file.absolutePath, options())
         val input = ClipModelIo.imageInput(ports(session.inputInfo, session.inputNames)) ?: run { session.close(); return null }
         val outputs = ports(session.outputInfo, session.outputNames)
         val output = ClipModelIo.embeddingOutput(outputs) ?: run { session.close(); return null }
         return ImageModel(session, input.name, ClipModelIo.imageSize(input), session.outputNames.indexOf(output.name))
     }
 
-    private fun openText(): TextModel? {
-        val session = environment.createSession(files.file(ClipModelKind.Text).absolutePath, options())
+    private fun openText(file: java.io.File = files.file(ClipModelKind.Text)): TextModel? {
+        val session = environment.createSession(file.absolutePath, options())
         val inputs = ports(session.inputInfo, session.inputNames)
         val ids = ClipModelIo.textIds(inputs) ?: run { session.close(); return null }
         val mask = ClipModelIo.textMask(inputs)
