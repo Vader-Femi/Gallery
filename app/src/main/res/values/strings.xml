@@ -160,6 +160,10 @@
     <string name="viewer_mute">Mute</string>
     <string name="viewer_unmute">Unmute</string>
     <string name="action_set_as_wallpaper">Set as wallpaper</string>
+    <string name="action_copy_text">Copy text</string>
+    <string name="details_detected_text">Text in photo</string>
+    <string name="text_copied">Text copied to clipboard</string>
+    <string name="text_none_found">No text found in photo</string>
 
     <string name="external_open_gallery">Open Gallery</string>
     <string name="picker_title_any">Choose a photo or video</string>

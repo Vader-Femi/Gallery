@@ -160,6 +160,10 @@
     <string name="viewer_mute">Kashe sauti</string>
     <string name="viewer_unmute">Kunna sauti</string>
     <string name="action_set_as_wallpaper">Saita a matsayin fuskar bangare</string>
+    <string name="action_copy_text">Kwafi rubutu</string>
+    <string name="details_detected_text">Rubutun da ke cikin hoto</string>
+    <string name="text_copied">An kwafi rubutu</string>
+    <string name="text_none_found">Babu rubutu a cikin wannan hoton</string>
 
     <string name="external_open_gallery">Buɗe Hotuna</string>
     <string name="picker_title_any">Zaɓi hoto ko bidiyo</string>

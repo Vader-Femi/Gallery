@@ -1,11 +1,14 @@
 package com.femi.gallery.presentation.viewer
 
+import android.app.WallpaperManager
 import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.view.LayoutInflater
 import android.util.Log
+import android.view.LayoutInflater
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.snap
@@ -38,6 +41,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
@@ -45,7 +49,6 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PlayCircle
-import android.app.WallpaperManager
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.RestoreFromTrash
@@ -435,7 +438,10 @@ private fun ViewerContent(
                                 },
                                 ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
                                     viewModel.actions.trash(listOf(ref))
-                                }
+                                },
+                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                    viewModel.showDetails(current)
+                                },
                             )
                             val overflow = listOfNotNull(
                                 ViewerAction(
@@ -452,11 +458,21 @@ private fun ViewerContent(
                                         setWallpaper(context, current)
                                     }
                                 } else null,
+                                if (!current.isVideo) {
+                                    ViewerAction(Icons.Outlined.ContentCopy, stringResource(R.string.action_copy_text)) {
+                                        viewModel.copyPhotoText(current) { text ->
+                                            if (!text.isNullOrBlank()) {
+                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                clipboard.setPrimaryClip(ClipData.newPlainText("Photo text", text))
+                                                Toast.makeText(context, R.string.text_copied, Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, R.string.text_none_found, Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                } else null,
                                 ViewerAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
                                     lockWithScreenLockCheck(context) { viewModel.actions.lock(listOf(ref)) }
-                                },
-                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
-                                    viewModel.showDetails(current)
                                 },
                             )
                             primary to overflow

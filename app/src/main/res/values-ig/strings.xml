@@ -160,6 +160,10 @@
     <string name="viewer_mute">Mechie ụda</string>
     <string name="viewer_unmute">Mepee ụda</string>
     <string name="action_set_as_wallpaper">Seta dị ka wallpaper</string>
+    <string name="action_copy_text">Detuo ederede</string>
+    <string name="details_detected_text">Ederede dị na foto</string>
+    <string name="text_copied">Edetụla ederede na clipboard</string>
+    <string name="text_none_found">Ọ dịghị ederede achọtara na foto a</string>
 
     <string name="external_open_gallery">Mepee Gallery</string>
     <string name="picker_title_any">Họrọ foto ma ọ bụ vidiyo</string>

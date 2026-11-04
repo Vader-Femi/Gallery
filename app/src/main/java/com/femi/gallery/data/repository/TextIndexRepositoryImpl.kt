@@ -84,6 +84,18 @@ class TextIndexRepositoryImpl @Inject constructor(
         _scan.update { it.copy(status = TextScanStatus.Idle) }
     }
 
+    override suspend fun getText(mediaId: Long): String? {
+        val cached = index.current().entries.firstOrNull { it.id == mediaId }?.text
+        if (!cached.isNullOrBlank()) {
+            return cached
+        }
+        return try {
+            recognizer.recognize(mediaId)?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     override fun startScan() {
         if (!permissions.hasMediaAccess()) {
             Log.i(TAG, "Not scanning: no access to photos")

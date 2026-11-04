@@ -137,7 +137,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Later**
 - [ ] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
-- [ ] More on-device ML: copy text from a photo, **people / face groups**, auto scene albums
+- [x] **Copy text from photo**: on-device ML Kit OCR extraction with clipboard copying from the viewer overflow menu and details sheet
+- [ ] More on-device ML: **people / face groups**, auto scene albums
 - [ ] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
 - [ ] Video editor, the rest: speed change and a few basic effects
 - [ ] Motion photo playback, *(set as wallpaper added)*

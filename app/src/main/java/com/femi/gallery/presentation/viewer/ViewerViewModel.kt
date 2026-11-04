@@ -16,6 +16,7 @@ import com.femi.gallery.domain.search.SearchQueryParser
 import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
 import com.femi.gallery.domain.usecase.GetMediaDetailsUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
+import com.femi.gallery.domain.usecase.GetPhotoTextUseCase
 import com.femi.gallery.domain.usecase.RequestDeleteUseCase
 import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
 import com.femi.gallery.domain.usecase.RequestTrashUseCase
@@ -36,6 +37,7 @@ class ViewerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     getPagedMedia: GetPagedMediaUseCase,
     private val getMediaDetails: GetMediaDetailsUseCase,
+    private val getPhotoText: GetPhotoTextUseCase,
     private val settingsRepository: SettingsRepository,
     selectionFactory: MediaSelectionControllerFactory,
     val lockSession: LockSession,
@@ -89,7 +91,18 @@ class ViewerViewModel @Inject constructor(
     fun showDetails(item: MediaItem) {
         detailsJob?.cancel()
         _details.value = MediaDetails(item) // file info is available instantly, EXIF follows
-        detailsJob = viewModelScope.launch { _details.value = getMediaDetails(item) }
+        detailsJob = viewModelScope.launch {
+            val base = getMediaDetails(item)
+            val text = if (!item.isVideo) getPhotoText(item.id) else null
+            _details.value = base.copy(detectedText = text)
+        }
+    }
+
+    fun copyPhotoText(item: MediaItem, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val text = if (!item.isVideo) getPhotoText(item.id) else null
+            onResult(text)
+        }
     }
 
     fun hideDetails() {

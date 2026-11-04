@@ -18,4 +18,7 @@ interface TextIndexRepository {
 
     /** Ends a running scan. What it has read and saved up to its last checkpoint is kept, and the next scan carries on from there. */
     fun stopScan()
+
+    /** Returns the recognized text for [mediaId], from cache or by recognizing it on-demand. */
+    suspend fun getText(mediaId: Long): String?
 }
