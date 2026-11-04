@@ -465,4 +465,8 @@
     <string name="people_delete_confirm">Cire</string>
     <string name="people_delete_message">Cire wannan rukunin mutum? Hotunan kansu ba za a goge su ba.</string>
     <string name="people_photos_count">Hotuna %1$d</string>
+    <string name="people_section_named">Wadanda aka saka wa suna</string>
+    <string name="people_section_unnamed">Sauran fuskoki</string>
+    <string name="people_add_name">Saka suna</string>
+    <string name="people_edit_name">Gyara suna</string>
 </resources>

@@ -48,8 +48,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **People & Face Groups (On-Device ML)**
 - [x] On-device Google ML Kit Face Detection scans photos in the background (or on demand) with zero cloud dependency
-- [x] Extracts facial landmarks, geometric proportions, and multi-region spatial color/texture representations
-- [x] Automatically clusters matching faces into People groups with adaptive centroid learning
+- [x] High-precision ArcFace MobileFaceNet ONNX model (512-d angular margin embeddings) with 2D affine eye-landmark alignment and pose/quality filtering
+- [x] Automatically clusters matching faces into People groups with adaptive centroid learning and negative same-photo constraints
 - [x] **People pill** in the Menu bottom sheet (directly beside Stories) and **People album** in the Albums tab
 - [x] **People & Faces Screen**: visual grid with circular face-cropped avatars, photo counts, renaming, and removal
 - [x] **Person Screen**: full timeline grid of all photos of that person, with 1-tap full-resolution image viewer swiping

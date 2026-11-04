@@ -464,4 +464,8 @@
     <string name="people_delete_confirm">Yọ kúrò</string>
     <string name="people_delete_message">Yọ ẹgbẹ́ ènìyàn yìí kúrò? Àwọn fọ́tò gangan kò ní parẹ́.</string>
     <string name="people_photos_count">Fọ́tò %1$d</string>
+    <string name="people_section_named">Àwọn tí a sọ lórúkọ</string>
+    <string name="people_section_unnamed">Àwọn ojú míràn</string>
+    <string name="people_add_name">Fi orúkọ kún un</string>
+    <string name="people_edit_name">Ṣatúnṣe orúkọ</string>
 </resources>

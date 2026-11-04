@@ -10,6 +10,7 @@ import com.femi.gallery.domain.repository.FaceIndexRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,6 +24,13 @@ class PeopleViewModel @Inject constructor(
 ) : ViewModel() {
 
     val people: StateFlow<List<PersonRow>> = personDao.flowAll()
+        .map { list ->
+            list.sortedWith(
+                compareByDescending<PersonRow> { it.isNamed }
+                    .thenByDescending { it.photoCount }
+                    .thenBy { it.name }
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val scanState: StateFlow<FaceScanState> = faceRepo.scan

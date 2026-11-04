@@ -464,4 +464,8 @@
     <string name="people_delete_confirm">Wepụ</string>
     <string name="people_delete_message">Wepụ otu onye a? Agaghị ehichapụ foto ndị ahụ n\'onwe ha.</string>
     <string name="people_photos_count">Foto %1$d</string>
+    <string name="people_section_named">Ndị akpọrọ aha</string>
+    <string name="people_section_unnamed">Ihu ndị ọzọ</string>
+    <string name="people_add_name">Tinye aha</string>
+    <string name="people_edit_name">Dezie aha</string>
 </resources>

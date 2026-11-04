@@ -24,7 +24,11 @@ class FaceClusterer @Inject constructor(
         val people = personDao.all()
         var bestPerson: PersonRow? = null
         var bestScore = -1f
-        val threshold = if (feature.size > 100) CLIP_CLUSTER_THRESHOLD else ZERO_MEAN_CLUSTER_THRESHOLD
+        val threshold = when {
+            feature.size == 512 -> MOBILE_FACENET_THRESHOLD
+            feature.size > 100 -> CLIP_CLUSTER_THRESHOLD
+            else -> ZERO_MEAN_CLUSTER_THRESHOLD
+        }
 
         for (person in people) {
             if (person.id in excludedPersonIds) continue
@@ -94,6 +98,7 @@ class FaceClusterer @Inject constructor(
     }
 
     companion object {
+        const val MOBILE_FACENET_THRESHOLD = 0.62f
         const val CLIP_CLUSTER_THRESHOLD = 0.76f
         const val ZERO_MEAN_CLUSTER_THRESHOLD = 0.70f
     }

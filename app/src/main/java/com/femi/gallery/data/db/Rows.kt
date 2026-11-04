@@ -126,7 +126,14 @@ data class PersonRow(
     val coverCrop: String = "",
     val photoCount: Int = 0,
     val centroid: ByteArray = ByteArray(0),
-)
+) {
+    val isNamed: Boolean
+        get() = !name.matches(DEFAULT_NAME_REGEX)
+
+    companion object {
+        private val DEFAULT_NAME_REGEX = Regex("""^[Pp]erson\s+\d+$""")
+    }
+}
 
 /** A detected face bounding box in a photo, clustered to a [PersonRow]. */
 @Entity(

@@ -248,10 +248,22 @@ abstract class MediaDao {
 
 @Dao
 abstract class PersonDao {
-    @Query("SELECT * FROM person ORDER BY photoCount DESC, name ASC")
+    @Query("""
+        SELECT * FROM person 
+        ORDER BY 
+            CASE WHEN name GLOB '[Pp]erson [0-9]*' THEN 1 ELSE 0 END ASC, 
+            photoCount DESC, 
+            name ASC
+    """)
     abstract fun flowAll(): Flow<List<PersonRow>>
 
-    @Query("SELECT * FROM person ORDER BY photoCount DESC, name ASC")
+    @Query("""
+        SELECT * FROM person 
+        ORDER BY 
+            CASE WHEN name GLOB '[Pp]erson [0-9]*' THEN 1 ELSE 0 END ASC, 
+            photoCount DESC, 
+            name ASC
+    """)
     abstract suspend fun all(): List<PersonRow>
 
     @Query("SELECT * FROM person WHERE id = :id")

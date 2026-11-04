@@ -26,13 +26,13 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.roundToInt
 
-import com.femi.gallery.domain.repository.ImageEmbedder
+import com.femi.gallery.domain.face.FaceAligner
 
 @Singleton
 class MlKitFaceDetector @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val io: CoroutineDispatcher,
-    private val embedder: ImageEmbedder,
+    private val mobileFaceNetEmbedder: MobileFaceNetEmbedder,
 ) : FaceDetector {
 
     private val detector by lazy {
@@ -40,7 +40,7 @@ class MlKitFaceDetector @Inject constructor(
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
-            .setMinFaceSize(0.12f)
+            .setMinFaceSize(0.10f)
             .build()
         FaceDetection.getClient(options)
     }
@@ -53,8 +53,8 @@ class MlKitFaceDetector @Inject constructor(
             val w = bitmap.width.toFloat()
             val h = bitmap.height.toFloat()
             faces.mapNotNull { face ->
+                if (!FaceAligner.isReliable(face)) return@mapNotNull null
                 val box = face.boundingBox
-                if (box.width() <= 10 || box.height() <= 10) return@mapNotNull null
                 val bounds = RectF(
                     (box.left / w).coerceIn(0f, 1f),
                     (box.top / h).coerceIn(0f, 1f),
@@ -62,24 +62,10 @@ class MlKitFaceDetector @Inject constructor(
                     (box.bottom / h).coerceIn(0f, 1f),
                 )
 
-                val padW = (box.width() * 0.15f).toInt()
-                val padH = (box.height() * 0.15f).toInt()
-                val cropLeft = maxOf(0, box.left - padW)
-                val cropTop = maxOf(0, box.top - padH)
-                val cropRight = minOf(bitmap.width, box.right + padW)
-                val cropBottom = minOf(bitmap.height, box.bottom + padH)
-                val cropW = cropRight - cropLeft
-                val cropH = cropBottom - cropTop
-
-                var feature: FloatArray? = null
-                if (embedder.isAvailable && cropW > 16 && cropH > 16) {
-                    val crop = Bitmap.createBitmap(bitmap, cropLeft, cropTop, cropW, cropH)
-                    feature = embedder.embedBitmap(crop)
-                    if (crop !== bitmap) crop.recycle()
-                }
-                if (feature == null) {
-                    feature = FaceFeatureHelper.extractFeatures(bitmap, face)
-                }
+                val alignedFace = FaceAligner.align(bitmap, face)
+                val feature = mobileFaceNetEmbedder.embed(alignedFace)
+                    ?: FaceFeatureHelper.extractFeatures(bitmap, face)
+                if (alignedFace !== bitmap) alignedFace.recycle()
 
                 DetectedFace(bounds, feature)
             }

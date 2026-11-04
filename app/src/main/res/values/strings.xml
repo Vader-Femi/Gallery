@@ -466,5 +466,9 @@
     <string name="people_delete_confirm">Remove</string>
     <string name="people_delete_message">Remove this person group? The photos themselves will not be deleted.</string>
     <string name="people_photos_count">%1$d photos</string>
+    <string name="people_section_named">Named</string>
+    <string name="people_section_unnamed">Other faces</string>
+    <string name="people_add_name">Add name</string>
+    <string name="people_edit_name">Edit name</string>
 </resources>
 
