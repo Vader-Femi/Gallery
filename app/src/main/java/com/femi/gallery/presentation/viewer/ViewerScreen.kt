@@ -49,6 +49,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Lock
@@ -69,6 +70,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -174,6 +176,8 @@ private fun ViewerContent(
     val backgroundColor = if (chromeVisible) MaterialTheme.colorScheme.background else Color.Black
     val details by viewModel.details.collectAsStateWithLifecycle()
     val currentHasText by viewModel.currentHasText.collectAsStateWithLifecycle()
+    val canRevert by viewModel.canRevert.collectAsStateWithLifecycle()
+    val imageRevision by viewModel.imageRevision.collectAsStateWithLifecycle()
     val scrollToText by viewModel.scrollToText.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -364,6 +368,7 @@ private fun ViewerContent(
                                 bottomReserve = 0.dp,
                                 activePlayer = if (pagerState.settledPage == page && pageItem?.uri == activeVideoUri) activePlayer else null,
                                 playerProvided = true,
+                                imageRevision = imageRevision,
                             )
                         }
                     }
@@ -463,6 +468,18 @@ private fun ViewerContent(
                                         onTrim(current.uri)
                                     }
                                 } else null,
+                                if (!current.isVideo && canRevert) {
+                                    ViewerAction(Icons.Outlined.History, stringResource(R.string.action_revert_original)) {
+                                        viewModel.revertOriginal(current) { success ->
+                                            if (success) {
+                                                Toast.makeText(context, R.string.toast_reverted, Toast.LENGTH_SHORT).show()
+                                                items.refresh()
+                                            } else {
+                                                Toast.makeText(context, R.string.toast_failed, Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                } else null,
                                 if (!current.isVideo) {
                                     ViewerAction(Icons.Outlined.Wallpaper, stringResource(R.string.action_set_as_wallpaper)) {
                                         setWallpaper(context, current)
@@ -488,7 +505,7 @@ private fun ViewerContent(
                         }
                     }
                     val cachedPrimary = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions.first }
-                    val cachedOverflow = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions.second }
+                    val cachedOverflow = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite, canRevert) { actions.second }
                     Column(modifier = Modifier.fillMaxWidth()) {
                         AnimatedVisibility(
                             visible = currentHasText,
@@ -540,16 +557,18 @@ private fun ViewerContent(
                             )
                         }
                         if (items.itemCount > 1) {
-                            MediaStrip(
-                                items = items,
-                                pagerState = pagerState,
-                                currentPositionMs = { currentPositionMs },
-                                durationMs = { durationMs },
-                                onSeek = { seekMs ->
-                                    activePlayer?.seekTo(seekMs)
-                                    currentPositionMs = seekMs
-                                },
-                            )
+                            key(imageRevision) {
+                                MediaStrip(
+                                    items = items,
+                                    pagerState = pagerState,
+                                    currentPositionMs = { currentPositionMs },
+                                    durationMs = { durationMs },
+                                    onSeek = { seekMs ->
+                                        activePlayer?.seekTo(seekMs)
+                                        currentPositionMs = seekMs
+                                    },
+                                )
+                            }
                         }
                         ActionBar(primaryActions = cachedPrimary, overflowActions = cachedOverflow)
                     }
@@ -573,19 +592,6 @@ private fun ViewerContent(
         DetailsSheet(
             details = it,
             onDismiss = viewModel::hideDetails,
-            onSetWallpaper = if (!it.item.isVideo) { { setWallpaper(context, it.item) } } else null,
-            onRevertOriginal = if (it.canRevert) {
-                {
-                    viewModel.revertOriginal(it.item) { success ->
-                        if (success) {
-                            Toast.makeText(context, R.string.toast_reverted, Toast.LENGTH_SHORT).show()
-                            viewModel.hideDetails()
-                        } else {
-                            Toast.makeText(context, R.string.toast_failed, Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            } else null,
             scrollToBottom = scrollToText,
         )
     }
@@ -602,49 +608,59 @@ private fun ViewerPage(
     activePlayer: ExoPlayer? = null,
     /** True when the caller supplies the player (the viewer does, once it has prepared one); no page then makes its own. */
     playerProvided: Boolean = false,
+    imageRevision: Long = 0L,
 ) {
     when {
         item == null -> Box(Modifier.fillMaxSize())
         item.isVideo -> VideoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) }, activePlayer = activePlayer, ownsPlayer = !playerProvided)
-        else -> PhotoPage(item, isCurrent, onTap = { onChromeChange(!chromeVisible) })
+        else -> PhotoPage(item, isCurrent, imageRevision = imageRevision, onTap = { onChromeChange(!chromeVisible) })
     }
 }
 
 @Composable
-internal fun PhotoPage(item: MediaItem, isCurrent: Boolean, onTap: () -> Unit) {
+internal fun PhotoPage(
+    item: MediaItem,
+    isCurrent: Boolean,
+    imageRevision: Long = 0L,
+    onTap: () -> Unit,
+) {
     val context = LocalContext.current
     val latestOnTap by rememberUpdatedState(onTap)
     val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id) else Modifier
 
     val viewerDrag = LocalViewerDrag.current
-    val zoomableState = me.saket.telephoto.zoomable.rememberZoomableImageState()
-    // A photo that is swiped away is put back to fit-to-screen, as the photo page did before Telephoto, so that
-    // coming back to it does not show it still zoomed in.
-    LaunchedEffect(isCurrent) {
-        if (!isCurrent) zoomableState.zoomableState.resetZoom(animationSpec = snap())
-    }
-    LaunchedEffect(zoomableState.zoomableState.zoomFraction, isCurrent) {
-        if (viewerDrag != null && isCurrent) {
-            viewerDrag.zoomed = (zoomableState.zoomableState.zoomFraction ?: 0f) > 0.02f
+
+    key(item.uri, imageRevision) {
+        val zoomableState = me.saket.telephoto.zoomable.rememberZoomableImageState()
+        // A photo that is swiped away is put back to fit-to-screen, as the photo page did before Telephoto, so that
+        // coming back to it does not show it still zoomed in.
+        LaunchedEffect(isCurrent) {
+            if (!isCurrent) zoomableState.zoomableState.resetZoom(animationSpec = snap())
         }
-    }
+        LaunchedEffect(zoomableState.zoomableState.zoomFraction, isCurrent) {
+            if (viewerDrag != null && isCurrent) {
+                viewerDrag.zoomed = (zoomableState.zoomableState.zoomFraction ?: 0f) > 0.02f
+            }
+        }
 
-    val thumbnailKey = GridThumbnails.keyFor(item.id)
-    val request = remember(item.uri, thumbnailKey) {
-        ImageRequest.Builder(context)
-            .data(item.uri)
-            .apply { if (thumbnailKey != null) placeholderMemoryCacheKey(thumbnailKey) }
-            .crossfade(true)
-            .build()
-    }
+        val thumbnailKey = GridThumbnails.keyFor(item.id)
+        val request = remember(item.uri, thumbnailKey, imageRevision) {
+            ImageRequest.Builder(context)
+                .data(item.uri)
+                .apply { if (thumbnailKey != null && imageRevision == 0L) placeholderMemoryCacheKey(thumbnailKey) }
+                .memoryCacheKey(if (imageRevision > 0L) "${item.uri}?rev=$imageRevision" else null)
+                .crossfade(true)
+                .build()
+        }
 
-    me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage(
-        model = request,
-        state = zoomableState,
-        contentDescription = null,
-        modifier = Modifier.fillMaxSize().then(sharedModifier),
-        onClick = { latestOnTap() }
-    )
+        me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage(
+            model = request,
+            state = zoomableState,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().then(sharedModifier),
+            onClick = { latestOnTap() }
+        )
+    }
 }
 
 @Composable

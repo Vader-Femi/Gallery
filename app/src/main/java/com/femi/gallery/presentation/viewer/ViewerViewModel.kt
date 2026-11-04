@@ -95,6 +95,12 @@ class ViewerViewModel @Inject constructor(
     private val _currentHasText = MutableStateFlow(false)
     val currentHasText: StateFlow<Boolean> = _currentHasText.asStateFlow()
 
+    private val _canRevert = MutableStateFlow(false)
+    val canRevert: StateFlow<Boolean> = _canRevert.asStateFlow()
+
+    private val _imageRevision = MutableStateFlow(0L)
+    val imageRevision: StateFlow<Long> = _imageRevision.asStateFlow()
+
     private val _scrollToText = MutableStateFlow(false)
     val scrollToText: StateFlow<Boolean> = _scrollToText.asStateFlow()
 
@@ -103,10 +109,17 @@ class ViewerViewModel @Inject constructor(
     fun checkTextFor(item: MediaItem?) {
         checkTextJob?.cancel()
         _currentHasText.value = false
+        _canRevert.value = false
         if (item == null) return
         checkTextJob = viewModelScope.launch {
-            val text = getPhotoText(item.id)
-            _currentHasText.value = !text.isNullOrBlank()
+            launch {
+                val text = getPhotoText(item.id)
+                _currentHasText.value = !text.isNullOrBlank()
+            }
+            launch {
+                val can = if (!item.isVideo) canRevertOriginal(item.uri) else false
+                _canRevert.value = can
+            }
         }
     }
 
@@ -130,7 +143,12 @@ class ViewerViewModel @Inject constructor(
                     viewModelScope.launch {
                         val ok = revertOriginalUseCase(item.uri)
                         if (ok) {
-                            showDetails(item)
+                            com.femi.gallery.presentation.common.GridThumbnails.forget(item.id)
+                            _canRevert.value = false
+                            _imageRevision.value = System.currentTimeMillis()
+                            if (_details.value != null) {
+                                showDetails(item)
+                            }
                         }
                         onDone(ok)
                     }

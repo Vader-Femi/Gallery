@@ -19,8 +19,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,8 +47,6 @@ import java.util.Locale
 fun DetailsSheet(
     details: MediaDetails,
     onDismiss: () -> Unit,
-    onSetWallpaper: (() -> Unit)? = null,
-    onRevertOriginal: (() -> Unit)? = null,
     scrollToBottom: Boolean = false,
 ) {
     val context = LocalContext.current
@@ -148,33 +144,6 @@ fun DetailsSheet(
                             Text(stringResource(R.string.action_copy_text))
                         }
                     }
-                }
-            }
-
-            if (details.canRevert && onRevertOriginal != null) {
-                Spacer(Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = onRevertOriginal,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Outlined.History, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_revert_original))
-                }
-            }
-
-            if (!item.isVideo && onSetWallpaper != null) {
-                Spacer(Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = {
-                        onSetWallpaper()
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Outlined.Wallpaper, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_set_as_wallpaper))
                 }
             }
             Spacer(Modifier.height(24.dp))

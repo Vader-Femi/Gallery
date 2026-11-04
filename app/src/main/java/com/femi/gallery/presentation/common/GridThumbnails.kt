@@ -20,6 +20,11 @@ object GridThumbnails {
         if (size.isSpecified && size.width > 0f && size.height > 0f) sizes.put(mediaId, size)
     }
 
+    fun forget(mediaId: Long) {
+        keys.remove(mediaId)
+        sizes.remove(mediaId)
+    }
+
     fun keyFor(mediaId: Long): MemoryCache.Key? = keys.get(mediaId)
 
     /**
