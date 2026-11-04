@@ -36,6 +36,8 @@ data class EditState(
     val sharpen: Float = 0f,
     val vignette: Float = 0f,
     val filter: EditFilter = EditFilter.None,
+    /** Drawings, text and stickers on the finished photo (after crop, effects and colours), in order, last on top. */
+    val markup: List<MarkupItem> = emptyList(),
 ) {
     val isUnchanged: Boolean get() = this == EditState()
 

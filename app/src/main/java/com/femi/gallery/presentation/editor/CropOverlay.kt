@@ -94,7 +94,7 @@ fun CropOverlay(
 }
 
 /** Where a photo of the given size is drawn when fitted and centered in the container. */
-private fun fitRect(containerWidth: Float, containerHeight: Float, imageWidth: Int, imageHeight: Int): Rect {
+internal fun fitRect(containerWidth: Float, containerHeight: Float, imageWidth: Int, imageHeight: Int): Rect {
     val scale = min(containerWidth / imageWidth, containerHeight / imageHeight)
     val width = imageWidth * scale
     val height = imageHeight * scale

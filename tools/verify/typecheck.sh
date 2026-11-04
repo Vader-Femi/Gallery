@@ -24,7 +24,7 @@ add "$J"/di/ScopeModule.kt "$J"/di/DispatcherModule.kt "$J"/di/DatabaseModule.kt
 for dir in data/db data/duplicates data/story data/clip; do
     [ -d "$J/$dir" ] && while IFS= read -r f; do FILES+=("$f"); done < <(find "$J/$dir" -name '*.kt')
 done
-add "$J"/data/mediastore/MediaStoreDataSource.kt "$J"/data/repository/ClipIndexRepositoryImpl.kt "$J"/data/edit/BitmapEditor.kt "$J"/core/lifecycle/*.kt "$J"/data/video/*.kt "$J"/presentation/trim/TrimViewModel.kt "$J"/data/similar/*.kt "$J"/data/repository/SimilarPhotoRepositoryImpl.kt "$J"/data/locked/Locked{Store,Keys,Backup,Provider}.kt "$J"/data/locked/KeyEncryptor.kt "$J"/data/locked/TinkContentCipher.kt "$J"/core/security/*.kt "$J"/presentation/settings/LockedProtectionViewModel.kt
+add "$J"/data/mediastore/MediaStoreDataSource.kt "$J"/data/repository/ClipIndexRepositoryImpl.kt "$J"/data/edit/BitmapEditor.kt "$J"/core/lifecycle/*.kt "$J"/data/video/*.kt "$J"/presentation/trim/TrimViewModel.kt "$J"/data/similar/*.kt "$J"/data/repository/SimilarPhotoRepositoryImpl.kt "$J"/data/locked/Locked{Store,Keys,Backup,Provider}.kt "$J"/data/locked/KeyEncryptor.kt "$J"/data/locked/TinkContentCipher.kt "$J"/core/security/*.kt "$J"/presentation/settings/LockedProtectionViewModel.kt "$J"/core/graphics/*.kt "$J"/presentation/editor/EditorViewModel.kt
 add "$J"/core/permission/MediaPermissions.kt "$J"/core/lifecycle/AppForeground.kt "$J"/presentation/settings/SettingsDataStore.kt "$J"/presentation/pictures/TimelineZoom.kt
 add "$J"/data/color/*IndexHolder.kt "$J"/data/label/*IndexHolder.kt "$J"/data/map/*IndexHolder.kt
 add "$J"/data/text/*IndexHolder.kt "$J"/data/location/*Holder.kt "$J"/data/location/LocationIndex*.kt

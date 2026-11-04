@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.RotateLeft
 import androidx.compose.material.icons.automirrored.outlined.RotateRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Flip
 import androidx.compose.material.icons.outlined.PhotoFilter
@@ -156,11 +157,16 @@ fun EditorScreen(
                         EditorTool.Crop -> CropPanel(state, viewModel)
                         EditorTool.Adjust -> AdjustPanel(edit, viewModel)
                         EditorTool.Filters -> FiltersPanel(state, viewModel)
+                        EditorTool.Markup -> MarkupPanel(state, viewModel)
                     }
                     ToolTabs(selected = state.tool, onSelect = viewModel::selectTool)
                 }
             }
         }
+    }
+
+    if (state.confirmClearMarkup) {
+        ConfirmClearMarkupDialog(onConfirm = viewModel::confirmClearingMarkup, onCancel = viewModel::cancelClearingMarkup)
     }
 
     if (confirmDiscard) {
@@ -219,6 +225,24 @@ private fun Preview(state: EditorUiState, viewModel: EditorViewModel, colorFilte
                     colorFilter = colorFilter,
                     modifier = bounds,
                 )
+                if (!cropping) {
+                    MarkupOverlay(
+                        imageWidth = bitmap.width,
+                        imageHeight = bitmap.height,
+                        items = state.edit.markup,
+                        selectedId = state.selectedMarkupId,
+                        interactive = state.tool == EditorTool.Markup && !state.saving,
+                        mode = state.markupMode,
+                        penColor = state.penColor,
+                        penWidth = state.penWidth,
+                        highlighter = state.highlighter,
+                        onCommitStroke = { points -> viewModel.commitStroke(points, bitmap.width.toFloat(), bitmap.height.toFloat()) },
+                        onSelect = viewModel::selectMarkup,
+                        onBeginGesture = viewModel::beginMarkupGesture,
+                        onTransform = viewModel::transformItem,
+                        modifier = bounds,
+                    )
+                }
                 if (cropping) {
                     CropOverlay(
                         imageWidth = bitmap.width,
@@ -379,6 +403,7 @@ private fun ToolTabs(selected: EditorTool, onSelect: (EditorTool) -> Unit) {
         ToolTab(Icons.Outlined.Crop, R.string.editor_tool_crop, selected == EditorTool.Crop) { onSelect(EditorTool.Crop) }
         ToolTab(Icons.Outlined.Tune, R.string.editor_tool_adjust, selected == EditorTool.Adjust) { onSelect(EditorTool.Adjust) }
         ToolTab(Icons.Outlined.PhotoFilter, R.string.editor_tool_filters, selected == EditorTool.Filters) { onSelect(EditorTool.Filters) }
+        ToolTab(Icons.Outlined.Brush, R.string.editor_tool_markup, selected == EditorTool.Markup) { onSelect(EditorTool.Markup) }
     }
 }
 

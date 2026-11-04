@@ -19,6 +19,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
+import com.femi.gallery.core.graphics.MarkupRenderer
 import com.femi.gallery.di.IoDispatcher
 import com.femi.gallery.domain.edit.CropRect
 import com.femi.gallery.domain.edit.EditState
@@ -211,8 +212,11 @@ class BitmapEditor @Inject constructor(
         val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
             colorFilter = ColorMatrixColorFilter(ColorMatrix(state.colorMatrix()))
         }
-        Canvas(result).drawBitmap(effected, 0f, 0f, paint)
+        val canvas = Canvas(result)
+        canvas.drawBitmap(effected, 0f, 0f, paint)
         effected.recycle()
+        // Drawings, text and stickers go on last, so that the colours of the edit do not tint them.
+        MarkupRenderer.draw(canvas, result.width.toFloat(), result.height.toFloat(), state.markup)
 
         val isPng = meta.mime == "image/png"
         val baseName = meta.name.substringBeforeLast('.', meta.name).ifEmpty { "photo" }
@@ -306,8 +310,11 @@ class BitmapEditor @Inject constructor(
         val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
             colorFilter = ColorMatrixColorFilter(ColorMatrix(state.colorMatrix()))
         }
-        Canvas(result).drawBitmap(effected, 0f, 0f, paint)
+        val canvas = Canvas(result)
+        canvas.drawBitmap(effected, 0f, 0f, paint)
         effected.recycle()
+        // Drawings, text and stickers go on last, so that the colours of the edit do not tint them.
+        MarkupRenderer.draw(canvas, result.width.toFloat(), result.height.toFloat(), state.markup)
 
         // Encode first, in memory: if that fails, the original has not been touched.
         val encoded = ByteArrayOutputStream().use { buffer ->
