@@ -46,10 +46,19 @@ class ClipModelViewModel @Inject constructor(
 
     val semanticSearch: StateFlow<Boolean> = settingsRepository.semanticSearch
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+        
+    val strictness: StateFlow<com.femi.gallery.domain.repository.SemanticSearchStrictness> = settingsRepository.semanticSearchStrictness
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal)
 
     fun setSemanticSearch(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setSemanticSearch(enabled)
+        }
+    }
+    
+    fun setSemanticSearchStrictness(strictness: com.femi.gallery.domain.repository.SemanticSearchStrictness) {
+        viewModelScope.launch {
+            settingsRepository.setSemanticSearchStrictness(strictness)
         }
     }
 

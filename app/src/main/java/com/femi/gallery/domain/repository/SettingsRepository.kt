@@ -15,6 +15,7 @@ interface SettingsRepository {
     val slideshowShuffle: Flow<Boolean>
     val timelineZoom: Flow<TimelineZoom>
     val semanticSearch: Flow<Boolean>
+    val semanticSearchStrictness: Flow<SemanticSearchStrictness>
     val albumSortOption: Flow<AlbumSortOption>
     val hiddenAlbums: Flow<Set<String>>
 
@@ -27,6 +28,7 @@ interface SettingsRepository {
     suspend fun setSlideshowShuffle(enabled: Boolean)
     suspend fun setTimelineZoom(zoom: TimelineZoom)
     suspend fun setSemanticSearch(enabled: Boolean)
+    suspend fun setSemanticSearchStrictness(strictness: SemanticSearchStrictness)
     suspend fun setAlbumSortOption(option: AlbumSortOption)
     suspend fun setHiddenAlbums(albums: Set<String>)
 
@@ -36,4 +38,10 @@ interface SettingsRepository {
     fun getBackgroundScanSync(): Boolean
     fun getScanOnlyWhileChargingSync(): Boolean
     fun getTimelineZoomSync(): TimelineZoom
+}
+
+enum class SemanticSearchStrictness {
+    Relaxed,
+    Normal,
+    Strict
 }

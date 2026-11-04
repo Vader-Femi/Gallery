@@ -37,6 +37,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_SLIDESHOW_SHUFFLE = booleanPreferencesKey("slideshow_shuffle")
         private val KEY_TIMELINE_ZOOM = stringPreferencesKey("timeline_zoom")
         private val KEY_SEMANTIC_SEARCH = booleanPreferencesKey("semantic_search")
+        private val KEY_SEMANTIC_SEARCH_STRICTNESS = stringPreferencesKey("semantic_search_strictness")
         private val KEY_ALBUM_SORT = stringPreferencesKey("album_sort_option")
         private val KEY_HIDDEN_ALBUMS = stringSetPreferencesKey("hidden_albums")
     }
@@ -77,6 +78,11 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val semanticSearch: Flow<Boolean> = dataStore.data.map {
         it[KEY_SEMANTIC_SEARCH] ?: true
+    }
+
+    override val semanticSearchStrictness: Flow<com.femi.gallery.domain.repository.SemanticSearchStrictness> = dataStore.data.map {
+        val name = it[KEY_SEMANTIC_SEARCH_STRICTNESS] ?: com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal.name
+        try { com.femi.gallery.domain.repository.SemanticSearchStrictness.valueOf(name) } catch (e: Exception) { com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal }
     }
 
     override val albumSortOption: Flow<AlbumSortOption> = dataStore.data.map {
@@ -123,6 +129,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setSemanticSearch(enabled: Boolean) {
         dataStore.edit { it[KEY_SEMANTIC_SEARCH] = enabled }
+    }
+
+    override suspend fun setSemanticSearchStrictness(strictness: com.femi.gallery.domain.repository.SemanticSearchStrictness) {
+        dataStore.edit { it[KEY_SEMANTIC_SEARCH_STRICTNESS] = strictness.name }
     }
 
     override suspend fun setAlbumSortOption(option: AlbumSortOption) {

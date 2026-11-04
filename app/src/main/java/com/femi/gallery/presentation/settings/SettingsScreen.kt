@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,9 +17,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -169,13 +172,16 @@ fun SettingsScreen(
     )
 
     val deletedCount by viewModel.deletedEmptyAlbumsCount.collectAsStateWithLifecycle()
-    LaunchedEffect(deletedCount) {
-        deletedCount?.let { count ->
-            val message = if (count > 0) {
-                context.getString(R.string.settings_delete_empty_albums_deleted, count)
-            } else {
-                context.getString(R.string.settings_delete_empty_albums_none)
-            }
+    val deletedMessage = deletedCount?.let { count ->
+        if (count > 0) {
+            stringResource(R.string.settings_delete_empty_albums_deleted, count)
+        } else {
+            stringResource(R.string.settings_delete_empty_albums_none)
+        }
+    }
+
+    LaunchedEffect(deletedMessage) {
+        deletedMessage?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             viewModel.clearDeletedCount()
         }
@@ -467,14 +473,25 @@ fun SettingsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingDropdown(
+fun SettingDropdown(
     selectedName: String,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     items: List<String>,
     onItemSelected: (index: Int) -> Unit,
+    title: String? = null,
+    summary: String? = null,
+    modifier: Modifier = Modifier,
 ) {
-    ExposedDropdownMenuBox(
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (title != null) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        }
+        if (summary != null) {
+            Text(text = summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.padding(vertical = 5.dp))
+        ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
     ) {
@@ -501,9 +518,10 @@ private fun SettingDropdown(
         }
     }
 }
+}
 
 @Composable
-private fun SettingCardHeader(
+fun SettingCardHeader(
     icon: ImageVector,
     title: String,
     summary: String,
@@ -514,30 +532,26 @@ private fun SettingCardHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.height(48.dp),
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier.padding(horizontal = 14.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(24.dp),
+            )
         }
-        Column(modifier = Modifier.weight(1f)) {
+        Column {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = summary,
                 style = MaterialTheme.typography.bodyMedium,
@@ -548,7 +562,7 @@ private fun SettingCardHeader(
 }
 
 @Composable
-private fun SettingSwitchCard(
+fun SettingSwitchCard(
     icon: ImageVector,
     title: String,
     summary: String,
@@ -581,7 +595,7 @@ private fun SettingSwitchCard(
 }
 
 @Composable
-private fun SettingActionCard(
+fun SettingActionCard(
     icon: ImageVector,
     title: String,
     summary: String,
@@ -591,10 +605,13 @@ private fun SettingActionCard(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {

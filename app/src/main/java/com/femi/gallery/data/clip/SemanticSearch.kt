@@ -45,10 +45,17 @@ class SemanticSearch @Inject constructor(
             phrase
         }
         
+        val strictness = settingsRepository.semanticSearchStrictness.first()
+        val config = when (strictness) {
+            com.femi.gallery.domain.repository.SemanticSearchStrictness.Relaxed -> com.femi.gallery.domain.clip.SemanticSelection.Config(minScore = 0.17f, margin = 0.08f)
+            com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal -> com.femi.gallery.domain.clip.SemanticSelection.Config(minScore = 0.20f, margin = 0.05f)
+            com.femi.gallery.domain.repository.SemanticSearchStrictness.Strict -> com.femi.gallery.domain.clip.SemanticSelection.Config(minScore = 0.23f, margin = 0.03f)
+        }
+        
         val query = embedder.embedText(searchPhrase) ?: return emptySet()
         val scores = clip.scores(query)
-        val found = clip.search(query).toSet()
-        Log.d(TAG, "\"$searchPhrase\": ${found.size} photos, best ${scores?.maxOrNull()}")
+        val found = clip.search(query, config).toSet()
+        Log.d(TAG, "\"$searchPhrase\": ${found.size} photos, best ${scores?.maxOrNull()} (strictness=${strictness.name})")
         synchronized(answers) { answers[key] = found }
         return found
     }

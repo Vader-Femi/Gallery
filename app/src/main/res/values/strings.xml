@@ -146,6 +146,10 @@
     <string name="sort_recency">Most recent</string>
     <string name="sort_name">Name (A-Z)</string>
     <string name="sort_count">Item count</string>
+    <string name="album_sort_recency">Last modified</string>
+    <string name="album_sort_name">Name</string>
+    <string name="album_sort_count">Number of items</string>
+
     <string name="story_pick_cover">Choose a cover photo</string>
     <string name="story_change_cover">Change cover</string>
     <string name="story_reset_cover">Use automatic cover</string>
@@ -318,6 +322,13 @@
     <string name="clip_restore_bundled">Restore bundled models</string>
     <string name="clip_search_title">Include described matches in search</string>
     <string name="clip_search_summary">Photos that look like what you typed are added to the results. Names, text, colours, labels and places are matched as before.</string>
+
+    <string name="settings_strictness_title">AI Search Strictness</string>
+    <string name="settings_strictness_summary">Adjust how strictly AI search matches your text to the image.\n\n• Relaxed: Searches will accept looser similarities (returns more photos).\n• Normal: Uses the default balanced threshold.\n• Strict: Searches will require higher similarity scores (filters out border-line matches and returns only high-confidence photos).</string>
+    <string name="settings_strictness_relaxed">Relaxed</string>
+    <string name="settings_strictness_normal">Normal</string>
+    <string name="settings_strictness_strict">Strict</string>
+
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

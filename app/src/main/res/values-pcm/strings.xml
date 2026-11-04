@@ -364,4 +364,13 @@
     <string name="trim_failed_unsupported">Dis phone no fit work on dis video.</string>
     <string name="trim_failed_other">Something go wrong. Di original video neva change.</string>
     <string name="trim_ok">OK</string>
+
+    <string name="album_sort_recency">Last modified</string>
+    <string name="album_sort_name">Name</string>
+    <string name="album_sort_count">Number of items</string>
+    <string name="settings_strictness_title">AI Search Strictness</string>
+    <string name="settings_strictness_summary">Adjust how strictly AI search matches your text to di photo.\n\n• Relaxed: Search go accept loose matching (e go bring out more photos).\n• Normal: E go use di normal balanced level.\n• Strict: Search go need higher matching score (e go comot photo wey nor too sure).</string>
+    <string name="settings_strictness_relaxed">Relaxed</string>
+    <string name="settings_strictness_normal">Normal</string>
+    <string name="settings_strictness_strict">Strict</string>
 </resources>

@@ -364,4 +364,14 @@
     <string name="trim_failed_unsupported">Wannan wayar ba za ta iya sarrafa wannan bidiyon ba.</string>
     <string name="trim_failed_other">Wani abu ya faru. Bidiyon asali bai canza ba.</string>
     <string name="trim_ok">To</string>
+
+    <string name="album_sort_recency">Na karshe da aka gyara</string>
+    <string name="album_sort_name">Suna</string>
+    <string name="album_sort_count">Adadin abubuwa</string>
+
+    <string name="settings_strictness_title">Tsananin Neman AI</string>
+    <string name="settings_strictness_summary">Daidaita yadda tsananin neman AI ya dace da rubutun ka zuwa hoton.\n\n• Sako-sako: Bincike zai karɓi kamanceceniya mai sauƙi (yana dawo da ƙarin hoto).\n• Na al\'ada: Yana amfani da ma\'auni na al\'ada.\n• Mai tsanani: Bincike zai buƙaci maki na kamanceceniya mai yawa (yana tace hotunan da ba a tabbatar ba).</string>
+    <string name="settings_strictness_relaxed">Sako-sako</string>
+    <string name="settings_strictness_normal">Na al\'ada</string>
+    <string name="settings_strictness_strict">Mai tsanani</string>
 </resources>

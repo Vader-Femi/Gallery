@@ -364,4 +364,13 @@
     <string name="trim_failed_unsupported">Fóònù yìí kò lè ṣiṣẹ́ lórí fídíò yìí.</string>
     <string name="trim_failed_other">Nǹkan kan ṣẹlẹ̀. Fídíò àtilẹ̀bá kò yípadà.</string>
     <string name="trim_ok">Ó dára</string>
+
+    <string name="album_sort_recency">Tí a ṣe àtúnṣe kẹhìn</string>
+    <string name="album_sort_name">Orukọ</string>
+    <string name="album_sort_count">Iye awọn ohun</string>
+    <string name="settings_strictness_title">AI Iwadi Agbára</string>
+    <string name="settings_strictness_summary">Ṣàtúnṣe bi AI iwadi ṣe jẹ ki ọrọ rẹ mu aworan naa mu.\n\n• Ifọkanbalẹ: Awọn iwadii yoo gba ifarara ti o fẹẹrẹ sii (yoo da awọn fọto diẹ sii padà).\n• Ti Deede: Lo iwọn ti o deede.\n• Ti o muna: Awọn iwadii yoo nilo awọn ami ifarara ti o ga julọ (yoo ṣe iyatọ awọn fọto ti ko daju).</string>
+    <string name="settings_strictness_relaxed">Ifọkanbalẹ</string>
+    <string name="settings_strictness_normal">Ti Deede</string>
+    <string name="settings_strictness_strict">Ti o muna</string>
 </resources>

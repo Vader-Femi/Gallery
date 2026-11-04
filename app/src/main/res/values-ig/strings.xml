@@ -364,4 +364,13 @@
     <string name="trim_failed_unsupported">Ekwentị a enweghị ike ịhazi vidio a.</string>
     <string name="trim_failed_other">Ihe gbagwojuru anya. Vidio mbụ agbanwebeghị.</string>
     <string name="trim_ok">Ọ dị mma</string>
+
+    <string name="album_sort_recency">Emelitere nso nso a</string>
+    <string name="album_sort_name">Aha</string>
+    <string name="album_sort_count">Ọnụọgụ nke ihe</string>
+    <string name="settings_strictness_title">Ngagharị Ọchụchọ AI</string>
+    <string name="settings_strictness_summary">Hazie otú ọchụchọ AI siri ike kwekọrọ n\'ihe odide gị na foto a.\n\n• Ezuru: Ọchụchọ ga-anabata myirịta dị mfe (na-eweghachi foto karịrị).\n• Nkịtị: Na-eji maịlụ agbakọta nkịtị.\n• Siri ike: Ọchụchọ ga-achọ akara myirịta dị elu (na-achụpụ foto na-edoghị anya).</string>
+    <string name="settings_strictness_relaxed">Ezuru</string>
+    <string name="settings_strictness_normal">Nkịtị</string>
+    <string name="settings_strictness_strict">Siri ike</string>
 </resources>

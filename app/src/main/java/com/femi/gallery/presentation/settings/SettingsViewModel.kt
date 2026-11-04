@@ -45,6 +45,12 @@ class SettingsViewModel @Inject constructor(
     val scanOnlyWhileCharging: StateFlow<Boolean> = settingsRepository.scanOnlyWhileCharging
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val semanticSearch: StateFlow<Boolean> = settingsRepository.semanticSearch
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val semanticSearchStrictness: StateFlow<com.femi.gallery.domain.repository.SemanticSearchStrictness> = settingsRepository.semanticSearchStrictness
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal)
+
     val albumSortOption: StateFlow<AlbumSortOption> = settingsRepository.albumSortOption
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AlbumSortOption.Recency)
 
@@ -85,6 +91,18 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.setScanOnlyWhileCharging(enabled)
             BackgroundScans.update(context, settingsChanged = true)
+        }
+    }
+
+    fun setSemanticSearch(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSemanticSearch(enabled)
+        }
+    }
+
+    fun setSemanticSearchStrictness(strictness: com.femi.gallery.domain.repository.SemanticSearchStrictness) {
+        viewModelScope.launch {
+            settingsRepository.setSemanticSearchStrictness(strictness)
         }
     }
 

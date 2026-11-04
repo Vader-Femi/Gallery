@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.femi.gallery.R
 import com.femi.gallery.domain.clip.ClipModelKind
+import com.femi.gallery.domain.repository.SemanticSearchStrictness
 import com.femi.gallery.domain.clip.ClipModelStatus
 import com.femi.gallery.domain.clip.ClipScanStatus
 
@@ -164,6 +165,32 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
                     Switch(
                         checked = searchEnabled,
                         onCheckedChange = { viewModel.setSemanticSearch(it) },
+                    )
+                }
+                
+                if (searchEnabled) {
+                    val strictnessOptions = listOf(
+                        SemanticSearchStrictness.Relaxed to stringResource(R.string.settings_strictness_relaxed),
+                        SemanticSearchStrictness.Normal to stringResource(R.string.settings_strictness_normal),
+                        SemanticSearchStrictness.Strict to stringResource(R.string.settings_strictness_strict),
+                    )
+                    
+                    val strictness by viewModel.strictness.collectAsStateWithLifecycle()
+                    var strictnessExpanded by remember { mutableStateOf(false) }
+
+                    SettingDropdown(
+                        selectedName = strictnessOptions.find { it.first == strictness }?.second ?: stringResource(R.string.settings_strictness_normal),
+                        expanded = strictnessExpanded,
+                        onExpandedChange = { strictnessExpanded = it },
+                        items = strictnessOptions.map { it.second },
+                        onItemSelected = { index ->
+                            val option = strictnessOptions[index].first
+                            strictnessExpanded = false
+                            viewModel.setSemanticSearchStrictness(option)
+                        },
+                        title = stringResource(R.string.settings_strictness_title),
+                        summary = stringResource(R.string.settings_strictness_summary),
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
 
