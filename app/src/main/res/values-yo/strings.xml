@@ -190,6 +190,14 @@
     <string name="slideshow_speed_slow">Lọ́ra</string>
     <string name="slideshow_speed_normal">Déédé</string>
     <string name="slideshow_speed_fast">Yára</string>
+    <string name="slideshow_music">Orin</string>
+    <string name="slideshow_music_off">Kò sí orin</string>
+    <string name="slideshow_music_theme">Orin àkòrí</string>
+    <string name="slideshow_music_custom">Orin àṣàyàn</string>
+    <string name="slideshow_music_choose">Yan orin…</string>
+    <string name="slideshow_music_change">Yi orin padà…</string>
+    <string name="slideshow_music_dialog_title">Orin ìfihàn àwòrán</string>
+    <string name="slideshow_music_done">Ó ti ṣeé</string>
 
     <string name="editor_close">Pa olùṣàtúnṣe</string>
     <string name="editor_reset">Tún bẹ̀rẹ̀</string>

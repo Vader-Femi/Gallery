@@ -190,6 +190,14 @@
     <string name="slideshow_speed_slow">A hankali</string>
     <string name="slideshow_speed_normal">Matsakaici</string>
     <string name="slideshow_speed_fast">Mai sauri</string>
+    <string name="slideshow_music">Kiɗa</string>
+    <string name="slideshow_music_off">Babu kiɗa</string>
+    <string name="slideshow_music_theme">Kiɗan jigo</string>
+    <string name="slideshow_music_custom">Waƙar da aka zaɓa</string>
+    <string name="slideshow_music_choose">Zaɓi waƙa…</string>
+    <string name="slideshow_music_change">Canza waƙa…</string>
+    <string name="slideshow_music_dialog_title">Kiɗan nunin faifai</string>
+    <string name="slideshow_music_done">An gama</string>
 
     <string name="editor_close">Rufe mai gyara</string>
     <string name="editor_reset">Sake saitawa</string>

@@ -3,43 +3,60 @@
 
 package com.femi.gallery.presentation.stories
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.view.LayoutInflater
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.MusicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -56,11 +73,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -72,6 +91,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.femi.gallery.R
+import com.femi.gallery.domain.model.SlideshowMusicTrack
 import com.femi.gallery.domain.model.SlideshowOrder
 import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.presentation.common.EmptyState
@@ -82,27 +102,122 @@ import androidx.media3.common.MediaItem as PlayerMediaItem
 
 /**
  * Plays photos one after another (a story, a place or an album). Tap to pause or resume, swipe to
- * skip, X to close. While paused, the speed and shuffle can be changed.
+ * skip, X to close. While paused, speed, shuffle, and music can be changed.
  *
  * In list order the photos are read from the paged list as the show moves along. A shuffled show is
  * different: the whole list is loaded and shuffled first (with a loading indicator), then played from
  * memory, because random positions in a paged list are mostly not loaded yet and would show black slides.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SlideshowScreen(
     onClose: () -> Unit,
     viewModel: SlideshowViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val items = viewModel.media.collectAsLazyPagingItems()
     val shuffledUris by viewModel.shuffled.collectAsStateWithLifecycle()
     val speed by viewModel.slideshowSpeed.collectAsStateWithLifecycle()
     val shuffle by viewModel.slideshowShuffle.collectAsStateWithLifecycle()
+    val musicEnabled by viewModel.slideshowMusicEnabled.collectAsStateWithLifecycle()
+    val musicTrack by viewModel.slideshowMusicTrack.collectAsStateWithLifecycle()
+    val customMusicUri by viewModel.slideshowCustomMusicUri.collectAsStateWithLifecycle()
+    val customMusicName by viewModel.slideshowCustomMusicName.collectAsStateWithLifecycle()
+
     var playing by remember { mutableStateOf(true) }
     var seed by rememberSaveable { mutableLongStateOf(Random.nextLong()) }
+    var showMusicDialog by remember { mutableStateOf(false) }
+    var isCurrentVideo by remember { mutableStateOf(false) }
 
     ImmersiveMode(enabled = true)
+
+    val audioPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (_: Exception) {
+            }
+            val name = queryAudioDisplayName(context, uri) ?: "Custom song"
+            viewModel.setSlideshowCustomMusic(uri.toString(), name)
+        }
+    }
+
+    // Background music player
+    val musicPlayer = remember(context) {
+        ExoPlayer.Builder(context).build().apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .setUsage(C.USAGE_MEDIA)
+                    .build(),
+                /* handleAudioFocus = */ true,
+            )
+            repeatMode = Player.REPEAT_MODE_ALL
+        }
+    }
+
+    DisposableEffect(musicPlayer) {
+        onDispose {
+            musicPlayer.release()
+        }
+    }
+
+    // Set or switch media item for background music
+    LaunchedEffect(musicPlayer, musicTrack, customMusicUri) {
+        val mediaUri = if (musicTrack == SlideshowMusicTrack.Custom && !customMusicUri.isNullOrEmpty()) {
+            try {
+                Uri.parse(customMusicUri)
+            } catch (_: Exception) {
+                Uri.parse("android.resource://${context.packageName}/${R.raw.slideshow_ambient}")
+            }
+        } else {
+            Uri.parse("android.resource://${context.packageName}/${R.raw.slideshow_ambient}")
+        }
+        musicPlayer.setMediaItem(PlayerMediaItem.fromUri(mediaUri))
+        musicPlayer.prepare()
+    }
+
+    // Fall back to default theme if custom audio fails
+    DisposableEffect(musicPlayer, musicTrack) {
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                if (musicTrack == SlideshowMusicTrack.Custom) {
+                    viewModel.setSlideshowMusicTrack(SlideshowMusicTrack.Default)
+                }
+            }
+        }
+        musicPlayer.addListener(listener)
+        onDispose { musicPlayer.removeListener(listener) }
+    }
+
+    // Start or stop music playback in sync with slideshow playing state and music toggle
+    val isLoaded = items.loadState.refresh is LoadState.NotLoading
+    val hasItems = (shuffle && (shuffledUris?.isNotEmpty() == true)) || (!shuffle && items.itemCount > 0)
+    val shouldPlayMusic = musicEnabled && playing && hasItems
+
+    LaunchedEffect(shouldPlayMusic) {
+        if (shouldPlayMusic) {
+            musicPlayer.play()
+        } else {
+            musicPlayer.pause()
+        }
+    }
+
+    // Duck the background music volume when a video slide is playing
+    val targetVolume = if (isCurrentVideo && playing) 0.15f else 1.0f
+    val animatedVolume by animateFloatAsState(
+        targetValue = targetVolume,
+        animationSpec = tween(durationMillis = 350),
+        label = "slideshowMusicVolume",
+    )
+    LaunchedEffect(animatedVolume) {
+        musicPlayer.volume = animatedVolume
+    }
 
     // Turning shuffle on prepares a new random order; turning it off goes back to the list order.
     LaunchedEffect(shuffle, seed) {
@@ -117,7 +232,6 @@ fun SlideshowScreen(
                 playing = !playing
             },
     ) {
-        val isLoaded = items.loadState.refresh is LoadState.NotLoading
         val preparing = shuffle && shuffledUris == null
         when {
             preparing -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
@@ -127,7 +241,13 @@ fun SlideshowScreen(
                 if (shuffledItems.isEmpty()) {
                     EmptyState(text = stringResource(R.string.slideshow_empty), textColor = Color.White.copy(alpha = 0.8f))
                 } else {
-                    SlidePager(pageCount = shuffledItems.size, playing = playing, speed = speed, itemAt = { shuffledItems.getOrNull(it) })
+                    SlidePager(
+                        pageCount = shuffledItems.size,
+                        playing = playing,
+                        speed = speed,
+                        itemAt = { shuffledItems.getOrNull(it) },
+                        onCurrentIsVideoChanged = { isCurrentVideo = it },
+                    )
                 }
             }
 
@@ -140,6 +260,7 @@ fun SlideshowScreen(
                     playing = playing,
                     speed = speed,
                     itemAt = { items[it]?.let { item -> SlideshowItem(item.uri, item.isVideo) } },
+                    onCurrentIsVideoChanged = { isCurrentVideo = it },
                 )
         }
 
@@ -159,8 +280,9 @@ fun SlideshowScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(bottom = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(bottom = 24.dp, start = 16.dp, end = 16.dp)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
                     selected = shuffle,
@@ -193,6 +315,7 @@ fun SlideshowScreen(
                         selectedBorderColor = Color.Transparent,
                     ),
                 )
+
                 AssistChip(
                     onClick = { viewModel.setSlideshowSpeed(speed.next()) },
                     label = {
@@ -220,6 +343,48 @@ fun SlideshowScreen(
                         borderColor = Color.White.copy(alpha = 0.25f),
                     ),
                 )
+
+                FilterChip(
+                    selected = musicEnabled,
+                    onClick = { showMusicDialog = true },
+                    label = {
+                        val musicLabel = when {
+                            !musicEnabled -> stringResource(R.string.slideshow_music_off)
+                            musicTrack == SlideshowMusicTrack.Custom && !customMusicName.isNullOrBlank() -> customMusicName.orEmpty()
+                            else -> stringResource(R.string.slideshow_music_theme)
+                        }
+                        Text(
+                            text = musicLabel,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 140.dp),
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (musicEnabled) Icons.Filled.MusicNote else Icons.Filled.MusicOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    shape = RoundedCornerShape(28.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.Black.copy(alpha = 0.75f),
+                        labelColor = Color.White,
+                        iconColor = Color.White,
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = musicEnabled,
+                        borderColor = Color.White.copy(alpha = 0.25f),
+                        selectedBorderColor = Color.Transparent,
+                    ),
+                )
             }
         }
 
@@ -232,6 +397,141 @@ fun SlideshowScreen(
             Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.slideshow_close), tint = Color.White)
         }
     }
+
+    if (showMusicDialog) {
+        AlertDialog(
+            onDismissRequest = { showMusicDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.slideshow_music_dialog_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Option 1: Theme music (bundled default)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setSlideshowMusicEnabled(true)
+                                viewModel.setSlideshowMusicTrack(SlideshowMusicTrack.Default)
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = musicEnabled && musicTrack == SlideshowMusicTrack.Default,
+                            onClick = {
+                                viewModel.setSlideshowMusicEnabled(true)
+                                viewModel.setSlideshowMusicTrack(SlideshowMusicTrack.Default)
+                            },
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.slideshow_music_theme),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+
+                    // Option 2: Custom song
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (!customMusicUri.isNullOrEmpty()) {
+                                    viewModel.setSlideshowMusicEnabled(true)
+                                    viewModel.setSlideshowMusicTrack(SlideshowMusicTrack.Custom)
+                                } else {
+                                    audioPickerLauncher.launch(arrayOf("audio/*"))
+                                }
+                            }
+                            .padding(vertical = 8.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = musicEnabled && musicTrack == SlideshowMusicTrack.Custom,
+                                onClick = {
+                                    if (!customMusicUri.isNullOrEmpty()) {
+                                        viewModel.setSlideshowMusicEnabled(true)
+                                        viewModel.setSlideshowMusicTrack(SlideshowMusicTrack.Custom)
+                                    } else {
+                                        audioPickerLauncher.launch(arrayOf("audio/*"))
+                                    }
+                                },
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (!customMusicName.isNullOrBlank()) {
+                                    customMusicName.orEmpty()
+                                } else {
+                                    stringResource(R.string.slideshow_music_custom)
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+
+                        TextButton(
+                            onClick = { audioPickerLauncher.launch(arrayOf("audio/*")) },
+                            modifier = Modifier.padding(start = 40.dp),
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    if (customMusicUri.isNullOrEmpty()) R.string.slideshow_music_choose
+                                    else R.string.slideshow_music_change
+                                ),
+                            )
+                        }
+                    }
+
+                    // Option 3: Music Off
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setSlideshowMusicEnabled(false)
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = !musicEnabled,
+                            onClick = {
+                                viewModel.setSlideshowMusicEnabled(false)
+                            },
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.slideshow_music_off),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMusicDialog = false }) {
+                    Text(stringResource(R.string.slideshow_music_done))
+                }
+            },
+        )
+    }
+}
+
+private fun queryAudioDisplayName(context: Context, uri: Uri): String? {
+    if (uri.scheme == "content") {
+        try {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index != -1) return cursor.getString(index)
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+    return uri.lastPathSegment
 }
 
 /**
@@ -245,6 +545,7 @@ private fun SlidePager(
     playing: Boolean,
     speed: SlideshowSpeed,
     itemAt: (Int) -> SlideshowItem?,
+    onCurrentIsVideoChanged: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val pagerState = rememberPagerState { pageCount }
@@ -252,6 +553,11 @@ private fun SlidePager(
     var videoEnded by remember { mutableStateOf(false) }
 
     val settledItem = itemAt(pagerState.settledPage)
+    val currentIsVideo = settledItem?.isVideo == true
+
+    LaunchedEffect(currentIsVideo) {
+        onCurrentIsVideoChanged(currentIsVideo)
+    }
 
     LaunchedEffect(pagerState.settledPage, settledItem?.uri) {
         videoEnded = false
@@ -275,8 +581,8 @@ private fun SlidePager(
                 targetValue = 1f,
                 animationSpec = tween(
                     durationMillis = speed.millis.toInt(),
-                    easing = LinearEasing
-                )
+                    easing = LinearEasing,
+                ),
             )
             val next = SlideshowOrder.pageAfter(pagerState.settledPage, pageCount)
             if (next > pagerState.settledPage) pagerState.animateScrollToPage(next) else pagerState.scrollToPage(next)
@@ -341,7 +647,7 @@ private fun SlideshowVideoPlayer(
     val context = LocalContext.current
     val player = remember(uri) {
         ExoPlayer.Builder(context).build().apply {
-            setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
+            setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ false)
             setMediaItem(PlayerMediaItem.fromUri(uri))
             prepare()
         }
@@ -400,6 +706,6 @@ private fun SlideshowVideoPlayer(
             it.useController = false
             it.player = player
         },
-        onRelease = { it.player = null }
+        onRelease = { it.player = null },
     )
 }

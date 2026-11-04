@@ -190,6 +190,14 @@
     <string name="slideshow_speed_slow">Nwayọ</string>
     <string name="slideshow_speed_normal">Nkịtị</string>
     <string name="slideshow_speed_fast">Ngwa ngwa</string>
+    <string name="slideshow_music">Egwu</string>
+    <string name="slideshow_music_off">Enweghị egwu</string>
+    <string name="slideshow_music_theme">Egwu isiokwu</string>
+    <string name="slideshow_music_custom">Egwu ahọpụtara</string>
+    <string name="slideshow_music_choose">Họrọ egwu…</string>
+    <string name="slideshow_music_change">Gbanwee egwu…</string>
+    <string name="slideshow_music_dialog_title">Egwu ihe ngosi foto</string>
+    <string name="slideshow_music_done">Emela</string>
 
     <string name="editor_close">Mechie onye nchịkọta</string>
     <string name="editor_reset">Tọgharịa</string>

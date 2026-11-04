@@ -17,6 +17,12 @@ enum class SlideshowSpeed(val millis: Long) {
     }
 }
 
+/** Which music track plays during a slideshow. */
+enum class SlideshowMusicTrack {
+    Default,
+    Custom,
+}
+
 /** The order a shuffled slideshow plays in. */
 object SlideshowOrder {
 

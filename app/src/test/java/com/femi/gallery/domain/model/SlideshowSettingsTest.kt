@@ -50,4 +50,9 @@ class SlideshowSettingsTest {
         assertEquals(0, SlideshowOrder.pageAfter(2, 3))
         assertEquals(0, SlideshowOrder.pageAfter(0, 0))
     }
+
+    @Test
+    fun musicTrackHasExpectedEntries() {
+        assertEquals(listOf(SlideshowMusicTrack.Default, SlideshowMusicTrack.Custom), SlideshowMusicTrack.entries)
+    }
 }

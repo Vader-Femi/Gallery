@@ -7,6 +7,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.femi.gallery.di.DefaultDispatcher
 import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.domain.model.SlideshowMusicTrack
 import com.femi.gallery.domain.model.SlideshowOrder
 import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.domain.repository.SettingsRepository
@@ -47,6 +48,18 @@ class SlideshowViewModel @Inject constructor(
     val slideshowShuffle: StateFlow<Boolean> = settingsRepository.slideshowShuffle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val slideshowMusicEnabled: StateFlow<Boolean> = settingsRepository.slideshowMusicEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val slideshowMusicTrack: StateFlow<SlideshowMusicTrack> = settingsRepository.slideshowMusicTrack
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SlideshowMusicTrack.Default)
+
+    val slideshowCustomMusicUri: StateFlow<String?> = settingsRepository.slideshowCustomMusicUri
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val slideshowCustomMusicName: StateFlow<String?> = settingsRepository.slideshowCustomMusicName
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     fun setSlideshowSpeed(speed: SlideshowSpeed) {
         viewModelScope.launch {
             settingsRepository.setSlideshowSpeed(speed)
@@ -56,6 +69,28 @@ class SlideshowViewModel @Inject constructor(
     fun setSlideshowShuffle(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setSlideshowShuffle(enabled)
+        }
+    }
+
+    fun setSlideshowMusicEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSlideshowMusicEnabled(enabled)
+        }
+    }
+
+    fun setSlideshowMusicTrack(track: SlideshowMusicTrack) {
+        viewModelScope.launch {
+            settingsRepository.setSlideshowMusicTrack(track)
+        }
+    }
+
+    fun setSlideshowCustomMusic(uri: String?, name: String?) {
+        viewModelScope.launch {
+            settingsRepository.setSlideshowCustomMusic(uri, name)
+            if (uri != null) {
+                settingsRepository.setSlideshowMusicTrack(SlideshowMusicTrack.Custom)
+                settingsRepository.setSlideshowMusicEnabled(true)
+            }
         }
     }
 

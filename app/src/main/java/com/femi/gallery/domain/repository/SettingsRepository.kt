@@ -13,6 +13,10 @@ interface SettingsRepository {
     val scanOnlyWhileCharging: Flow<Boolean>
     val slideshowSpeed: Flow<SlideshowSpeed>
     val slideshowShuffle: Flow<Boolean>
+    val slideshowMusicEnabled: Flow<Boolean>
+    val slideshowMusicTrack: Flow<com.femi.gallery.domain.model.SlideshowMusicTrack>
+    val slideshowCustomMusicUri: Flow<String?>
+    val slideshowCustomMusicName: Flow<String?>
     val timelineZoom: Flow<TimelineZoom>
     val semanticSearch: Flow<Boolean>
     val semanticSearchStrictness: Flow<SemanticSearchStrictness>
@@ -26,6 +30,9 @@ interface SettingsRepository {
     suspend fun setScanOnlyWhileCharging(enabled: Boolean)
     suspend fun setSlideshowSpeed(speed: SlideshowSpeed)
     suspend fun setSlideshowShuffle(enabled: Boolean)
+    suspend fun setSlideshowMusicEnabled(enabled: Boolean)
+    suspend fun setSlideshowMusicTrack(track: com.femi.gallery.domain.model.SlideshowMusicTrack)
+    suspend fun setSlideshowCustomMusic(uri: String?, name: String?)
     suspend fun setTimelineZoom(zoom: TimelineZoom)
     suspend fun setSemanticSearch(enabled: Boolean)
     suspend fun setSemanticSearchStrictness(strictness: SemanticSearchStrictness)

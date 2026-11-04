@@ -194,6 +194,14 @@
     <string name="slideshow_speed_slow">Slow</string>
     <string name="slideshow_speed_normal">Normal</string>
     <string name="slideshow_speed_fast">Fast</string>
+    <string name="slideshow_music">Music</string>
+    <string name="slideshow_music_off">No music</string>
+    <string name="slideshow_music_theme">Theme music</string>
+    <string name="slideshow_music_custom">Custom song</string>
+    <string name="slideshow_music_choose">Choose song…</string>
+    <string name="slideshow_music_change">Change song…</string>
+    <string name="slideshow_music_dialog_title">Slideshow music</string>
+    <string name="slideshow_music_done">Done</string>
 
     <string name="editor_close">Close editor</string>
     <string name="editor_reset">Reset</string>

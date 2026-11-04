@@ -130,7 +130,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [ ] **Map extras**: a map with streets (offline vector tiles you import once), a round-bubble morph into the viewer (fling, smooth zoom and the animated "show all" are done)
-- [ ] **Slideshow music** (cannot be tested without a device), *(progress bar added; shuffle and speed choice between launches remembered; videos in slideshows added)*
+- [x] **Slideshow music**: bundled ambient theme track, custom song picker from device audio, and automatic audio ducking during video slides *(progress bar, shuffle, speed choice remembered between launches, and videos in slideshows)*
 - [ ] **Editor extras**: draw, text and stickers (straighten, sharpen, vignette and keeping the camera details are done)
 - [ ] **Describe a photo**, to tune on a real library: a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
 

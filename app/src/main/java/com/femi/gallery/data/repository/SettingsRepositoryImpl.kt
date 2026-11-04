@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.femi.gallery.domain.mirror.AlbumSortOption
+import com.femi.gallery.domain.model.SlideshowMusicTrack
 import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.presentation.pictures.TimelineZoom
@@ -35,6 +36,10 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_SCAN_ONLY_CHARGING = booleanPreferencesKey("scan_only_while_charging")
         private val KEY_SLIDESHOW_SPEED = stringPreferencesKey("slideshow_speed")
         private val KEY_SLIDESHOW_SHUFFLE = booleanPreferencesKey("slideshow_shuffle")
+        private val KEY_SLIDESHOW_MUSIC_ENABLED = booleanPreferencesKey("slideshow_music_enabled")
+        private val KEY_SLIDESHOW_MUSIC_TRACK = stringPreferencesKey("slideshow_music_track")
+        private val KEY_SLIDESHOW_CUSTOM_MUSIC_URI = stringPreferencesKey("slideshow_custom_music_uri")
+        private val KEY_SLIDESHOW_CUSTOM_MUSIC_NAME = stringPreferencesKey("slideshow_custom_music_name")
         private val KEY_TIMELINE_ZOOM = stringPreferencesKey("timeline_zoom")
         private val KEY_SEMANTIC_SEARCH = booleanPreferencesKey("semantic_search")
         private val KEY_SEMANTIC_SEARCH_STRICTNESS = stringPreferencesKey("semantic_search_strictness")
@@ -69,6 +74,23 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val slideshowShuffle: Flow<Boolean> = dataStore.data.map {
         it[KEY_SLIDESHOW_SHUFFLE] ?: false
+    }
+
+    override val slideshowMusicEnabled: Flow<Boolean> = dataStore.data.map {
+        it[KEY_SLIDESHOW_MUSIC_ENABLED] ?: true
+    }
+
+    override val slideshowMusicTrack: Flow<SlideshowMusicTrack> = dataStore.data.map {
+        val name = it[KEY_SLIDESHOW_MUSIC_TRACK] ?: SlideshowMusicTrack.Default.name
+        try { SlideshowMusicTrack.valueOf(name) } catch (e: Exception) { SlideshowMusicTrack.Default }
+    }
+
+    override val slideshowCustomMusicUri: Flow<String?> = dataStore.data.map {
+        it[KEY_SLIDESHOW_CUSTOM_MUSIC_URI]
+    }
+
+    override val slideshowCustomMusicName: Flow<String?> = dataStore.data.map {
+        it[KEY_SLIDESHOW_CUSTOM_MUSIC_NAME]
     }
 
     override val timelineZoom: Flow<TimelineZoom> = dataStore.data.map {
@@ -121,6 +143,21 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setSlideshowShuffle(enabled: Boolean) {
         dataStore.edit { it[KEY_SLIDESHOW_SHUFFLE] = enabled }
+    }
+
+    override suspend fun setSlideshowMusicEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_SLIDESHOW_MUSIC_ENABLED] = enabled }
+    }
+
+    override suspend fun setSlideshowMusicTrack(track: SlideshowMusicTrack) {
+        dataStore.edit { it[KEY_SLIDESHOW_MUSIC_TRACK] = track.name }
+    }
+
+    override suspend fun setSlideshowCustomMusic(uri: String?, name: String?) {
+        dataStore.edit {
+            if (uri != null) it[KEY_SLIDESHOW_CUSTOM_MUSIC_URI] = uri else it.remove(KEY_SLIDESHOW_CUSTOM_MUSIC_URI)
+            if (name != null) it[KEY_SLIDESHOW_CUSTOM_MUSIC_NAME] = name else it.remove(KEY_SLIDESHOW_CUSTOM_MUSIC_NAME)
+        }
     }
 
     override suspend fun setTimelineZoom(zoom: TimelineZoom) {
