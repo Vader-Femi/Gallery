@@ -42,6 +42,7 @@ class ViewerViewModel @Inject constructor(
     private val getPhotoText: GetPhotoTextUseCase,
     private val canRevertOriginal: CanRevertOriginalUseCase,
     private val revertOriginalUseCase: RevertOriginalUseCase,
+    private val getMotionPhoto: com.femi.gallery.domain.usecase.GetMotionPhotoUseCase,
     private val settingsRepository: SettingsRepository,
     selectionFactory: MediaSelectionControllerFactory,
     val lockSession: LockSession,
@@ -98,6 +99,9 @@ class ViewerViewModel @Inject constructor(
     private val _canRevert = MutableStateFlow(false)
     val canRevert: StateFlow<Boolean> = _canRevert.asStateFlow()
 
+    private val _motionPhoto = MutableStateFlow<com.femi.gallery.domain.model.MotionPhotoInfo?>(null)
+    val motionPhoto: StateFlow<com.femi.gallery.domain.model.MotionPhotoInfo?> = _motionPhoto.asStateFlow()
+
     private val _imageRevision = MutableStateFlow(0L)
     val imageRevision: StateFlow<Long> = _imageRevision.asStateFlow()
 
@@ -110,6 +114,7 @@ class ViewerViewModel @Inject constructor(
         checkTextJob?.cancel()
         _currentHasText.value = false
         _canRevert.value = false
+        _motionPhoto.value = null
         if (item == null) return
         checkTextJob = viewModelScope.launch {
             launch {
@@ -119,6 +124,10 @@ class ViewerViewModel @Inject constructor(
             launch {
                 val can = if (!item.isVideo) canRevertOriginal(item.uri) else false
                 _canRevert.value = can
+            }
+            launch {
+                val motion = if (!item.isVideo) getMotionPhoto(item) else null
+                _motionPhoto.value = motion
             }
         }
     }

@@ -159,6 +159,8 @@
     <string name="viewer_pause">Tsaya</string>
     <string name="viewer_mute">Kashe sauti</string>
     <string name="viewer_unmute">Kunna sauti</string>
+    <string name="viewer_motion_photo">Kalli bidiyon hoto</string>
+    <string name="viewer_motion_photo_pause">Dakata da bidiyon hoto</string>
     <string name="action_set_as_wallpaper">Saita a matsayin fuskar bangare</string>
     <string name="action_copy_text">Kwafi rubutu</string>
     <string name="details_detected_text">Rubutun da ke cikin hoto</string>
@@ -415,6 +417,9 @@
     <string name="trim_failed_unsupported">Wannan wayar ba za ta iya sarrafa wannan bidiyon ba.</string>
     <string name="trim_failed_other">Wani abu ya faru. Bidiyon asali bai canza ba.</string>
     <string name="trim_ok">To</string>
+    <string name="trim_mute">Kashe sauti</string>
+    <string name="trim_unmute">Kunna sauti</string>
+    <string name="trim_rotate">Juya digiri 90</string>
 
     <string name="album_sort_recency">Na karshe da aka gyara</string>
     <string name="album_sort_name">Suna</string>

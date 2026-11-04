@@ -8,6 +8,7 @@ class ProgressHolder { @JvmField var progress: Int = 0 }
 
 class EditedMediaItem private constructor() {
     class Builder(mediaItem: MediaItem) {
+        fun setRemoveAudio(removeAudio: Boolean): Builder = this
         fun setSpeed(parameters: androidx.media3.common.SpeedParameters): Builder = this
         fun setSpeed(provider: androidx.media3.common.audio.SpeedProvider): Builder = this
         fun setEffects(effects: Effects): Builder = this

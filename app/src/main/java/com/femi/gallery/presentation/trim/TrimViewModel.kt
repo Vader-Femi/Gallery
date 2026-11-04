@@ -29,10 +29,17 @@ data class TrimUiState(
     val durationMs: Long = 0L,
     val range: TrimRange = TrimRange(0L, 0L),
     val speed: Float = 1f,
+    val isMuted: Boolean = false,
+    val rotationDegrees: Int = 0,
     val export: TrimExport = TrimExport.Idle,
 ) {
     val isReady: Boolean get() = durationMs > 0L
-    val canSave: Boolean get() = isReady && (!range.isWholeVideo(durationMs) || speed != 1f) && export !is TrimExport.Running
+    val canSave: Boolean get() = isReady && (
+        !range.isWholeVideo(durationMs) ||
+        speed != 1f ||
+        isMuted ||
+        rotationDegrees != 0
+    ) && export !is TrimExport.Running
 }
 
 @HiltViewModel
@@ -64,12 +71,22 @@ class TrimViewModel @Inject constructor(
         }
     }
 
+    fun toggleMute() = _state.update { it.copy(isMuted = !it.isMuted) }
+
+    fun rotateClockwise() = _state.update { it.copy(rotationDegrees = (it.rotationDegrees + 90) % 360) }
+
     fun save() {
         val current = _state.value
         if (!current.canSave) return
         exportJob = viewModelScope.launch {
             _state.update { it.copy(export = TrimExport.Running(0)) }
-            trimVideo(uri, current.range, current.speed).collect { event ->
+            trimVideo(
+                uri = uri,
+                range = current.range,
+                speed = current.speed,
+                muteAudio = current.isMuted,
+                rotationDegrees = current.rotationDegrees,
+            ).collect { event ->
                 _state.update {
                     it.copy(
                         export = when (event) {

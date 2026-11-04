@@ -74,20 +74,21 @@ object TrimMath {
         taken: Set<String>,
         speed: Float = 1f,
         isTrimmed: Boolean = true,
+        muteAudio: Boolean = false,
+        rotationDegrees: Int = 0,
     ): String {
         val base = originalName.substringBeforeLast('.', originalName).ifBlank { "video" }
         val used = taken.mapTo(HashSet()) { it.lowercase() }
-        val suffix = when {
-            isTrimmed && speed != 1f -> {
-                val speedStr = if (speed == speed.toLong().toFloat()) "${speed.toInt()}x" else "${speed}x"
-                "_trim_$speedStr"
-            }
-            speed != 1f -> {
-                val speedStr = if (speed == speed.toLong().toFloat()) "${speed.toInt()}x" else "${speed}x"
-                "_$speedStr"
-            }
-            else -> "_trim"
+        val parts = mutableListOf<String>()
+        if (isTrimmed) parts.add("trim")
+        if (speed != 1f) {
+            val speedStr = if (speed == speed.toLong().toFloat()) "${speed.toInt()}x" else "${speed}x"
+            parts.add(speedStr)
         }
+        if (muteAudio) parts.add("muted")
+        if (rotationDegrees != 0) parts.add("${rotationDegrees}deg")
+
+        val suffix = if (parts.isEmpty()) "_edit" else "_${parts.joinToString("_")}"
         var candidate = "${base}${suffix}.mp4"
         var n = 2
         while (candidate.lowercase() in used) {

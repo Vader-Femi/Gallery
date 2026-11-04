@@ -159,6 +159,8 @@
     <string name="viewer_pause">Dúró</string>
     <string name="viewer_mute">Pa ohùn rẹ́</string>
     <string name="viewer_unmute">Ṣí ohùn</string>
+    <string name="viewer_motion_photo">Wo fọ́tò tó ń rìn</string>
+    <string name="viewer_motion_photo_pause">Dúró fọ́tò tó ń rìn</string>
     <string name="action_set_as_wallpaper">Yàn gẹ́gẹ́ bí wallpaper</string>
     <string name="action_copy_text">Ṣe ẹ̀dà ọ̀rọ̀</string>
     <string name="details_detected_text">Ọ̀rọ̀ inú fọ́tò</string>
@@ -415,6 +417,9 @@
     <string name="trim_failed_unsupported">Fóònù yìí kò lè ṣiṣẹ́ lórí fídíò yìí.</string>
     <string name="trim_failed_other">Nǹkan kan ṣẹlẹ̀. Fídíò àtilẹ̀bá kò yípadà.</string>
     <string name="trim_ok">Ó dára</string>
+    <string name="trim_mute">Pa ohùn</string>
+    <string name="trim_unmute">Tan ohùn</string>
+    <string name="trim_rotate">Yi pada ní 90°</string>
 
     <string name="album_sort_recency">Tí a ṣe àtúnṣe kẹhìn</string>
     <string name="album_sort_name">Orukọ</string>

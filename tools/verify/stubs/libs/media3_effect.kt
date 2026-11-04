@@ -6,3 +6,10 @@ class FrameDropEffect private constructor() {
         fun createDefaultFrameDropEffect(targetFrameRate: Float): FrameDropEffect = FrameDropEffect()
     }
 }
+
+class ScaleAndRotateTransformation private constructor() : androidx.media3.common.Effect {
+    class Builder {
+        fun setRotationDegrees(degrees: Float): Builder = this
+        fun build(): ScaleAndRotateTransformation = ScaleAndRotateTransformation()
+    }
+}

@@ -159,6 +159,8 @@
     <string name="viewer_pause">Pause</string>
     <string name="viewer_mute">Mute sound</string>
     <string name="viewer_unmute">Turn on sound</string>
+    <string name="viewer_motion_photo">View motion photo</string>
+    <string name="viewer_motion_photo_pause">Pause motion photo</string>
     <string name="action_set_as_wallpaper">Use as wallpaper</string>
     <string name="action_copy_text">Copy text</string>
     <string name="details_detected_text">Text inside photo</string>
@@ -415,6 +417,9 @@
     <string name="trim_failed_unsupported">Dis phone no fit work on dis video.</string>
     <string name="trim_failed_other">Something go wrong. Di original video neva change.</string>
     <string name="trim_ok">OK</string>
+    <string name="trim_mute">Mute audio</string>
+    <string name="trim_unmute">Unmute audio</string>
+    <string name="trim_rotate">Rotate 90°</string>
 
     <string name="album_sort_recency">Last modified</string>
     <string name="album_sort_name">Name</string>

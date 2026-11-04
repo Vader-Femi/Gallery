@@ -16,8 +16,10 @@ import androidx.media3.common.SpeedParameters
 import androidx.media3.common.audio.SpeedProvider
 import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
@@ -65,7 +67,13 @@ class TransformerVideoTrimRepository @Inject constructor(
         val durationMs: Long,
     )
 
-    override fun trim(uri: String, range: TrimRange, speed: Float): Flow<TrimEvent> = callbackFlow {
+    override fun trim(
+        uri: String,
+        range: TrimRange,
+        speed: Float,
+        muteAudio: Boolean,
+        rotationDegrees: Int,
+    ): Flow<TrimEvent> = callbackFlow {
         val source = withContext(io) { readSource(Uri.parse(uri)) }
         if (source == null) {
             Log.w(TAG, "Cannot read the details of $uri")
@@ -102,7 +110,7 @@ class TransformerVideoTrimRepository @Inject constructor(
                 launch(io) {
                     val isTrimmed = !range.isWholeVideo(source.durationMs)
                     val added = try {
-                        addToLibrary(temp, source, uri, speed, isTrimmed)
+                        addToLibrary(temp, source, uri, speed, isTrimmed, muteAudio, rotationDegrees)
                     } catch (e: Exception) {
                         Log.e(TAG, "Cannot add the trimmed video to the library", e)
                         null
@@ -129,22 +137,37 @@ class TransformerVideoTrimRepository @Inject constructor(
                     .setEndPositionMs(range.endMs)
                     .build()
                 val item = MediaItem.Builder().setUri(Uri.parse(uri)).setClippingConfiguration(clip).build()
+                val canOptimize = speed == 1f && (rotationDegrees % 90 == 0)
                 val built = Transformer.Builder(context)
                     .setLooper(Looper.getMainLooper())
                     // Copies what it can between the key frame before the start and the end, and re-encodes only the
                     // first stretch; falls back to a full export by itself when the pieces cannot be joined.
-                    .experimentalSetTrimOptimizationEnabled(speed == 1f)
+                    .experimentalSetTrimOptimizationEnabled(canOptimize)
                     .addListener(listener)
                     .build()
                 transformer = built
-                Log.i(TAG, "Exporting $uri from ${range.startMs} ms to ${range.endMs} ms at ${speed}x")
+                Log.i(TAG, "Exporting $uri from ${range.startMs} ms to ${range.endMs} ms at ${speed}x, mute=$muteAudio, rotation=$rotationDegrees")
                 val editedItemBuilder = EditedMediaItem.Builder(item)
+                if (muteAudio) {
+                    editedItemBuilder.setRemoveAudio(true)
+                }
                 if (speed != 1f) {
                     val speedProvider = object : SpeedProvider {
                         override fun getSpeed(timeUs: Long): Float = speed
                         override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = C.TIME_UNSET
                     }
                     editedItemBuilder.setSpeed(SpeedParameters(speedProvider, /* shouldMaintainPitch = */ true))
+                }
+                if (rotationDegrees != 0) {
+                    val rotationEffect = ScaleAndRotateTransformation.Builder()
+                        .setRotationDegrees(rotationDegrees.toFloat())
+                        .build()
+                    editedItemBuilder.setEffects(
+                        Effects(
+                            /* audioProcessors = */ emptyList(),
+                            /* videoEffects = */ listOf(rotationEffect),
+                        )
+                    )
                 }
                 built.start(editedItemBuilder.build(), temp.absolutePath)
 
@@ -257,6 +280,8 @@ class TransformerVideoTrimRepository @Inject constructor(
         originalUri: String,
         speed: Float,
         isTrimmed: Boolean,
+        muteAudio: Boolean,
+        rotationDegrees: Int,
     ): TrimEvent.Done? {
         val resolver = context.contentResolver
         val collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
@@ -270,7 +295,14 @@ class TransformerVideoTrimRepository @Inject constructor(
             arrayOf(folder),
             null,
         )?.use { while (it.moveToNext()) it.getString(0)?.let(taken::add) }
-        val name = TrimMath.outputName(source.name, taken, speed, isTrimmed)
+        val name = TrimMath.outputName(
+            originalName = source.name,
+            taken = taken,
+            speed = speed,
+            isTrimmed = isTrimmed,
+            muteAudio = muteAudio,
+            rotationDegrees = rotationDegrees,
+        )
 
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)

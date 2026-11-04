@@ -123,4 +123,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindClipIndexRepository(impl: ClipIndexRepositoryImpl): ClipIndexRepository
+
+    @Binds
+    abstract fun bindMotionPhotoRepository(impl: com.femi.gallery.data.motion.MotionPhotoRepositoryImpl): com.femi.gallery.domain.repository.MotionPhotoRepository
 }

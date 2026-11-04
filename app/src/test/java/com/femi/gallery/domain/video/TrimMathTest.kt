@@ -101,6 +101,16 @@ class TrimMathTest {
     }
 
     @Test
+    fun outputNameWithMuteAndRotation() {
+        assertEquals("VID_1_muted.mp4", TrimMath.outputName("VID_1.mp4", emptySet(), isTrimmed = false, muteAudio = true))
+        assertEquals("VID_1_90deg.mp4", TrimMath.outputName("VID_1.mp4", emptySet(), isTrimmed = false, rotationDegrees = 90))
+        assertEquals(
+            "VID_1_trim_2x_muted_90deg.mp4",
+            TrimMath.outputName("VID_1.mp4", emptySet(), speed = 2f, isTrimmed = true, muteAudio = true, rotationDegrees = 90),
+        )
+    }
+
+    @Test
     fun timesAreFormatted() {
         assertEquals("0:07", TrimMath.format(7_400))
         assertEquals("1:05", TrimMath.format(65_000))

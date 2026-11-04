@@ -80,7 +80,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Pinch / double-tap zoom** with panning that hands back to the pager at the edges
 - [x] **Tiled full-resolution zoom** for very large photos (Telephoto)
 - [x] Instant system thumbnail with the sharp image fading in on top
-- [x] **Video editor**: "Trim" in the viewer's actions for videos; two handles, speed change (0.5x, 1x, 2x), a preview of the kept part and speed, and "Save copy" / "Save trimmed copy" (Media3 Transformer), saved next to the original with its date taken; the original is never changed
+- [x] **Video editor**: "Trim" in the viewer's actions for videos; two handles, speed change (0.5x, 1x, 2x), audio control (mute / strip audio), video rotation (90° clockwise), a preview of the edits, and "Save copy" / "Save trimmed copy" (Media3 Transformer), saved next to the original with its date taken; the original is never changed
+- [x] **Motion photo playback**: automatic detection and playback for Google Pixel (XMP MicroVideo / Container Directory), Samsung Galaxy (SEF trailer `0x0A30` & modern XMP), iOS Live Photos (paired `.MOV`/`.MP4` companion files), and embedded MP4 fallback; interactive floating pill ("View motion photo" / "Pause motion photo") and seamless looping playback
 - [x] Tap to hide/show the interface and system bars
 - [x] **Shared-element transition**: the tapped thumbnail grows into the viewer and the photo shrinks back into the grid; when you close the viewer after swiping, the grid scrolls to the photo you ended on (from Pictures, albums, search and stories)
 - [x] **Details panel**: file name, date, folder, resolution, size, duration, camera, aperture, shutter speed, ISO, focal length and GPS (from EXIF)
@@ -139,8 +140,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 **Later**
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
 - [ ] More on-device ML: **people / face groups**, auto scene albums
-- [ ] Video editor, the rest: a few basic effects (speed change 0.5x, 1x, 2x is done)
-- [ ] Motion photo playback, *(set as wallpaper added)*
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
 

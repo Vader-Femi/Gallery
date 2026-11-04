@@ -18,11 +18,13 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +32,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -184,6 +187,7 @@ private fun ViewerContent(
     val canRevert by viewModel.canRevert.collectAsStateWithLifecycle()
     val imageRevision by viewModel.imageRevision.collectAsStateWithLifecycle()
     val scrollToText by viewModel.scrollToText.collectAsStateWithLifecycle()
+    val motionPhoto by viewModel.motionPhoto.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     ImmersiveMode(enabled = !chromeVisible)
@@ -221,6 +225,7 @@ private fun ViewerContent(
             }
 
             val current = items.peekOrNull(pagerState.currentPage)
+            var isMotionPlaying by remember(current?.id) { mutableStateOf(false) }
             LaunchedEffect(current?.id) {
                 viewModel.checkTextFor(current)
             }
@@ -365,16 +370,19 @@ private fun ViewerContent(
                         ) { page ->
                             val handleChromeChange: (Boolean) -> Unit = remember { { chromeVisible = it } }
                             val pageItem = items.getOrNull(page)
+                            val isCurrent = pagerState.settledPage == page
                             ViewerPage(
                                 item = pageItem,
-                                isCurrent = pagerState.settledPage == page,
+                                isCurrent = isCurrent,
                                 chromeVisible = chromeVisible,
                                 onChromeChange = handleChromeChange,
                                 bottomReserve = 0.dp,
-                                activePlayer = if (pagerState.settledPage == page && pageItem?.uri == activeVideoUri) activePlayer else null,
+                                activePlayer = if (isCurrent && pageItem?.uri == activeVideoUri) activePlayer else null,
                                 playerProvided = true,
                                 imageRevision = imageRevision,
                                 isMapOrigin = isMapOrigin,
+                                motionVideoUri = if (isCurrent) motionPhoto?.videoUri else null,
+                                isMotionPlaying = isCurrent && isMotionPlaying,
                             )
                         }
                     }
@@ -513,28 +521,66 @@ private fun ViewerContent(
                     val cachedPrimary = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions.first }
                     val cachedOverflow = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite, canRevert) { actions.second }
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        AnimatedVisibility(
-                            visible = currentHasText,
-                            enter = fadeIn() + scaleIn(),
-                            exit = fadeOut() + scaleOut(),
+                        Box(
                             modifier = Modifier
-                                .align(Alignment.End)
-                                .padding(end = 16.dp, bottom = 8.dp),
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
                         ) {
-                            Surface(
-                                onClick = { viewModel.showDetails(current, scrollToText = true) },
-                                shape = CircleShape,
-                                color = Color(0xFFFFD600),
-                                shadowElevation = 4.dp,
-                                modifier = Modifier.size(38.dp),
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = motionPhoto != null && !current.isVideo,
+                                enter = fadeIn() + scaleIn(),
+                                exit = fadeOut() + scaleOut(),
+                                modifier = Modifier.align(Alignment.Center),
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "T",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp,
-                                        color = Color(0xFF1C1B1F),
-                                    )
+                                Surface(
+                                    onClick = { isMotionPlaying = !isMotionPlaying },
+                                    shape = RoundedCornerShape(50),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    shadowElevation = 4.dp,
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isMotionPlaying) Icons.Filled.Pause else Icons.Outlined.PlayCircle,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = stringResource(
+                                                if (isMotionPlaying) R.string.viewer_motion_photo_pause else R.string.viewer_motion_photo
+                                            ),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Medium,
+                                        )
+                                    }
+                                }
+                            }
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = currentHasText,
+                                enter = fadeIn() + scaleIn(),
+                                exit = fadeOut() + scaleOut(),
+                                modifier = Modifier.align(Alignment.CenterEnd),
+                            ) {
+                                Surface(
+                                    onClick = { viewModel.showDetails(current, scrollToText = true) },
+                                    shape = CircleShape,
+                                    color = Color(0xFFFFD600),
+                                    shadowElevation = 4.dp,
+                                    modifier = Modifier.size(38.dp),
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "T",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp,
+                                            color = Color(0xFF1C1B1F),
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -617,6 +663,8 @@ private fun ViewerPage(
     playerProvided: Boolean = false,
     imageRevision: Long = 0L,
     isMapOrigin: Boolean = false,
+    motionVideoUri: String? = null,
+    isMotionPlaying: Boolean = false,
 ) {
     val clipInOverlay = if (isMapOrigin) BubbleMorphOverlayClip else null
     when {
@@ -630,11 +678,13 @@ private fun ViewerPage(
             clipInOverlay = clipInOverlay,
         )
         else -> PhotoPage(
-            item,
-            isCurrent,
+            item = item,
+            isCurrent = isCurrent,
             imageRevision = imageRevision,
-            onTap = { onChromeChange(!chromeVisible) },
             clipInOverlay = clipInOverlay,
+            motionVideoUri = motionVideoUri,
+            isMotionPlaying = isMotionPlaying,
+            onTap = { onChromeChange(!chromeVisible) },
         )
     }
 }
@@ -646,6 +696,8 @@ internal fun PhotoPage(
     isCurrent: Boolean,
     imageRevision: Long = 0L,
     clipInOverlay: SharedTransitionScope.OverlayClip? = null,
+    motionVideoUri: String? = null,
+    isMotionPlaying: Boolean = false,
     onTap: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -654,35 +706,102 @@ internal fun PhotoPage(
 
     val viewerDrag = LocalViewerDrag.current
 
-    key(item.uri, imageRevision) {
-        val zoomableState = me.saket.telephoto.zoomable.rememberZoomableImageState()
-        // A photo that is swiped away is put back to fit-to-screen, as the photo page did before Telephoto, so that
-        // coming back to it does not show it still zoomed in.
-        LaunchedEffect(isCurrent) {
-            if (!isCurrent) zoomableState.zoomableState.resetZoom(animationSpec = snap())
-        }
-        LaunchedEffect(zoomableState.zoomableState.zoomFraction, isCurrent) {
-            if (viewerDrag != null && isCurrent) {
-                viewerDrag.zoomed = (zoomableState.zoomableState.zoomFraction ?: 0f) > 0.02f
+    Box(modifier = Modifier.fillMaxSize()) {
+        key(item.uri, imageRevision) {
+            val zoomableState = me.saket.telephoto.zoomable.rememberZoomableImageState()
+            // A photo that is swiped away is put back to fit-to-screen, as the photo page did before Telephoto, so that
+            // coming back to it does not show it still zoomed in.
+            LaunchedEffect(isCurrent) {
+                if (!isCurrent) zoomableState.zoomableState.resetZoom(animationSpec = snap())
             }
+            LaunchedEffect(zoomableState.zoomableState.zoomFraction, isCurrent) {
+                if (viewerDrag != null && isCurrent) {
+                    viewerDrag.zoomed = (zoomableState.zoomableState.zoomFraction ?: 0f) > 0.02f
+                }
+            }
+
+            val thumbnailKey = GridThumbnails.keyFor(item.id)
+            val request = remember(item.uri, thumbnailKey, imageRevision) {
+                ImageRequest.Builder(context)
+                    .data(item.uri)
+                    .apply { if (thumbnailKey != null && imageRevision == 0L) placeholderMemoryCacheKey(thumbnailKey) }
+                    .memoryCacheKey(if (imageRevision > 0L) "${item.uri}?rev=$imageRevision" else null)
+                    .crossfade(true)
+                    .build()
+            }
+
+            me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage(
+                model = request,
+                state = zoomableState,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().then(sharedModifier),
+                onClick = { latestOnTap() }
+            )
         }
 
-        val thumbnailKey = GridThumbnails.keyFor(item.id)
-        val request = remember(item.uri, thumbnailKey, imageRevision) {
-            ImageRequest.Builder(context)
-                .data(item.uri)
-                .apply { if (thumbnailKey != null && imageRevision == 0L) placeholderMemoryCacheKey(thumbnailKey) }
-                .memoryCacheKey(if (imageRevision > 0L) "${item.uri}?rev=$imageRevision" else null)
-                .crossfade(true)
-                .build()
+        if (isCurrent && isMotionPlaying && motionVideoUri != null) {
+            MotionVideoPlayer(
+                videoUri = motionVideoUri,
+                onTap = { latestOnTap() },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
+    }
+}
 
-        me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage(
-            model = request,
-            state = zoomableState,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize().then(sharedModifier),
-            onClick = { latestOnTap() }
+@OptIn(UnstableApi::class)
+@Composable
+private fun MotionVideoPlayer(
+    videoUri: String,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val motionPlayer = remember(videoUri) {
+        ExoPlayer.Builder(context).build().apply {
+            setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
+            setMediaItem(PlayerMediaItem.fromUri(videoUri))
+            repeatMode = androidx.media3.common.Player.REPEAT_MODE_ONE
+            playWhenReady = true
+            prepare()
+        }
+    }
+
+    DisposableEffect(motionPlayer) {
+        onDispose {
+            motionPlayer.stop()
+            motionPlayer.clearMediaItems()
+            motionPlayer.release()
+        }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
+        motionPlayer.pause()
+    }
+
+    Box(modifier = modifier) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                (LayoutInflater.from(ctx).inflate(R.layout.viewer_player_view, null, false) as PlayerView).apply {
+                    useController = false
+                    this.player = motionPlayer
+                }
+            },
+            update = {
+                it.useController = false
+                it.player = motionPlayer
+            },
+            onRelease = { it.player = null },
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onTap,
+                )
         )
     }
 }

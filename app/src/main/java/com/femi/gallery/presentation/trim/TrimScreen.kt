@@ -5,7 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.RotateRight
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -41,7 +44,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -109,6 +114,9 @@ fun TrimScreen(
     LaunchedEffect(player, state.speed) {
         player.playbackParameters = androidx.media3.common.PlaybackParameters(state.speed)
     }
+    LaunchedEffect(player, state.isMuted) {
+        player.volume = if (state.isMuted) 0f else 1f
+    }
     LaunchedEffect(player) {
         while (true) {
             positionMs = player.currentPosition.coerceAtLeast(0L)
@@ -149,7 +157,10 @@ fun TrimScreen(
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+            ) {
                 IconButton(onClick = { if (exporting) viewModel.cancel() else onClose() }) {
                     Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.trim_close))
                 }
@@ -158,11 +169,51 @@ fun TrimScreen(
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.weight(1f),
                 )
+                IconButton(
+                    onClick = viewModel::toggleMute,
+                    enabled = state.isReady && !exporting,
+                ) {
+                    Icon(
+                        imageVector = if (state.isMuted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
+                        contentDescription = stringResource(if (state.isMuted) R.string.trim_unmute else R.string.trim_mute),
+                        tint = if (state.isMuted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                IconButton(
+                    onClick = viewModel::rotateClockwise,
+                    enabled = state.isReady && !exporting,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.RotateRight,
+                        contentDescription = stringResource(R.string.trim_rotate),
+                    )
+                }
             }
 
-            Box(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
+            BoxWithConstraints(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(Color.Black)
+                    .clipToBounds(),
+                contentAlignment = Alignment.Center,
+            ) {
+                val isSwapped = state.rotationDegrees % 180 != 0
+                val scale = if (isSwapped && maxWidth > 0.dp && maxHeight > 0.dp) {
+                    val ratioW = maxWidth / maxHeight
+                    val ratioH = maxHeight / maxWidth
+                    minOf(1f, minOf(ratioW, ratioH))
+                } else {
+                    1f
+                }
                 AndroidView(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            rotationZ = state.rotationDegrees.toFloat()
+                            scaleX = scale
+                            scaleY = scale
+                        },
                     factory = { ctx ->
                         (LayoutInflater.from(ctx).inflate(R.layout.viewer_player_view, null, false) as PlayerView).apply {
                             this.player = player

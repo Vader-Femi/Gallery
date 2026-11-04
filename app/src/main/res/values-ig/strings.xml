@@ -159,6 +159,8 @@
     <string name="viewer_pause">Kwụsị</string>
     <string name="viewer_mute">Mechie ụda</string>
     <string name="viewer_unmute">Mepee ụda</string>
+    <string name="viewer_motion_photo">Lelee foto mmegharị</string>
+    <string name="viewer_motion_photo_pause">Kwụsị foto mmegharị</string>
     <string name="action_set_as_wallpaper">Seta dị ka wallpaper</string>
     <string name="action_copy_text">Detuo ederede</string>
     <string name="details_detected_text">Ederede dị na foto</string>
@@ -415,6 +417,9 @@
     <string name="trim_failed_unsupported">Ekwentị a enweghị ike ịhazi vidio a.</string>
     <string name="trim_failed_other">Ihe gbagwojuru anya. Vidio mbụ agbanwebeghị.</string>
     <string name="trim_ok">Ọ dị mma</string>
+    <string name="trim_mute">Gbanyụọ ụda</string>
+    <string name="trim_unmute">Gbanye ụda</string>
+    <string name="trim_rotate">Kpọgharịa ogo 90</string>
 
     <string name="album_sort_recency">Emelitere nso nso a</string>
     <string name="album_sort_name">Aha</string>
