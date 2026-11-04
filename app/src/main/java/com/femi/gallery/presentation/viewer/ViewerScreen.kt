@@ -37,6 +37,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
@@ -51,6 +52,8 @@ import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Wallpaper
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -378,77 +381,89 @@ private fun ViewerContent(
                 if (current != null) {
                     val ref = current.toRef()
                     val actions = when {
-                        viewModel.isRecycleBin -> listOfNotNull(
-                            ViewerAction(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore)) {
-                                viewModel.actions.restore(listOf(ref))
-                            },
-                            ViewerAction(Icons.Outlined.DeleteForever, stringResource(R.string.action_delete_forever)) {
-                                viewModel.actions.deleteForever(listOf(ref))
-                            },
-                            if (current.isVideo) {
-                                ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
-                                    playFull(current.uri)
+                        viewModel.isRecycleBin -> {
+                            val primary = listOfNotNull(
+                                ViewerAction(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore)) {
+                                    viewModel.actions.restore(listOf(ref))
+                                },
+                                ViewerAction(Icons.Outlined.DeleteForever, stringResource(R.string.action_delete_forever)) {
+                                    viewModel.actions.deleteForever(listOf(ref))
+                                },
+                                if (current.isVideo) {
+                                    ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
+                                        playFull(current.uri)
+                                    }
+                                } else null,
+                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                    viewModel.showDetails(current)
+                                },
+                            )
+                            primary to emptyList<ViewerAction>()
+                        }
+                        viewModel.isLocked -> {
+                            val primary = listOfNotNull(
+                                ViewerAction(Icons.Outlined.LockOpen, stringResource(R.string.action_unlock)) {
+                                    viewModel.actions.unlock(listOf(ref))
+                                },
+                                ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
+                                    viewModel.actions.deleteLocked(listOf(ref))
+                                },
+                                if (current.isVideo) {
+                                    ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
+                                        playFull(current.uri)
+                                    }
+                                } else null,
+                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                    viewModel.showDetails(current)
+                                },
+                            )
+                            primary to emptyList<ViewerAction>()
+                        }
+                        else -> {
+                            val primary = listOfNotNull(
+                                ViewerAction(Icons.Outlined.Share, stringResource(R.string.viewer_share)) {
+                                    shareMedia(context, current)
+                                },
+                                if (current.isVideo) {
+                                    ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
+                                        playFull(current.uri)
+                                    }
+                                } else {
+                                    ViewerAction(Icons.Outlined.Edit, stringResource(R.string.viewer_edit)) {
+                                        onEdit(current.uri)
+                                    }
+                                },
+                                ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
+                                    viewModel.actions.trash(listOf(ref))
                                 }
-                            } else null,
-                            ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
-                                viewModel.showDetails(current)
-                            },
-                        )
-                        viewModel.isLocked -> listOfNotNull(
-                            ViewerAction(Icons.Outlined.LockOpen, stringResource(R.string.action_unlock)) {
-                                viewModel.actions.unlock(listOf(ref))
-                            },
-                            ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
-                                viewModel.actions.deleteLocked(listOf(ref))
-                            },
-                            if (current.isVideo) {
-                                ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
-                                    playFull(current.uri)
-                                }
-                            } else null,
-                            ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
-                                viewModel.showDetails(current)
-                            },
-                        )
-                        else -> listOfNotNull(
-                            ViewerAction(Icons.Outlined.Share, stringResource(R.string.viewer_share)) {
-                                shareMedia(context, current)
-                            },
-                            ViewerAction(
-                                icon = if (current.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                                label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
-                            ) { viewModel.actions.toggleFavorite(listOf(ref)) },
-                            if (current.isVideo) {
-                                ViewerAction(Icons.Outlined.PlayCircle, stringResource(R.string.viewer_play)) {
-                                    playFull(current.uri)
-                                }
-                            } else {
-                                ViewerAction(Icons.Outlined.Edit, stringResource(R.string.viewer_edit)) {
-                                    onEdit(current.uri)
-                                }
-                            },
-                            if (current.isVideo) {
-                                ViewerAction(Icons.Outlined.ContentCut, stringResource(R.string.viewer_trim)) {
-                                    onTrim(current.uri)
-                                }
-                            } else null,
-                            if (!current.isVideo) {
-                                ViewerAction(Icons.Outlined.Wallpaper, stringResource(R.string.action_set_as_wallpaper)) {
-                                    setWallpaper(context, current)
-                                }
-                            } else null,
-                            ViewerAction(Icons.Outlined.Delete, stringResource(R.string.action_delete)) {
-                                viewModel.actions.trash(listOf(ref))
-                            },
-                            ViewerAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
-                                lockWithScreenLockCheck(context) { viewModel.actions.lock(listOf(ref)) }
-                            },
-                            ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
-                                viewModel.showDetails(current)
-                            },
-                        )
+                            )
+                            val overflow = listOfNotNull(
+                                ViewerAction(
+                                    icon = if (current.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                    label = stringResource(if (current.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                                ) { viewModel.actions.toggleFavorite(listOf(ref)) },
+                                if (current.isVideo) {
+                                    ViewerAction(Icons.Outlined.ContentCut, stringResource(R.string.viewer_trim)) {
+                                        onTrim(current.uri)
+                                    }
+                                } else null,
+                                if (!current.isVideo) {
+                                    ViewerAction(Icons.Outlined.Wallpaper, stringResource(R.string.action_set_as_wallpaper)) {
+                                        setWallpaper(context, current)
+                                    }
+                                } else null,
+                                ViewerAction(Icons.Outlined.Lock, stringResource(R.string.action_lock)) {
+                                    lockWithScreenLockCheck(context) { viewModel.actions.lock(listOf(ref)) }
+                                },
+                                ViewerAction(Icons.Outlined.Info, stringResource(R.string.viewer_info)) {
+                                    viewModel.showDetails(current)
+                                },
+                            )
+                            primary to overflow
+                        }
                     }
-                    val cachedActions = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions }
+                    val cachedPrimary = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions.first }
+                    val cachedOverflow = remember(ref, viewModel.isRecycleBin, viewModel.isLocked, current.isFavorite) { actions.second }
                     Column {
                         if (current.isVideo && activePlayer != null) {
                             VideoControlsOverlay(
@@ -486,7 +501,7 @@ private fun ViewerContent(
                                 },
                             )
                         }
-                        ActionBar(actions = cachedActions)
+                        ActionBar(primaryActions = cachedPrimary, overflowActions = cachedOverflow)
                     }
                 }
             }
@@ -779,9 +794,10 @@ private class ViewerAction(
 )
 
 @Composable
-private fun ActionBar(actions: List<ViewerAction>) {
+private fun ActionBar(primaryActions: List<ViewerAction>, overflowActions: List<ViewerAction> = emptyList()) {
     val surface = MaterialTheme.colorScheme.surface
     val contentColor = MaterialTheme.colorScheme.onSurface
+    var moreExpanded by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -791,9 +807,32 @@ private fun ActionBar(actions: List<ViewerAction>) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        actions.forEach { action ->
+        primaryActions.forEach { action ->
             IconButton(onClick = action.onClick) {
                 Icon(action.icon, action.label, tint = contentColor)
+            }
+        }
+        
+        if (overflowActions.isNotEmpty()) {
+            Box {
+                IconButton(onClick = { moreExpanded = true }) {
+                    Icon(Icons.Filled.MoreVert, stringResource(R.string.action_more), tint = contentColor)
+                }
+                DropdownMenu(
+                    expanded = moreExpanded,
+                    onDismissRequest = { moreExpanded = false }
+                ) {
+                    overflowActions.forEach { action ->
+                        DropdownMenuItem(
+                            text = { Text(action.label) },
+                            onClick = {
+                                moreExpanded = false
+                                action.onClick()
+                            },
+                            leadingIcon = { Icon(action.icon, contentDescription = null) }
+                        )
+                    }
+                }
             }
         }
     }
