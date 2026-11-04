@@ -424,6 +424,8 @@ fun SettingsScreen(
             }
 
             ClipModelCard()
+
+            LockedProtectionCard()
         }
 
         if (showHideAlbumsDialog) {

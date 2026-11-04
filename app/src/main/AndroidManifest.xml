@@ -82,6 +82,13 @@
         </activity>
 
         <!-- Foreground Service configuration for WorkManager -->
+        <!-- Decrypts the items of the Locked folder for the app itself; not reachable by other apps. -->
+        <provider
+            android:name=".data.locked.LockedProvider"
+            android:authorities="${applicationId}.locked"
+            android:exported="false"
+            android:grantUriPermissions="false" />
+
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"

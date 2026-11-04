@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.transformer)
+    implementation(libs.tink.android)
     implementation(libs.androidx.exifinterface)
     // Reads the text in photos. This is the bundled model (it is part of the app and works offline), not the
     // one that downloads through Google Play services.

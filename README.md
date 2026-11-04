@@ -97,7 +97,10 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] Opens only after **fingerprint / face / screen lock**, and re-locks when you leave it or the app goes to the background
 - [x] Hidden from screenshots, screen recording and the recent-apps preview while it is open
 - [x] Same timeline, zoom, viewer and selection as everywhere else; **Unlock** puts items back into the gallery, **Delete** removes them for good
-- [x] Never included in backups
+- [x] Never included in Android's backups
+- [x] **Encrypted at rest**: every item is one `.lk` file with its own AES-256-GCM key, in 64 KiB segments (Tink streaming AEAD), and its name, dates and folder sealed in its header; the folder key is random and protected by an Android Keystore key (StrongBox when the phone has it). Nothing readable is left on the phone, and what is shown is decrypted on the fly by a private content provider, never written to disk. Items of older versions are encrypted in the background, each read back and compared by SHA-256 before the plain file is deleted
+- [x] **Optional "require authentication"** (Settings): the Keystore key then opens the folder key only right after a fingerprint, face or screen-lock authentication, and the folder key is dropped from memory when the folder locks. If Android deletes that key (the screen lock is removed), the items can only be brought back from a backup
+- [x] **Encrypted backup** (Settings): export to a file you choose, protected by a passphrase of at least 12 characters (PBKDF2-HMAC-SHA-256, 600,000 rounds); restore on this or another phone. There is no recovery if the passphrase is forgotten
 
 **Works with other apps**
 - [x] **Open with**: photos and videos opened from Files, Chrome, a camera app or a chat show in a simple viewer (zoom, video playback) with an **Open Gallery** button — they don't need to be in your library
@@ -138,7 +141,6 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] **Describe a video**: extract a keyframe thumbnail from videos so CLIP can index what videos show too
 - [ ] Video editor, the rest: speed change and a few basic effects
 - [ ] Motion photo playback, *(set as wallpaper added)*
-- [ ] Optional encrypted backup of the Locked folder, and encryption of its files at rest
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
 
@@ -206,7 +208,7 @@ app/src/main/java/com/femi/gallery/
 ├── data/
 │   ├── mediastore/           MediaStoreDataSource, MediaPagingSource
 │   ├── repository/           MediaRepositoryImpl
-│   ├── locked/               LockedStore, LockedPagingSource
+│   ├── locked/               LockedStore, LockedKeys, LockedProvider, LockedBackup, LockedPagingSource
 │   ├── edit/                 BitmapEditor
 │   ├── exif/                 ExifReader
 │   └── image/                MediaThumbnailFetcher (Coil)
@@ -242,6 +244,7 @@ app/src/main/java/com/femi/gallery/
 | DI | Hilt (with KSP 2.3.12) | 2.60.1 |
 | Paging | Paging 3 (+ Compose) | 3.3.6 |
 | Images | Coil 3 (+ video frames) | 3.6.3 |
+| Encryption | Tink `tink-android` (streaming AEAD for the Locked folder) | 1.24.0 |
 | Zoom | Telephoto `zoomable-image-coil3` (tiled zoom for large photos) | 0.19.0 |
 | Video | Media3 ExoPlayer + UI | 1.11.1 |
 | EXIF | AndroidX ExifInterface | 1.4.1 |
@@ -394,6 +397,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 81 | Similar photos: the rules | `domain/similar` (pure, 21 tests): `DifferenceHash` (a 64-bit hash of a 9 by 8 grid of grey values, each the average of the part of the picture it covers; blank pictures get none so that all of them do not look alike; `distance` counts differing bits), `SimilarFinder` (groups photos within 6 bits of each other across the **whole library**; the hash is cut into 7 pieces so only photos sharing a piece are compared, which finds every pair within the limit, tested for bits in every position; groups are kept tight, so a chain "A like B, B like C" does not join unlike photos), `SimilarKeepRule` (favorite, most pixels, biggest file, camera folder, earliest) and the `PerceptualHasher` interface. Groups are `DuplicateGroup`s, so the duplicates screen can show them. No hashing of real photos, database or screen yet |
 | 82 | Similar photos: hashing and the search | New table `photo_hash` (database version 4, `AutoMigration(3, 4)`; the index database is already excluded from backup): the hash of each photo, valid while its size and date added are unchanged, and also a "looked at, too flat" mark so such photos are not looked at again. `ThumbnailPerceptualHasher` hashes from the 64 by 64 thumbnail (`loadThumbnail`, like the colour scan), writes in groups of 100 and keeps what it learned when a search is cancelled. `SimilarPhotoRepository.scan()` hashes all photos (not videos; hidden albums and the Locked folder are left out), 32 at a time on three background threads, with progress, then groups them with `SimilarFinder`; `ScanSimilarPhotosUseCase`. Log tag `SimilarScan` (photos, how many got a hash, groups, time). **After building, commit the new `app/schemas/.../4.json` that Room writes.** No screen yet |
 | 83 | Similar photos: the screen | A "Similar photos" entry in the menu opens `SimilarPhotosScreen` (route `similar`). The duplicates screen is now a shared `GroupsScreen` with two thin entry points (identical copies, similar photos): each group shows its photos, tapping one chooses which to keep (the best one is suggested), the bottom button moves all the others to the recycle bin after the system confirmation, and in the similar mode each group also has "Keep all" which leaves it alone. Progress ("Looking at your photos (n of m)") reuses the duplicates progress with a new `DuplicatePhase.Hashing`. `SimilarPhotosViewModel`; nine strings in the five languages (four best-effort). Compose screens are not compiled here; the first scan of a big library takes a while, later ones only look at new photos |
+| 84 | Locked folder: encryption, backup, optional authentication | Every locked item is encrypted (see the Locked folder list above). Pure and tested on the JVM (`domain/locked`, 22 tests): the item header (file key and metadata sealed with AES-GCM, resealable for a backup without touching the contents), the backup file format (wrong passphrase noticed at once, a cut-short, changed or incomplete backup refused), the passphrase rules and an offset channel. Android side (`data/locked`): `TinkContentCipher` (`AesGcmHkdfStreaming`, 64 KiB segments), `AndroidKeystoreKeyEncryptor`, `LockedKeys` (folder key, lock/unlock with `LockSession`, switching "require authentication", reset after a lost key), `LockedStore` (encrypted items; plain items of older versions stay listed until encrypted and verified), `LockedProvider` (not exported; Android proxy file descriptors, so the viewer, player, image loader and metadata readers keep working with a content URI), `LockedBackup` (export and import, imported files are read through once to check them). Settings has a "Locked folder protection" card; the lock screen explains when the key is lost. Dependency `tink-android`. **Not run on a device: the crypto against Tink, the Keystore, the provider with ExoPlayer and Telephoto, and the screens** |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

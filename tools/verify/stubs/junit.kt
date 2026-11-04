@@ -16,6 +16,8 @@ object Assert {
     fun assertFalse(c: Boolean) { if (c) throw AssertionError("expected false") }
     fun assertFalse(m: String?, c: Boolean) { if (c) throw AssertionError(m) }
     fun assertArrayEquals(e: FloatArray, a: FloatArray, d: Float) { if (e.size != a.size) throw AssertionError("size"); for (i in e.indices) if (Math.abs(e[i]-a[i]) > d) throw AssertionError("idx $i") }
+    fun assertArrayEquals(e: ByteArray, a: ByteArray) { if (!e.contentEquals(a)) throw AssertionError("arrays differ") }
+    fun fail(message: String): Nothing { throw AssertionError(message) }
     fun assertArrayEquals(e: LongArray, a: LongArray) { if (!e.contentEquals(a)) throw AssertionError("arrays differ") }
     fun assertArrayEquals(e: IntArray, a: IntArray) { if (!e.contentEquals(a)) throw AssertionError("arrays differ") }
     fun assertNotEquals(u: Any?, a: Any?) { if (u == a) throw AssertionError("values should differ: <$a>") }

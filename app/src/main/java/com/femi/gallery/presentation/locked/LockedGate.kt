@@ -44,6 +44,7 @@ fun LockedGate(
     content: @Composable () -> Unit,
 ) {
     val unlocked by session.unlocked.collectAsStateWithLifecycle()
+    val keyLost by session.keyLost.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = context.findActivity() as? FragmentActivity
     val available = BiometricAuth.isAvailable(context)
@@ -52,7 +53,9 @@ fun LockedGate(
 
     SecureWindow()
 
-    if (unlocked) {
+    if (unlocked && keyLost) {
+        KeyLostNotice(onClose = onClose)
+    } else if (unlocked) {
         content()
     } else {
         val handleUnlock: () -> Unit = remember { { session.unlock() } }
@@ -64,6 +67,37 @@ fun LockedGate(
         val handlePrompt by rememberUpdatedState(prompt)
         LaunchedEffect(available) { handlePrompt() }
         LockedPlaceholder(available = available, onUnlock = handlePrompt, onClose = onClose)
+    }
+}
+
+/** The key of the folder is gone: its items cannot be opened, only restored from a backup. */
+@Composable
+private fun KeyLostNotice(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.error,
+        )
+        Text(
+            text = stringResource(R.string.locked_key_lost_title),
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(R.string.locked_key_lost_body),
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+        )
+        TextButton(onClick = onClose) { Text(stringResource(R.string.viewer_back)) }
     }
 }
 
