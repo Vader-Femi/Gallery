@@ -13,7 +13,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 CACHE="${VERIFY_CACHE:-$HOME/.cache/gallery-verify}"
-[ -x "$CACHE/kotlinc/bin/kotlinc" ] && [ -f "$CACHE/android.jar" ] || "$HERE/setup.sh" || exit 2
+[ -x "$CACHE/kotlinc/bin/kotlinc" ] && [ -f "$CACHE/android-35.jar" ] || "$HERE/setup.sh" || exit 2
 
 J="$ROOT/app/src/main/java/com/femi/gallery"
 FILES=()
@@ -32,7 +32,7 @@ for extra in "$@"; do add "$ROOT/$extra"; done
 
 OUT="$(mktemp -d)"
 RESULT="$("$CACHE/kotlinc/bin/kotlinc" -nowarn \
-    -cp "$CACHE/android.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar" \
+    -cp "$CACHE/android-35.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar" \
     "$HERE"/stubs/libs/*.kt $(find "$HERE/stubs/java" -name '*.java') "${FILES[@]}" -d "$OUT" 2>&1 | grep -E "error:" || true)"
 rm -rf "$OUT"
 if [ -z "$RESULT" ]; then echo "typecheck: clean (${#FILES[@]} files)"; exit 0; fi

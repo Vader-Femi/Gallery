@@ -4,7 +4,7 @@ These scripts check the app's logic without Gradle or an Android SDK. They exist
 the app cannot be built (a sandbox without the SDK), and they are quick enough to run on a laptop too.
 
 ```
-tools/verify/setup.sh        # once: downloads the Kotlin compiler and an android.jar into ~/.cache/gallery-verify (~110 MB)
+tools/verify/setup.sh        # once: downloads the Kotlin compiler and an android.jar (API 35) into ~/.cache/gallery-verify (~110 MB)
 tools/verify/typecheck.sh    # compiles the logic and data layers against stubs; "typecheck: clean" means no errors
 tools/verify/test.sh         # runs the pure-Kotlin unit tests on the JVM; prints passed=N failed=M
 ```

@@ -11,7 +11,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 CACHE="${VERIFY_CACHE:-$HOME/.cache/gallery-verify}"
-[ -x "$CACHE/kotlinc/bin/kotlinc" ] && [ -f "$CACHE/android.jar" ] || "$HERE/setup.sh" || exit 2
+[ -x "$CACHE/kotlinc/bin/kotlinc" ] && [ -f "$CACHE/android-35.jar" ] || "$HERE/setup.sh" || exit 2
 
 APP="$ROOT/app"
 J="$APP/src/main/java/com/femi/gallery"
@@ -27,7 +27,7 @@ for dir in domain presentation/stories presentation/viewer core/perf; do
 done
 
 OUT="$(mktemp -d)"
-CP="$CACHE/android.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar"
+CP="$CACHE/android-35.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar"
 ERRORS="$(cd "$APP" && "$CACHE/kotlinc/bin/kotlinc" -nowarn -cp "$CP" "$HERE/stubs/junit.kt" "$HERE/stubs/Runner.kt" "$HERE/stubs/TestSupport.kt" "$HERE/stubs/TestSupport2.kt" "$HERE/stubs/libs/room.kt" "$HERE/stubs/libs/mlkit_face.kt" "${SOURCES[@]}" "${TESTS[@]}" -d "$OUT" 2>&1 | grep -E "error:" || true)"
 if [ -n "$ERRORS" ]; then echo "$ERRORS"; rm -rf "$OUT"; exit 1; fi
 
@@ -37,7 +37,7 @@ for f in "${TESTS[@]}"; do
     while IFS= read -r c; do CLASSES+=("$pkg.$c"); done < <(grep -oE '^class [A-Za-z0-9]*Test[A-Za-z0-9]*' "$f" | awk '{print $2}')
 done
 # The tokenizer test reads the vocabulary relative to the app module.
-RESULT="$(cd "$APP" && java -cp "$OUT:$CACHE/kotlinc/lib/kotlin-stdlib.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar:$CACHE/android.jar" RunnerKt "${CLASSES[@]}" 2>&1)"
+RESULT="$(cd "$APP" && java -cp "$OUT:$CACHE/kotlinc/lib/kotlin-stdlib.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar:$CACHE/android-35.jar" RunnerKt "${CLASSES[@]}" 2>&1)"
 rm -rf "$OUT"
 echo "$RESULT"
 echo "$RESULT" | grep -q "failed=0" && exit 0 || exit 1

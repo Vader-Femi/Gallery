@@ -13,9 +13,9 @@ if [ ! -x "$CACHE/kotlinc/bin/kotlinc" ]; then
     rm "$CACHE/kotlin.zip"
 fi
 
-if [ ! -f "$CACHE/android.jar" ]; then
-    echo "Downloading android.jar (API 33) ..."
-    curl -fsSL -o "$CACHE/android.jar" "https://github.com/Sable/android-platforms/raw/master/android-33/android.jar"
+if [ ! -f "$CACHE/android-35.jar" ]; then
+    echo "Downloading android.jar (API 35) ..."
+    curl -fsSL -o "$CACHE/android-35.jar" "https://github.com/Sable/android-platforms/raw/master/android-35/android.jar"
 fi
 
 echo "Ready: $CACHE"
