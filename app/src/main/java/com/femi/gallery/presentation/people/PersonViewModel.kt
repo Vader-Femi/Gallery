@@ -38,7 +38,7 @@ class PersonViewModel @Inject constructor(
                 if (ids.isEmpty()) {
                     emit(emptyList())
                 } else {
-                    emit(dataSource.loadByIds(ids.toLongArray()))
+                    emit(dataSource.loadVisibleByIds(ids.toLongArray()))
                 }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

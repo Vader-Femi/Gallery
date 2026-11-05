@@ -245,6 +245,16 @@ class MediaStoreDataSource @Inject constructor(
         loadByIdsFromMediaStore(ids, bucketId, search)
     }
 
+    /**
+     * [loadByIds] without the photos of hidden albums, for screens that reach photos through an id list kept earlier
+     * (the photos of a person), which were found before the album was hidden.
+     */
+    suspend fun loadVisibleByIds(ids: LongArray): List<MediaItem> {
+        val items = loadByIds(ids)
+        val hidden = hiddenAlbums()
+        return if (hidden.isEmpty()) items else items.filter { it.bucketId !in hidden }
+    }
+
     /** [loadByIds] read from MediaStore itself. */
     suspend fun loadByIdsFromMediaStore(
         ids: LongArray,
