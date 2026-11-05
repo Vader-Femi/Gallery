@@ -18,7 +18,7 @@ J="$APP/src/main/java/com/femi/gallery"
 T="$APP/src/test/java/com/femi/gallery"
 SOURCES=()
 while IFS= read -r f; do SOURCES+=("$f"); done < <(find "$J/domain" -name '*.kt' -not -path '*/domain/repository/*' -not -path '*/domain/usecase/*')
-for f in "$J"/presentation/stories/StoryTitles.kt "$J"/presentation/viewer/MediaStripMath.kt "$J"/presentation/viewer/ViewerDragMath.kt "$J"/core/perf/FrameStats.kt; do
+for f in "$J"/presentation/stories/StoryTitles.kt "$J"/presentation/viewer/MediaStripMath.kt "$J"/presentation/viewer/ViewerDragMath.kt "$J"/presentation/viewer/DetailsFormat.kt "$J"/core/perf/FrameStats.kt "$J"/domain/repository/EditRepository.kt "$J"/domain/usecase/EditUseCases.kt "$J"/data/db/Rows.kt "$J"/data/db/Daos.kt; do
     [ -f "$f" ] && SOURCES+=("$f")
 done
 TESTS=()
@@ -28,7 +28,7 @@ done
 
 OUT="$(mktemp -d)"
 CP="$CACHE/android.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar"
-ERRORS="$(cd "$APP" && "$CACHE/kotlinc/bin/kotlinc" -nowarn -cp "$CP" "$HERE/stubs/junit.kt" "$HERE/stubs/Runner.kt" "${SOURCES[@]}" "${TESTS[@]}" -d "$OUT" 2>&1 | grep -E "error:" || true)"
+ERRORS="$(cd "$APP" && "$CACHE/kotlinc/bin/kotlinc" -nowarn -cp "$CP" "$HERE/stubs/junit.kt" "$HERE/stubs/Runner.kt" "$HERE/stubs/TestSupport.kt" "$HERE/stubs/TestSupport2.kt" "$HERE/stubs/libs/room.kt" "$HERE/stubs/libs/mlkit_face.kt" "${SOURCES[@]}" "${TESTS[@]}" -d "$OUT" 2>&1 | grep -E "error:" || true)"
 if [ -n "$ERRORS" ]; then echo "$ERRORS"; rm -rf "$OUT"; exit 1; fi
 
 CLASSES=()

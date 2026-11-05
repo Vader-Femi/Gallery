@@ -1,6 +1,9 @@
 @file:Suppress("unused", "UNUSED_PARAMETER")
 package androidx.media3.common
 
+/** Stub for tools/verify: the marker interface of Media3 effects. */
+interface Effect
+
 class MediaItem private constructor() {
     class ClippingConfiguration private constructor() {
         class Builder {
