@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -66,6 +67,7 @@ fun StoriesScreen(
     viewModel: StoriesViewModel = hiltViewModel(),
 ) {
     val stories by viewModel.stories.collectAsStateWithLifecycle()
+    val isUpdating by viewModel.isUpdating.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     LifecycleResumeEffect(viewModel) {
@@ -73,7 +75,13 @@ fun StoriesScreen(
         onPauseOrDispose { }
     }
 
-    var columns by rememberSaveable { mutableIntStateOf(2) }
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val defaultColumns = when {
+        configuration.screenWidthDp >= 900 -> 4
+        configuration.screenWidthDp >= 600 -> 3
+        else -> 2
+    }
+    var columns by rememberSaveable(defaultColumns) { mutableIntStateOf(defaultColumns) }
     val haptic = LocalHapticFeedback.current
 
     Scaffold(
@@ -88,59 +96,71 @@ fun StoriesScreen(
             )
         },
     ) { innerPadding ->
-        val loaded = stories
-        if (loaded == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = innerPadding.calculateTopPadding()),
-                contentAlignment = Alignment.Center,
-            ) {
-                LoadingIndicator(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding()),
+        ) {
+            if (isUpdating) {
+                LinearWavyProgressIndicator(
                     modifier = Modifier
-                        .size(64.dp)
-                        .offset(y = (-48).dp),
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
                 )
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = innerPadding.calculateTopPadding())
-                    .pinchToChangeColumns(
-                        onZoomIn = {
-                            if (columns > 2) {
-                                columns--
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
-                        },
-                        onZoomOut = {
-                            if (columns < 5) {
-                                columns++
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
-                        },
-                    ),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                if (loaded.isEmpty()) {
-                    item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            text = stringResource(R.string.stories_empty),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 48.dp, horizontal = 16.dp),
-                        )
-                    }
+            if (stories.isEmpty() && isUpdating) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    LoadingIndicator(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .offset(y = (-48).dp),
+                    )
                 }
-                items(loaded, key = { "${it.fromDay}-${it.toDay}" }) { story ->
-                    StoryCard(story = story, onClick = { onStoryClick(story.fromDay, story.toDay) })
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                        .pinchToChangeColumns(
+                            onZoomIn = {
+                                if (columns > 2) {
+                                    columns--
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                            onZoomOut = {
+                                if (columns < 6) {
+                                    columns++
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                        ),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    if (stories.isEmpty()) {
+                        item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
+                            Text(
+                                text = stringResource(R.string.stories_empty),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 48.dp, horizontal = 16.dp),
+                            )
+                        }
+                    }
+                    items(stories, key = { "${it.fromDay}-${it.toDay}" }) { story ->
+                        StoryCard(story = story, onClick = { onStoryClick(story.fromDay, story.toDay) })
+                    }
                 }
             }
         }

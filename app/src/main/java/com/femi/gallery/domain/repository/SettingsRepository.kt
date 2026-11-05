@@ -1,5 +1,6 @@
 package com.femi.gallery.domain.repository
 
+import com.femi.gallery.domain.clip.ClipNormalization
 import com.femi.gallery.domain.mirror.AlbumSortOption
 import com.femi.gallery.domain.model.SlideshowSpeed
 import com.femi.gallery.presentation.pictures.TimelineZoom
@@ -20,6 +21,7 @@ interface SettingsRepository {
     val timelineZoom: Flow<TimelineZoom>
     val semanticSearch: Flow<Boolean>
     val semanticSearchStrictness: Flow<SemanticSearchStrictness>
+    val clipNormalization: Flow<ClipNormalization>
     val albumSortOption: Flow<AlbumSortOption>
     val hiddenAlbums: Flow<Set<String>>
 
@@ -36,6 +38,7 @@ interface SettingsRepository {
     suspend fun setTimelineZoom(zoom: TimelineZoom)
     suspend fun setSemanticSearch(enabled: Boolean)
     suspend fun setSemanticSearchStrictness(strictness: SemanticSearchStrictness)
+    suspend fun setClipNormalization(normalization: ClipNormalization)
     suspend fun setAlbumSortOption(option: AlbumSortOption)
     suspend fun setHiddenAlbums(albums: Set<String>)
 
@@ -45,6 +48,7 @@ interface SettingsRepository {
     fun getBackgroundScanSync(): Boolean
     fun getScanOnlyWhileChargingSync(): Boolean
     fun getTimelineZoomSync(): TimelineZoom
+    fun getClipNormalizationSync(): ClipNormalization
 }
 
 enum class SemanticSearchStrictness {

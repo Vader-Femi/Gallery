@@ -202,13 +202,19 @@ class BitmapEditor @Inject constructor(
 
         // Edits are rendered from the photo itself (up to MAX_SAVE_SIZE) rather than the preview.
         val full = decode(uri, MAX_SAVE_SIZE)
+        val cs = full.colorSpace
+        val gainmapHolder = extractGainmap(full)
         val oriented = orient(full, state)
         if (oriented !== full) full.recycle() // a 4096 px bitmap is ~50 MB; free copies as soon as possible
         val geometry = crop(oriented, state.crop)
         if (geometry !== oriented) oriented.recycle()
         val effected = renderEffects(geometry, state)
         if (effected !== geometry) geometry.recycle()
-        val result = Bitmap.createBitmap(effected.width, effected.height, Bitmap.Config.ARGB_8888)
+        val result = if (cs != null) {
+            Bitmap.createBitmap(effected.width, effected.height, Bitmap.Config.ARGB_8888, true, cs)
+        } else {
+            Bitmap.createBitmap(effected.width, effected.height, Bitmap.Config.ARGB_8888)
+        }
         val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
             colorFilter = ColorMatrixColorFilter(ColorMatrix(state.colorMatrix()))
         }
@@ -217,6 +223,7 @@ class BitmapEditor @Inject constructor(
         effected.recycle()
         // Drawings, text and stickers go on last, so that the colours of the edit do not tint them.
         MarkupRenderer.draw(canvas, result.width.toFloat(), result.height.toFloat(), state.markup)
+        applyGainmap(result, gainmapHolder, state)
 
         val isPng = meta.mime == "image/png"
         val baseName = meta.name.substringBeforeLast('.', meta.name).ifEmpty { "photo" }
@@ -300,13 +307,19 @@ class BitmapEditor @Inject constructor(
         }
 
         val full = decode(uri, MAX_SAVE_SIZE)
+        val cs = full.colorSpace
+        val gainmapHolder = extractGainmap(full)
         val oriented = orient(full, state)
         if (oriented !== full) full.recycle()
         val geometry = crop(oriented, state.crop)
         if (geometry !== oriented) oriented.recycle()
         val effected = renderEffects(geometry, state)
         if (effected !== geometry) geometry.recycle()
-        val result = Bitmap.createBitmap(effected.width, effected.height, Bitmap.Config.ARGB_8888)
+        val result = if (cs != null) {
+            Bitmap.createBitmap(effected.width, effected.height, Bitmap.Config.ARGB_8888, true, cs)
+        } else {
+            Bitmap.createBitmap(effected.width, effected.height, Bitmap.Config.ARGB_8888)
+        }
         val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
             colorFilter = ColorMatrixColorFilter(ColorMatrix(state.colorMatrix()))
         }
@@ -315,6 +328,7 @@ class BitmapEditor @Inject constructor(
         effected.recycle()
         // Drawings, text and stickers go on last, so that the colours of the edit do not tint them.
         MarkupRenderer.draw(canvas, result.width.toFloat(), result.height.toFloat(), state.markup)
+        applyGainmap(result, gainmapHolder, state)
 
         // Encode first, in memory: if that fails, the original has not been touched.
         val encoded = ByteArrayOutputStream().use { buffer ->
@@ -460,6 +474,60 @@ class BitmapEditor @Inject constructor(
     private fun destinationFor(originalPath: String): String =
         if (AlbumPaths.isAlbumFolder(originalPath)) AlbumPaths.forMedia(originalPath, isVideo = false) else "Pictures/Edited/"
 
+    private fun extractGainmap(source: Bitmap): GainmapHolder? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return null
+        return runCatching {
+            if (!source.hasGainmap()) return@runCatching null
+            val gm = source.gainmap ?: return@runCatching null
+            val content = gm.gainmapContents
+            val copy = content.copy(Bitmap.Config.ARGB_8888, true)
+            GainmapHolder(
+                gainmapContents = copy,
+                displayRatioForFullHdr = gm.displayRatioForFullHdr,
+                epsilonHdr = gm.epsilonHdr.clone(),
+                epsilonSdr = gm.epsilonSdr.clone(),
+                gamma = gm.gamma.clone(),
+                ratioMin = gm.ratioMin.clone(),
+                ratioMax = gm.ratioMax.clone(),
+            )
+        }.getOrNull()
+    }
+
+    private fun applyGainmap(target: Bitmap, holder: GainmapHolder?, state: EditState) {
+        if (holder == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        runCatching {
+            val needsGeometry = state.rotationTurns != 0 || state.straightenAngle != 0f ||
+                state.flipHorizontal || state.flipVertical || state.crop != CropRect.Full
+            val gmContent = if (needsGeometry) {
+                val orientedGm = orient(holder.gainmapContents, state)
+                if (state.crop != CropRect.Full) crop(orientedGm, state.crop) else orientedGm
+            } else {
+                holder.gainmapContents
+            }
+            val newGainmap = android.graphics.Gainmap(gmContent).apply {
+                displayRatioForFullHdr = holder.displayRatioForFullHdr
+                setEpsilonHdr(holder.epsilonHdr[0], holder.epsilonHdr[1], holder.epsilonHdr[2])
+                setEpsilonSdr(holder.epsilonSdr[0], holder.epsilonSdr[1], holder.epsilonSdr[2])
+                setGamma(holder.gamma[0], holder.gamma[1], holder.gamma[2])
+                setRatioMin(holder.ratioMin[0], holder.ratioMin[1], holder.ratioMin[2])
+                setRatioMax(holder.ratioMax[0], holder.ratioMax[1], holder.ratioMax[2])
+            }
+            target.gainmap = newGainmap
+        }.onFailure { e ->
+            Log.w(TAG, "Could not apply Ultra HDR gain map", e)
+        }
+    }
+
+    private class GainmapHolder(
+        val gainmapContents: Bitmap,
+        val displayRatioForFullHdr: Float,
+        val epsilonHdr: FloatArray,
+        val epsilonSdr: FloatArray,
+        val gamma: FloatArray,
+        val ratioMin: FloatArray,
+        val ratioMax: FloatArray,
+    )
+
     private class Original(
         val name: String,
         val mime: String,
@@ -486,6 +554,10 @@ class BitmapEditor @Inject constructor(
             ExifInterface.TAG_GPS_LONGITUDE_REF,
             ExifInterface.TAG_GPS_ALTITUDE,
             ExifInterface.TAG_GPS_ALTITUDE_REF,
+            ExifInterface.TAG_GPS_SPEED,
+            ExifInterface.TAG_GPS_SPEED_REF,
+            ExifInterface.TAG_GPS_IMG_DIRECTION,
+            ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
             ExifInterface.TAG_MAKE,
             ExifInterface.TAG_MODEL,
             ExifInterface.TAG_FOCAL_LENGTH,
@@ -494,6 +566,26 @@ class BitmapEditor @Inject constructor(
             ExifInterface.TAG_EXPOSURE_PROGRAM,
             ExifInterface.TAG_WHITE_BALANCE,
             ExifInterface.TAG_FLASH,
+            ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY,
+            ExifInterface.TAG_COLOR_SPACE,
+            ExifInterface.TAG_SHUTTER_SPEED_VALUE,
+            ExifInterface.TAG_APERTURE_VALUE,
+            ExifInterface.TAG_LENS_MAKE,
+            ExifInterface.TAG_LENS_MODEL,
+            ExifInterface.TAG_LENS_SPECIFICATION,
+            ExifInterface.TAG_OFFSET_TIME,
+            ExifInterface.TAG_OFFSET_TIME_ORIGINAL,
+            ExifInterface.TAG_OFFSET_TIME_DIGITIZED,
+            ExifInterface.TAG_SUBSEC_TIME,
+            ExifInterface.TAG_SUBSEC_TIME_ORIGINAL,
+            ExifInterface.TAG_SUBSEC_TIME_DIGITIZED,
+            ExifInterface.TAG_COPYRIGHT,
+            ExifInterface.TAG_ARTIST,
+            ExifInterface.TAG_USER_COMMENT,
+            ExifInterface.TAG_X_RESOLUTION,
+            ExifInterface.TAG_Y_RESOLUTION,
+            ExifInterface.TAG_RESOLUTION_UNIT,
+            ExifInterface.TAG_SOFTWARE,
         )
     }
 }

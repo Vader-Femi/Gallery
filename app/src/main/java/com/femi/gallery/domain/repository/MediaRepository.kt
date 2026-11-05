@@ -27,6 +27,12 @@ interface MediaRepository {
     /** Automatically found events (busy days or runs of days), newest first. */
     fun observeStories(): Flow<List<Story>>
 
+    /** Whether stories are currently being recomputed in the background. */
+    fun isStoriesUpdating(): Flow<Boolean>
+
+    /** Recomputes stories from the media library and updates the local cache. */
+    suspend fun refreshStories()
+
     /** The title and cover the person chose for the story [fromDay]..[toDay]; null when it has none. */
     fun observeStoryEdit(fromDay: Long, toDay: Long): Flow<StoryEdit?>
 

@@ -468,4 +468,8 @@
     <string name="people_section_unnamed">Àwọn ojú míràn</string>
     <string name="people_add_name">Fi orúkọ kún un</string>
     <string name="people_edit_name">Ṣatúnṣe orúkọ</string>
+    <string name="clip_normalization_title">Ètò Àwòṣe / Ìṣètò</string>
+    <string name="clip_normalization_summary">Yan ètò ìṣètò fún àwòṣe ONNX rẹ.</string>
+    <string name="clip_normalization_openai">OpenAI CLIP (Standard)</string>
+    <string name="clip_normalization_imagenet">ImageNet (MobileCLIP / SigLIP)</string>
 </resources>

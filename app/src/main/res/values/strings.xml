@@ -403,6 +403,11 @@
     <string name="settings_strictness_normal">Normal</string>
     <string name="settings_strictness_strict">Strict</string>
 
+    <string name="clip_normalization_title">Model Architecture / Normalization</string>
+    <string name="clip_normalization_summary">Choose preprocessing normalization according to your custom ONNX vision model weights.</string>
+    <string name="clip_normalization_openai">OpenAI CLIP (Standard)</string>
+    <string name="clip_normalization_imagenet">ImageNet (MobileCLIP / SigLIP)</string>
+
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

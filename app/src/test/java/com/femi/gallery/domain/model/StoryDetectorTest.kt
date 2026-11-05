@@ -68,6 +68,15 @@ class StoryDetectorTest {
     }
 
     @Test
+    fun busyDayWithQuietNeighborsRemainsSingleDayStory() {
+        // Saturday has 20 photos (event), Sunday has 5 photos (quiet/incidental).
+        // The event stays a 1-day story and does not absorb Sunday.
+        val stories = detect(days(101L to 5, 100L to 20))
+        assertEquals(listOf(100L to 100L), stories.map { it.fromDay to it.toDay })
+        assertEquals(20, stories.single().count)
+    }
+
+    @Test
     fun longRunsAreCutAtTheMaximumLength() {
         val run = (30L downTo 11L).map { it to 6 } // 20 consecutive busy days
         val stories = detect(days(*run.toTypedArray()))

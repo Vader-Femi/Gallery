@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.IntentSender
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import com.femi.gallery.data.clip.SemanticSearch
@@ -273,7 +274,7 @@ class MediaStoreDataSource @Inject constructor(
      * The Camera folder is pinned first, the rest are ordered by most recent activity.
      */
     suspend fun loadAlbums(): List<Album> = withContext(io) {
-        fromMirror { mirror.albums() }?.let { return@withContext it }
+        fromMirror { mirror.albums() }?.takeIf { it.isNotEmpty() }?.let { return@withContext it }
         val projection = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.Files.FileColumns.MEDIA_TYPE,
@@ -462,6 +463,31 @@ class MediaStoreDataSource @Inject constructor(
                 selection.append(" AND 1=0")
             } else {
                 selection.append(" AND ${MediaStore.MediaColumns._ID} IN (${search.specificIds.joinToString(",")})")
+            }
+        }
+        if (search.excludeJunk) {
+            selection.append(
+                " AND ${MediaStore.MediaColumns.DISPLAY_NAME} NOT LIKE 'Screenshot%'" +
+                " AND ${MediaStore.MediaColumns.DISPLAY_NAME} NOT LIKE 'screenshot%'" +
+                " AND ${MediaStore.MediaColumns.DISPLAY_NAME} NOT LIKE 'screen_%'" +
+                " AND ${MediaStore.MediaColumns.DISPLAY_NAME} NOT LIKE 'screenrecording%'" +
+                " AND ${MediaStore.MediaColumns.DISPLAY_NAME} NOT LIKE 'screen_recording%'" +
+                " AND ${MediaStore.MediaColumns.DISPLAY_NAME} NOT LIKE 'receipt%'" +
+                " AND ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} NOT LIKE '%Screenshot%'" +
+                " AND ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} NOT LIKE '%screenshot%'" +
+                " AND ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} NOT LIKE '%Screen recording%'" +
+                " AND ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} NOT LIKE '%Screen Recording%'" +
+                " AND ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} NOT LIKE '%WhatsApp Sticker%'" +
+                " AND ${MediaStore.MediaColumns.BUCKET_DISPLAY_NAME} NOT LIKE '%Receipt%'",
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                selection.append(
+                    " AND (${MediaStore.MediaColumns.RELATIVE_PATH} IS NULL" +
+                    " OR (${MediaStore.MediaColumns.RELATIVE_PATH} NOT LIKE '%Screenshots%'" +
+                    " AND ${MediaStore.MediaColumns.RELATIVE_PATH} NOT LIKE '%screenshots%'" +
+                    " AND ${MediaStore.MediaColumns.RELATIVE_PATH} NOT LIKE '%Screen recordings%'" +
+                    " AND ${MediaStore.MediaColumns.RELATIVE_PATH} NOT LIKE '%WhatsApp Stickers%'))",
+                )
             }
         }
     }

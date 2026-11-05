@@ -468,4 +468,8 @@
     <string name="people_section_unnamed">Other faces</string>
     <string name="people_add_name">Add name</string>
     <string name="people_edit_name">Change name</string>
+    <string name="clip_normalization_title">Model Architecture / Normalization</string>
+    <string name="clip_normalization_summary">Choose preprocessing normalization according to your custom ONNX vision model weights.</string>
+    <string name="clip_normalization_openai">OpenAI CLIP (Standard)</string>
+    <string name="clip_normalization_imagenet">ImageNet (MobileCLIP / SigLIP)</string>
 </resources>

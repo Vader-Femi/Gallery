@@ -50,6 +50,9 @@ class ClipModelViewModel @Inject constructor(
     val strictness: StateFlow<com.femi.gallery.domain.repository.SemanticSearchStrictness> = settingsRepository.semanticSearchStrictness
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal)
 
+    val normalization: StateFlow<com.femi.gallery.domain.clip.ClipNormalization> = settingsRepository.clipNormalization
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.femi.gallery.domain.clip.ClipNormalization.OpenAiClip)
+
     fun setSemanticSearch(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setSemanticSearch(enabled)
@@ -59,6 +62,12 @@ class ClipModelViewModel @Inject constructor(
     fun setSemanticSearchStrictness(strictness: com.femi.gallery.domain.repository.SemanticSearchStrictness) {
         viewModelScope.launch {
             settingsRepository.setSemanticSearchStrictness(strictness)
+        }
+    }
+
+    fun setNormalization(norm: com.femi.gallery.domain.clip.ClipNormalization) {
+        viewModelScope.launch {
+            settingsRepository.setClipNormalization(norm)
         }
     }
 

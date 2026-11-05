@@ -59,4 +59,7 @@ object DatabaseModule {
 
     @Provides
     fun provideFaceScanDao(database: GalleryDatabase): com.femi.gallery.data.db.FaceScanDao = database.faceScanDao()
+
+    @Provides
+    fun provideStoryDao(database: GalleryDatabase): com.femi.gallery.data.db.StoryDao = database.storyDao()
 }

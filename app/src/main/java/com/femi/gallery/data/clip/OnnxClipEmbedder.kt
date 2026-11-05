@@ -45,6 +45,7 @@ class OnnxClipEmbedder @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val io: CoroutineDispatcher,
     private val files: ClipModelFiles,
+    private val settingsRepository: com.femi.gallery.domain.repository.SettingsRepository,
 ) : ImageEmbedder {
 
     /** What a model reported and was checked for, or why it cannot be used. */
@@ -313,7 +314,12 @@ class OnnxClipEmbedder @Inject constructor(
     }
 
     private fun embedPixels(pixels: IntArray, model: ImageModel): FloatArray {
-        val data = ClipPreprocess.toTensor(pixels, model.size)
+        val norm = try {
+            settingsRepository.getClipNormalizationSync()
+        } catch (e: Exception) {
+            com.femi.gallery.domain.clip.ClipNormalization.OpenAiClip
+        }
+        val data = ClipPreprocess.toTensor(pixels, model.size, norm)
         val shape = longArrayOf(1, 3, model.size.toLong(), model.size.toLong())
         return OnnxTensor.createTensor(environment, FloatBuffer.wrap(data), shape).use { input ->
             model.session.run(mapOf(model.inputName to input)).use { result ->

@@ -22,6 +22,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -146,24 +148,30 @@ private fun GalleryScaffold() {
                 snapshotFlow { transitionScope.isTransitionActive }
                     .collect { Log.d("SharedPhoto", "photo transition running = $it") }
             }
+            val windowInfo = LocalWindowInfo.current
+            val density = LocalDensity.current
+            val isExpanded = with(density) { windowInfo.containerSize.width.toDp() } >= 600.dp
+
             Box(Modifier.fillMaxSize()) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                 ) { innerPadding ->
                     val isFullScreen = route?.startsWith("slideshow") == true || route?.startsWith("editor") == true || route?.startsWith("trim") == true
                     val topPadding = if (isFullScreen) 0.dp else innerPadding.calculateTopPadding()
+                    val startPadding = if (isExpanded && isTopLevel && !chrome.bottomBarHidden && !isFullScreen) 104.dp else 0.dp
                     GalleryNavHost(
                         navController = navController,
                         viewerSession = viewerSession,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = topPadding),
+                            .padding(top = topPadding, start = startPadding),
                     )
                 }
 
                 if (isTopLevel && !chrome.bottomBarHidden) {
                     FloatingNavigationBar(
-                        modifier = Modifier.align(Alignment.BottomCenter),
+                        modifier = Modifier.align(if (isExpanded) Alignment.CenterStart else Alignment.BottomCenter),
+                        isVertical = isExpanded,
                         destinations = GalleryDestination.entries,
                         currentDestinationSelected = { destination ->
                             currentDestination?.hierarchy?.any { it.route == destination.route } == true ||

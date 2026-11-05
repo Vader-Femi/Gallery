@@ -52,17 +52,45 @@ object StoryDetector {
         fun finishRun() {
             if (run.isNotEmpty()) {
                 val total = run.sumOf { it.count }
-                if (total >= MIN_STORY_PHOTOS) {
-                    val newest = run.first()
-                    val oldest = run.last()
-                    stories.add(
-                        StoryCandidate(
-                            fromDay = oldest.epochDay,
-                            toDay = newest.epochDay,
-                            count = total,
-                            coverIndex = newest.startIndex + total / 2,
-                        ),
-                    )
+                if (run.size == 1) {
+                    if (total >= MIN_STORY_PHOTOS) {
+                        val day = run.single()
+                        stories.add(
+                            StoryCandidate(
+                                fromDay = day.epochDay,
+                                toDay = day.epochDay,
+                                count = day.count,
+                                coverIndex = day.startIndex + day.count / 2,
+                            ),
+                        )
+                    }
+                } else if (total >= MIN_STORY_PHOTOS) {
+                    // If one day is an isolated spike while others are quiet (< 8 photos),
+                    // the spike day should be its own 1-day story rather than being diluted by quiet neighbors.
+                    val spikeDays = run.filter { it.count >= MIN_STORY_PHOTOS }
+                    val quietDays = run.filter { it.count < 8 }
+                    if (spikeDays.size == 1 && quietDays.isNotEmpty()) {
+                        val spike = spikeDays.single()
+                        stories.add(
+                            StoryCandidate(
+                                fromDay = spike.epochDay,
+                                toDay = spike.epochDay,
+                                count = spike.count,
+                                coverIndex = spike.startIndex + spike.count / 2,
+                            ),
+                        )
+                    } else {
+                        val newest = run.first()
+                        val oldest = run.last()
+                        stories.add(
+                            StoryCandidate(
+                                fromDay = oldest.epochDay,
+                                toDay = newest.epochDay,
+                                count = total,
+                                coverIndex = newest.startIndex + total / 2,
+                            ),
+                        )
+                    }
                 }
             }
             run = ArrayList()

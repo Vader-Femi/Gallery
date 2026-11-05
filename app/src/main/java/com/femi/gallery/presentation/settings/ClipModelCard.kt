@@ -15,9 +15,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ImageSearch
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -47,6 +48,7 @@ import com.femi.gallery.domain.clip.ClipScanStatus
  * the reading of the photos has got. The models are copied in from wherever the person has them; the app
  * never downloads anything.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
     val status by viewModel.status.collectAsStateWithLifecycle()
@@ -192,6 +194,28 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
                         summary = stringResource(R.string.settings_strictness_summary),
                         modifier = Modifier.padding(top = 8.dp)
                     )
+
+                    val normOptions = listOf(
+                        com.femi.gallery.domain.clip.ClipNormalization.OpenAiClip to stringResource(R.string.clip_normalization_openai),
+                        com.femi.gallery.domain.clip.ClipNormalization.ImageNet to stringResource(R.string.clip_normalization_imagenet),
+                    )
+                    val norm by viewModel.normalization.collectAsStateWithLifecycle()
+                    var normExpanded by remember { mutableStateOf(false) }
+
+                    SettingDropdown(
+                        selectedName = normOptions.find { it.first == norm }?.second ?: stringResource(R.string.clip_normalization_openai),
+                        expanded = normExpanded,
+                        onExpandedChange = { normExpanded = it },
+                        items = normOptions.map { it.second },
+                        onItemSelected = { index ->
+                            val option = normOptions[index].first
+                            normExpanded = false
+                            viewModel.setNormalization(option)
+                        },
+                        title = stringResource(R.string.clip_normalization_title),
+                        summary = stringResource(R.string.clip_normalization_summary),
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
 
                 if (scan.status == ClipScanStatus.Scanning && scan.total > 0) {
@@ -201,7 +225,7 @@ fun ClipModelCard(viewModel: ClipModelViewModel = hiltViewModel()) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        LinearProgressIndicator(
+                        LinearWavyProgressIndicator(
                             progress = { scan.scanned.toFloat() / scan.total },
                             modifier = Modifier.fillMaxWidth(),
                         )

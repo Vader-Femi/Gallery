@@ -158,3 +158,46 @@ data class FaceScanRow(
     val modified: Long,
     val faceCount: Int,
 )
+
+/** Cached smart story definitions in the database. */
+@Entity(tableName = "stories")
+data class StoryRow(
+    @PrimaryKey val id: String,
+    val fromDay: Long,
+    val toDay: Long,
+    val count: Int,
+    val coverUri: String,
+    val title: String?,
+    val videoCount: Int,
+    val smartTitle: String?,
+    val subtitle: String?,
+    val theme: String,
+) {
+    fun toStory(): com.femi.gallery.domain.model.Story = com.femi.gallery.domain.model.Story(
+        fromDay = fromDay,
+        toDay = toDay,
+        count = count,
+        coverUri = coverUri,
+        title = title,
+        videoCount = videoCount,
+        smartTitle = smartTitle,
+        subtitle = subtitle,
+        theme = runCatching { com.femi.gallery.domain.model.StoryTheme.valueOf(theme) }
+            .getOrDefault(com.femi.gallery.domain.model.StoryTheme.Outing),
+    )
+
+    companion object {
+        fun fromStory(story: com.femi.gallery.domain.model.Story): StoryRow = StoryRow(
+            id = "${story.fromDay}-${story.toDay}",
+            fromDay = story.fromDay,
+            toDay = story.toDay,
+            count = story.count,
+            coverUri = story.coverUri,
+            title = story.title,
+            videoCount = story.videoCount,
+            smartTitle = story.smartTitle,
+            subtitle = story.subtitle,
+            theme = story.theme.name,
+        )
+    }
+}

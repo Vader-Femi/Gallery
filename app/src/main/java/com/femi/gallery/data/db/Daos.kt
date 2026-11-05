@@ -371,3 +371,31 @@ abstract class FaceScanDao {
         removedIds.chunked(DELETE_CHUNK).forEach { delete(it) }
     }
 }
+
+@Dao
+abstract class StoryDao {
+    @Query("SELECT * FROM stories ORDER BY toDay DESC, fromDay DESC")
+    abstract fun flowAll(): kotlinx.coroutines.flow.Flow<List<StoryRow>>
+
+    @Query("SELECT * FROM stories ORDER BY toDay DESC, fromDay DESC")
+    abstract suspend fun all(): List<StoryRow>
+
+    @Upsert
+    abstract suspend fun upsertAll(stories: List<StoryRow>)
+
+    @Query("DELETE FROM stories WHERE id NOT IN (:currentIds)")
+    abstract suspend fun deleteOld(currentIds: List<String>)
+
+    @Query("DELETE FROM stories")
+    abstract suspend fun deleteAll()
+
+    @Transaction
+    open suspend fun replaceAll(stories: List<StoryRow>) {
+        if (stories.isEmpty()) {
+            deleteAll()
+        } else {
+            upsertAll(stories)
+            deleteOld(stories.map { it.id })
+        }
+    }
+}

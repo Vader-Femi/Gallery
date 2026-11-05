@@ -26,17 +26,19 @@ import androidx.room.RoomDatabase
         PersonRow::class,
         FaceRow::class,
         FaceScanRow::class,
+        StoryRow::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
-    // Versions 2, 3, 4 and 5 only added tables (the library mirror; the photos' embeddings; the hashes for similar
-    // photos; the face clusters and people), which Room can migrate by itself from the exported schemas, which is
-    // why the schemas belong in version control.
+    // Versions 2, 3, 4, 5 and 6 only added tables (the library mirror; the photos' embeddings; the hashes for similar
+    // photos; the face clusters and people; cached smart stories), which Room can migrate by itself from the exported
+    // schemas, which is why the schemas belong in version control.
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
+        AutoMigration(from = 5, to = 6),
     ],
 )
 abstract class GalleryDatabase : RoomDatabase() {
@@ -51,6 +53,7 @@ abstract class GalleryDatabase : RoomDatabase() {
     abstract fun personDao(): PersonDao
     abstract fun faceDao(): FaceDao
     abstract fun faceScanDao(): FaceScanDao
+    abstract fun storyDao(): StoryDao
 
     companion object {
         const val FILE_NAME = "gallery.db"

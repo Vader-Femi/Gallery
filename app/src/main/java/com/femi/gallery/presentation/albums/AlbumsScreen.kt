@@ -90,7 +90,13 @@ fun AlbumsScreen(
     }
 
     val handleAlbumClick by rememberUpdatedState(onAlbumClick)
-    var columns by rememberSaveable { mutableIntStateOf(2) }
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val defaultColumns = when {
+        configuration.screenWidthDp >= 900 -> 4
+        configuration.screenWidthDp >= 600 -> 3
+        else -> 2
+    }
+    var columns by rememberSaveable(defaultColumns) { mutableIntStateOf(defaultColumns) }
     val haptic = LocalHapticFeedback.current
 
     Scaffold(
@@ -123,7 +129,7 @@ fun AlbumsScreen(
                             }
                         },
                         onZoomOut = {
-                            if (columns < 5) {
+                            if (columns < 6) {
                                 columns++
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             }

@@ -10,3 +10,15 @@ class ObserveStoriesUseCase @Inject constructor(
 ) {
     operator fun invoke(): Flow<List<Story>> = repository.observeStories()
 }
+
+class ObserveStoriesUpdatingUseCase @Inject constructor(
+    private val repository: MediaRepository,
+) {
+    operator fun invoke(): Flow<Boolean> = repository.isStoriesUpdating()
+}
+
+class RefreshStoriesUseCase @Inject constructor(
+    private val repository: MediaRepository,
+) {
+    suspend operator fun invoke() = repository.refreshStories()
+}

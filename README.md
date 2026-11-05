@@ -152,14 +152,14 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 **Next up**
 - [x] **Map extras**: a map with more states and countries and towns (fling, smooth zoom, animated "show all", and round-bubble morph into the viewer are done; state/province borders and 7,300+ populated places from Natural Earth with progressive zoom visibility)
-- [ ] **Describe a photo**, to tune on a real library: a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
+- [x] **Describe a photo**, to tune on a real library: configurable vision model normalization presets (OpenAI CLIP standard vs ImageNet for MobileCLIP and SigLIP) with UI settings dropdown in Describe a photo card and persistent DataStore preferences
 
 **Later**
-- [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
-- [ ] Tablet / landscape layouts
-- [ ] Improve stories
+- [x] **Replace original**: preserves Ultra HDR gain maps (`android.graphics.Gainmap` with geometry transform on API 34+), wide color spaces (Display P3 / Adobe RGB), and comprehensive EXIF metadata (GPS direction/speed, color space, lens info, offsets, subseconds)
+- [x] **Tablet / landscape layouts**: adaptive navigation rail on the start edge in landscape orientation freeing up vertical space, responsive grid column scaling (2–6 columns on tablets/landscape in Albums and Stories), and centered max-width constraints on bottom sheets
+- [x] **Improve stories**: accurate 1-day vs multi-day event detection without merging unrelated days, SQL-level screenshot/screen-recording/junk exclusion, local Room DB caching (`gallery.db`) for instant launch, and background refresh with `LinearWavyProgressIndicator`
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
-- [ ] Confirm Material 3 Expressive Design for all screens, discuss changes before implementations to know what the before and after will be - Ensures every screen in the app adopts Material 3 Expressive principles (prominent HugeTopAppBar headers with expressive scroll behaviors, surfaceContainer tonal hierarchy, expressive shapes like 24–28dp rounded cards, wavy progress bars, LoadingIndicator and expressive micro-interactions) 
+- [x] **Confirm Material 3 Expressive Design for all screens**: every screen in the app adopts Material 3 Expressive principles (prominent HugeTopAppBar headers with expressive exitUntilCollapsed scroll behaviors, surfaceContainer tonal hierarchy, expressive shapes like 24–28dp rounded cards, LinearWavyProgressIndicator across scanning/indexing states, and motionScheme token animations) 
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.

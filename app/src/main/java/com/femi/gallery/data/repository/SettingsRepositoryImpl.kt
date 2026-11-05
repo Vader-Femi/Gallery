@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.femi.gallery.domain.clip.ClipNormalization
 import com.femi.gallery.domain.mirror.AlbumSortOption
 import com.femi.gallery.domain.model.SlideshowMusicTrack
 import com.femi.gallery.domain.model.SlideshowSpeed
@@ -43,6 +44,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_TIMELINE_ZOOM = stringPreferencesKey("timeline_zoom")
         private val KEY_SEMANTIC_SEARCH = booleanPreferencesKey("semantic_search")
         private val KEY_SEMANTIC_SEARCH_STRICTNESS = stringPreferencesKey("semantic_search_strictness")
+        private val KEY_CLIP_NORMALIZATION = stringPreferencesKey("clip_normalization")
         private val KEY_ALBUM_SORT = stringPreferencesKey("album_sort_option")
         private val KEY_HIDDEN_ALBUMS = stringSetPreferencesKey("hidden_albums")
     }
@@ -105,6 +107,11 @@ class SettingsRepositoryImpl @Inject constructor(
     override val semanticSearchStrictness: Flow<com.femi.gallery.domain.repository.SemanticSearchStrictness> = dataStore.data.map {
         val name = it[KEY_SEMANTIC_SEARCH_STRICTNESS] ?: com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal.name
         try { com.femi.gallery.domain.repository.SemanticSearchStrictness.valueOf(name) } catch (e: Exception) { com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal }
+    }
+
+    override val clipNormalization: Flow<ClipNormalization> = dataStore.data.map {
+        val name = it[KEY_CLIP_NORMALIZATION] ?: ClipNormalization.OpenAiClip.name
+        try { ClipNormalization.valueOf(name) } catch (e: Exception) { ClipNormalization.OpenAiClip }
     }
 
     override val albumSortOption: Flow<AlbumSortOption> = dataStore.data.map {
@@ -172,6 +179,10 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[KEY_SEMANTIC_SEARCH_STRICTNESS] = strictness.name }
     }
 
+    override suspend fun setClipNormalization(normalization: ClipNormalization) {
+        dataStore.edit { it[KEY_CLIP_NORMALIZATION] = normalization.name }
+    }
+
     override suspend fun setAlbumSortOption(option: AlbumSortOption) {
         dataStore.edit { it[KEY_ALBUM_SORT] = option.name }
     }
@@ -198,5 +209,9 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override fun getTimelineZoomSync(): TimelineZoom = runBlocking {
         timelineZoom.first()
+    }
+
+    override fun getClipNormalizationSync(): ClipNormalization = runBlocking {
+        clipNormalization.first()
     }
 }
