@@ -156,8 +156,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 
 ### Still to do
 
-**Later**
-- [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds) 
+- [x] **Baseline Profiles evaluation & startup benchmark**: measured with `tools/startup_bench.sh` on a release build on a physical Pixel 7 (`verify`: 215 ms median, `speed`: 202 ms median; ~13 ms difference on a ~200 ms cold start), confirming ahead-of-time compilation provides no meaningful speedup and cold start is already near-instantaneous. `Frames` log (`adb logcat -s Frames`) confirmed 0 dropped frames on launch. 
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.
@@ -423,6 +422,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 92 | Replace original: Ultra HDR & EXIF preservation | Replacing the original now preserves Ultra HDR gain maps (`android.graphics.Gainmap` with geometry transform on API 34+), wide color spaces (Display P3 / Adobe RGB), and comprehensive EXIF tags (GPS direction/speed, color space, lens info, offsets, subseconds) |
 | 93 | Improved stories & local DB caching | Accurate 1-day vs multi-day event clustering (`StoryDetector`) without merging unrelated days; SQL-level screenshot, screen-recording, and document junk exclusion; local Room caching (`story` table in `gallery.db`) for instant launch and background refresh with `LinearWavyProgressIndicator` |
 | 94 | Adaptive Navigation Rail & tablet layouts | Dedicated Material 3 Expressive Navigation Rail on the start edge for large screens and tablets (`width >= 600dp` or landscape), featuring a 32dp rounded floating surface, M3 selection indicator pills, AI search and menu buttons, dynamic 104dp content offset, responsive 2–6 column grid scaling, and `MediaMirror` count mismatch synchronization hardening |
+| 95 | Release startup benchmark & Baseline Profile decision | Measured cold start on a physical Pixel 7 running a release build (`verify`: 215 ms median, `speed`: 202 ms median; min 192 ms), confirming baseline profiles provide no meaningful gain over a ~200 ms cold start; 0 dropped frames in `Frames` log |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
