@@ -49,10 +49,11 @@ class MapData(
     /** Outlines of land and of islands and lakes in it; drawn as one area with holes. */
     val land: List<MapPolyline>,
     val borders: List<MapPolyline>,
+    val stateBorders: List<MapPolyline> = emptyList(),
     /** Largest first. */
     val places: List<MapPlace>,
 ) {
     companion object {
-        val Empty = MapData(emptyList(), emptyList(), emptyList())
+        val Empty = MapData(emptyList(), emptyList(), emptyList(), emptyList())
     }
 }

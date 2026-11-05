@@ -32,10 +32,11 @@ class AssetMapDataRepository @Inject constructor(
                 MapData(
                     land = read("land.bin")?.let(MapDataCodec::decodePolylines).orEmpty(),
                     borders = read("borders.bin")?.let(MapDataCodec::decodePolylines).orEmpty(),
+                    stateBorders = read("state_borders.bin")?.let(MapDataCodec::decodePolylines).orEmpty(),
                     places = read("places.bin")?.let(MapDataCodec::decodePlaces).orEmpty(),
                 )
             }.also {
-                Log.i(TAG, "Map data: ${it.land.size} land outlines, ${it.borders.size} borders, ${it.places.size} places")
+                Log.i(TAG, "Map data: ${it.land.size} land outlines, ${it.borders.size} borders, ${it.stateBorders.size} state borders, ${it.places.size} places")
                 loaded = it
             }
         }

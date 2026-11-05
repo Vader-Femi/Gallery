@@ -61,6 +61,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
@@ -524,6 +525,18 @@ private fun DrawScope.drawMap(
     drawPath(land, colors.coast, style = Stroke(width = 0.75f * density))
 
     drawGraticule(viewport, worldSize, originX, originY, w, h, colors.grid)
+
+    if (viewport.zoom >= 3.0 && data.stateBorders.isNotEmpty()) {
+        val stateBorders = buildPath(data.stateBorders, close = false, worldSize, originX, originY, w, h)
+        drawPath(
+            stateBorders,
+            colors.border.copy(alpha = 0.5f),
+            style = Stroke(
+                width = 0.5f * density,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f * density, 3f * density)),
+            ),
+        )
+    }
 
     val borders = buildPath(data.borders, close = false, worldSize, originX, originY, w, h)
     drawPath(borders, colors.border, style = Stroke(width = 0.75f * density))

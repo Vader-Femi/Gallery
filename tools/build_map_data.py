@@ -16,6 +16,7 @@ Places (places.bin):
     uint16 name length in bytes, the name in UTF-8.
 """
 import json
+import ssl
 import struct
 import sys
 import urllib.request
@@ -25,7 +26,8 @@ BASE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/ge
 SOURCES = {
     "land": "ne_50m_land.geojson",
     "borders": "ne_50m_admin_0_boundary_lines_land.geojson",
-    "places": "ne_50m_populated_places_simple.geojson",
+    "state_borders": "ne_50m_admin_1_states_provinces_lines.geojson",
+    "places": "ne_10m_populated_places_simple.geojson",
 }
 SCALE = 10_000
 OUT = Path(__file__).resolve().parent.parent / "app/src/main/assets/map"
@@ -34,7 +36,9 @@ OUT = Path(__file__).resolve().parent.parent / "app/src/main/assets/map"
 def load(name, source_dir):
     if source_dir:
         return json.loads((Path(source_dir) / name).read_text(encoding="utf-8"))
-    with urllib.request.urlopen(BASE + name) as response:
+    ctx = ssl._create_unverified_context() if hasattr(ssl, "_create_unverified_context") else None
+    req = urllib.request.Request(BASE + name, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, context=ctx) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -108,6 +112,8 @@ def encode_places(features):
             continue
         places.append((round(p["latitude"] * SCALE), round(p["longitude"] * SCALE),
                        min(int(p["pop_max"] or 0) // 1000, 2**31 - 1), name))
+    # Sort largest first so viewers can prune places at any zoom level
+    places.sort(key=lambda p: p[2], reverse=True)
     body = bytearray()
     for lat, lon, pop, name in places:
         body += struct.pack(">iiiH", lat, lon, pop, len(name)) + name
@@ -119,16 +125,18 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     land = [r for f in load(SOURCES["land"], source_dir)["features"] for r in rings(f["geometry"])]
     borders = [l for f in load(SOURCES["borders"], source_dir)["features"] for l in lines(f["geometry"])]
+    state_borders = [l for f in load(SOURCES["state_borders"], source_dir)["features"] for l in lines(f["geometry"])]
     places = load(SOURCES["places"], source_dir)["features"]
     outputs = {
         "land.bin": encode_polylines(land),
         "borders.bin": encode_polylines(borders),
+        "state_borders.bin": encode_polylines(state_borders),
         "places.bin": encode_places(places),
     }
     for name, data in outputs.items():
         (OUT / name).write_bytes(data)
         print(f"{name}: {len(data) / 1024:.0f} KB")
-    print(f"{len(land)} land rings, {len(borders)} border lines, {len(places)} places")
+    print(f"{len(land)} land rings, {len(borders)} border lines, {len(state_borders)} state lines, {len(places)} places")
 
 
 if __name__ == "__main__":
