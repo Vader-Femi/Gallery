@@ -158,7 +158,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
-- [ ] Confirm Material 3 Expressive Design for all screens, discuss changes before implementations to know what the before and after will be 
+- [ ] Confirm Material 3 Expressive Design for all screens, discuss changes before implementations to know what the before and after will be - Ensures every screen in the app adopts Material 3 Expressive principles (prominent HugeTopAppBar headers with expressive scroll behaviors, surfaceContainer tonal hierarchy, expressive shapes like 24–28dp rounded cards, wavy progress bars, LoadingIndicator and expressive micro-interactions) 
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.
