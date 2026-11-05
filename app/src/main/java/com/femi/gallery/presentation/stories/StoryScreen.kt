@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -15,13 +17,15 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,23 +33,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
+import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.StoryFilter
 import com.femi.gallery.domain.model.StoryTitle
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.toRef
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HideBottomBarWhile
@@ -60,7 +63,7 @@ import com.femi.gallery.presentation.selection.libraryMoreActions
 import com.femi.gallery.presentation.selection.selectMediaRange
 import com.femi.gallery.presentation.selection.toggleSectionSelection
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun StoryScreen(
     modifier: Modifier = Modifier,
@@ -97,6 +100,13 @@ fun StoryScreen(
     BackHandler(enabled = pickingCover) { pickingCover = false }
     SelectionHost(controller = viewModel.selection, onSuccess = viewModel.selection::clear)
 
+    val story by viewModel.story.collectAsStateWithLifecycle()
+    val displayTitle = if (pickingCover) {
+        stringResource(R.string.story_pick_cover)
+    } else {
+        customTitle ?: story?.displayTitle ?: dateTitle
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier
@@ -105,7 +115,7 @@ fun StoryScreen(
             topBar = {
                 Box(modifier = Modifier.fillMaxWidth()) {
                     HugeTopAppBar(
-                        title = if (pickingCover) stringResource(R.string.story_pick_cover) else customTitle ?: dateTitle,
+                        title = displayTitle,
                         onBack = { if (pickingCover) pickingCover = false else onBack() },
                         actions = {
                             if (!pickingCover) {
@@ -163,43 +173,58 @@ fun StoryScreen(
                 if (hasVideos && !pickingCover) {
                     StoryFilterChips(selected = filter, onSelect = viewModel::setFilter)
                 }
-                TimelineGrid(
-                    items = items,
-                    sections = sections,
-                    zoom = zoom,
-                    onMediaClick = { mediaIndex, item ->
-                        if (pickingCover) {
-                            viewModel.setCover(item.id)
-                            pickingCover = false
-                        } else if (selectionState.active) {
-                            viewModel.selection.toggle(item.toRef())
-                        } else {
-                            onMediaClick(mediaIndex, item.id, viewModel.query)
-                        }
-                    },
-                    onMediaLongClick = { item ->
-                        if (!pickingCover) {
-                            dragBaseSelection = selectionState.selected
-                            viewModel.selection.begin(item.toRef())
-                        }
-                    },
-                    onZoomIn = viewModel.timeline::zoomIn,
-                    onZoomOut = viewModel.timeline::zoomOut,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    selectionActive = selectionState.active,
-                    selectedIds = selectionState.ids,
-                    onHeaderClick = { section ->
-                        toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
-                    },
-                    onDragSelectRange = { start, end ->
-                        selectMediaRange(start, end, items, viewModel.selection, dragBaseSelection)
-                    },
-                    viewed = viewed,
-                    onViewedConsumed = onViewedConsumed,
-                    emptyContent = { EmptyState(stringResource(R.string.story_empty)) },
-                )
+                if (items.loadState.refresh is LoadState.Loading && items.itemCount == 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        LoadingIndicator(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .offset(y = (-48).dp),
+                        )
+                    }
+                } else {
+                    TimelineGrid(
+                        items = items,
+                        sections = sections,
+                        zoom = zoom,
+                        onMediaClick = { mediaIndex, item ->
+                            if (pickingCover) {
+                                viewModel.setCover(item.id)
+                                pickingCover = false
+                            } else if (selectionState.active) {
+                                viewModel.selection.toggle(item.toRef())
+                            } else {
+                                onMediaClick(mediaIndex, item.id, viewModel.query)
+                            }
+                        },
+                        onMediaLongClick = { item ->
+                            if (!pickingCover) {
+                                dragBaseSelection = selectionState.selected
+                                viewModel.selection.begin(item.toRef())
+                            }
+                        },
+                        onZoomIn = viewModel.timeline::zoomIn,
+                        onZoomOut = viewModel.timeline::zoomOut,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        selectionActive = selectionState.active,
+                        selectedIds = selectionState.ids,
+                        onHeaderClick = { section ->
+                            toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
+                        },
+                        onDragSelectRange = { start, end ->
+                            selectMediaRange(start, end, items, viewModel.selection, dragBaseSelection)
+                        },
+                        viewed = viewed,
+                        onViewedConsumed = onViewedConsumed,
+                        emptyContent = { EmptyState(stringResource(R.string.story_empty)) },
+                    )
+                }
             }
         }
 

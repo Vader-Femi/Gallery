@@ -204,6 +204,7 @@ private fun AlbumCard(album: Album, onClick: () -> Unit, onRename: () -> Unit) {
                 SpecialAlbums.FAVORITES -> stringResource(R.string.album_favorites)
                 SpecialAlbums.TRASH -> stringResource(R.string.album_trash)
                 SpecialAlbums.LOCKED -> stringResource(R.string.album_locked)
+                SpecialAlbums.PEOPLE -> stringResource(R.string.album_people)
                 else -> album.name.ifEmpty { stringResource(R.string.album_unnamed) }
             },
             style = MaterialTheme.typography.titleSmall,

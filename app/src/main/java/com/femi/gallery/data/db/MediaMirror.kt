@@ -201,6 +201,8 @@ class MediaMirror @Inject constructor(
         isFavorite = isFavorite,
     )
 
+    suspend fun junkIds(): List<Long> = dao.junkIds()
+
     private companion object {
         const val TAG = "MediaMirror"
         const val IMAGE = 0

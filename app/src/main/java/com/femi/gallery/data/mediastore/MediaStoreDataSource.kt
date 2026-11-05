@@ -109,7 +109,14 @@ class MediaStoreDataSource @Inject constructor(
         val area = search?.area
         val afterArea = if (area == null) order else order.retainIds(locationIndex.current().idsIn(area))
         val specific = search?.specificIds
-        if (specific == null) afterArea else afterArea.retainIds(specific.toSet())
+        val afterSpecific = if (specific == null) afterArea else afterArea.retainIds(specific.toSet())
+        if (search?.excludeJunk == true) {
+            val junk = try { mirror.junkIds().toSet() } catch (e: Exception) { emptySet() }
+            if (junk.isNotEmpty()) {
+                val kept = afterSpecific.ids.filter { it !in junk }.toSet()
+                afterSpecific.retainIds(kept)
+            } else afterSpecific
+        } else afterSpecific
     }
 
     /** [block] on the mirror once it is up to date, or null when it cannot answer (not copied yet, no access, any error). */

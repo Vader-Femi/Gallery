@@ -15,9 +15,11 @@ data class SearchCriteria(
     val area: GeoBox? = null,
     /** Specific media item IDs to restrict results to. */
     val specificIds: List<Long>? = null,
+    /** Whether to filter out screenshots, document scans, and clutter (e.g. for Stories). */
+    val excludeJunk: Boolean = false,
 ) {
     val isEmpty: Boolean
-        get() = terms.isEmpty() && dateRanges.isEmpty() && mediaType == null && !favoritesOnly && area == null && specificIds == null
+        get() = terms.isEmpty() && dateRanges.isEmpty() && mediaType == null && !favoritesOnly && area == null && specificIds == null && !excludeJunk
 
     companion object {
         val None = SearchCriteria()

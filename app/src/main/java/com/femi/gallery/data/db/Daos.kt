@@ -209,6 +209,23 @@ abstract class MediaDao {
     @Query("SELECT COUNT(*) FROM media")
     abstract suspend fun count(): Int
 
+    @Query("""
+        SELECT id FROM media 
+        WHERE isFavorite = 0 AND (
+            LOWER(relativePath) LIKE '%screenshot%' 
+            OR LOWER(bucketName) LIKE '%screenshot%' 
+            OR LOWER(displayName) LIKE 'screenshot%'
+            OR LOWER(displayName) LIKE 'screen_%'
+            OR LOWER(relativePath) LIKE '%whatsapp stickers%'
+            OR LOWER(relativePath) LIKE '%screen recording%'
+            OR LOWER(displayName) LIKE 'screenrecording%'
+            OR LOWER(displayName) LIKE 'screen_recording%'
+            OR LOWER(relativePath) LIKE '%receipt%'
+            OR LOWER(displayName) LIKE 'receipt%'
+        )
+    """)
+    abstract suspend fun junkIds(): List<Long>
+
     @Upsert
     abstract suspend fun upsert(rows: List<MediaRow>)
 

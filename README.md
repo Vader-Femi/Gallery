@@ -68,8 +68,12 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Recycle bin**: restore, delete forever, empty bin (Android keeps trashed items for 30 days)
 
 **Stories**
-- [x] **Stories tab** finds events automatically: a busy day (5+ photos) or a run of busy days in a row (up to 10), with at least 12 photos in total
-- [x] **"On this day" memories**: photos taken on today's month and day in previous years (3 or more that day), titled "On this day in YYYY", shown before the trips; a leap day is remembered on Feb 28 in other years, and a busy day that is already a story is not listed twice
+- [x] **Smart Story Engine**: automatic event clustering that rejects junk (screenshots, document/receipt scans, screen recordings) so stories only contain real memories
+- [x] **Contextual Multi-Signal Detection**:
+  - **Trips & Getaways**: automatically groups photos by offline GPS city clusters (`"Trip to Paris"`, `"Weekend in Lagos"`)
+  - **People & Together**: highlights gatherings with named people from ArcFace face groups (`"With Alice"`, `"With Sarah & John"`)
+  - **Activities & Scenes**: detects thematic outings (`"A Day at the Beach"`, `"Out in Nature"`, `"Food & Dining"`, `"Pet Highlights"`)
+  - **Enriched "On this day" memories**: past year anniversaries with city/person context (`"Paris, 2024"`, `"With Alice in 2023"`)
 - [x] **Story title and cover**: rename a story and pick any photo or video as its cover from the story's menu (stored in `story_edits.bin`, private to the app). The edit follows the story when a trip grows by a few days; an "On this day" memory never takes over the title of a longer trip
 - [x] **Videos in stories**: a video count on the story card, and All / Pictures / Videos chips inside a story (shown when it has videos; the viewer opens exactly what the grid shows)
 - [x] **Slideshow from any album** (play button in the album's top bar; not offered for the recycle bin or the Locked folder), plus **shuffle** and **speed** (slow, normal, fast) buttons that appear while the slideshow is paused. Shuffle covers the whole album (a loading indicator shows while it is prepared) and keeps its order until you turn it off and on again
@@ -107,6 +111,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Rotate** in 90° steps, **straighten** (-45° to 45°) and **flip**
 - [x] **Adjust** brightness, contrast, saturation, warmth, **sharpen**, **vignette** and **straighten** with live preview; straightening trims the empty corners automatically
 - [x] **Filters**: Vivid, Warm, Cool, Mono, Noir, Sepia, Fade and Dramatic, previewed on your photo
+- [x] **Markup & Editor extras**: freehand drawing brush, text annotations, and emoji stickers with live preview in the new Markup tool
 - [x] **Save as copy or replace original**: the editor now offers both options — when replacing the original, the edited photo is saved directly over the old one, preserving EXIF metadata
 - [x] **Revert an edit to the original**: "Save as copy" leaves the original alone, but "Replace original" overwrites it for good. To allow a revert, keep the original bytes (app-private, excluded from backup, with a size limit and a way to clear them) before replacing, and add "Revert to original" in the viewer's details
 
@@ -146,15 +151,14 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 ### Still to do
 
 **Next up**
-- [ ] **Map extras**: a map with streets (offline vector tiles you import once) (fling, smooth zoom, animated "show all", and round-bubble morph into the viewer are done)
-- [x] **Editor extras**: draw, text and emoji stickers, in the editor's new Markup tool (patch 88) (straighten, sharpen, vignette, keeping the camera details and replacing the original are done too). Not tried on a phone yet
+- [ ] **Map extras**: a map with more states and countries and towns (fling, smooth zoom, animated "show all", and round-bubble morph into the viewer are done)
 - [ ] **Describe a photo**, to tune on a real library: a bigger or newer model (MobileCLIP and others normalise their pictures differently from CLIP, which would need a setting for that)
 
 **Later**
 - [ ] **Replace original**: keep the Ultra HDR gain map and other JPEG extras, which re-encoding drops
-- [ ] Auto scene albums
 - [ ] Tablet / landscape layouts
 - [ ] Baseline Profiles: measured with `tools/startup_bench.sh` on a debug build, cold start was 958 ms with `verify` and 984 ms with `speed` compilation, so ahead-of-time compilation does not help there; repeat on a release build before deciding. Further jank work: watch the `Frames` log (`adb logcat -s Frames` also works on release builds)
+- [ ] Confirm Material 3 Expressive Design for all screens, discuss changes before implementations to know what the before and after will be 
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.

@@ -22,6 +22,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import com.femi.gallery.domain.model.Story
+import com.femi.gallery.domain.usecase.ObserveStoriesUseCase
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -43,6 +45,7 @@ class StoryViewModel @Inject constructor(
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
     observeStoryEdit: ObserveStoryEditUseCase,
+    observeStories: ObserveStoriesUseCase,
     selectionFactory: MediaSelectionControllerFactory,
     private val renameStory: RenameStoryUseCase,
     private val setStoryCover: SetStoryCoverUseCase,
@@ -51,6 +54,10 @@ class StoryViewModel @Inject constructor(
 
     val fromDay: Long = checkNotNull(savedStateHandle.get<Long>(FROM_ARG))
     val toDay: Long = checkNotNull(savedStateHandle.get<Long>(TO_ARG))
+
+    val story: StateFlow<Story?> = observeStories()
+        .map { list -> list.firstOrNull { it.fromDay == fromDay && it.toDay == toDay } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     private val from = LocalDate.ofEpochDay(fromDay)
     private val to = LocalDate.ofEpochDay(toDay)
@@ -65,12 +72,12 @@ class StoryViewModel @Inject constructor(
     val slideshowQuery: String = StoryFilter.All.query(from, to)
 
     val media: Flow<PagingData<MediaItem>> =
-        _filter.flatMapLatest { getPagedMedia(search = it.criteria(from, to)) }.cachedIn(viewModelScope)
+        _filter.flatMapLatest { getPagedMedia(search = it.criteria(from, to, excludeJunk = true)) }.cachedIn(viewModelScope)
 
-    val timeline = TimelineZoomState(viewModelScope, _filter.flatMapLatest { observeTimeline(search = it.criteria(from, to)) }, settingsRepository)
+    val timeline = TimelineZoomState(viewModelScope, _filter.flatMapLatest { observeTimeline(search = it.criteria(from, to, excludeJunk = true)) }, settingsRepository)
 
     /** Whether the story has any video; the filter is only offered then. */
-    val hasVideos: StateFlow<Boolean> = observeTimeline(search = StoryFilter.Videos.criteria(from, to))
+    val hasVideos: StateFlow<Boolean> = observeTimeline(search = StoryFilter.Videos.criteria(from, to, excludeJunk = true))
         .map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
@@ -87,7 +94,7 @@ class StoryViewModel @Inject constructor(
     val selection = selectionFactory.create(
         scope = viewModelScope,
         bucketId = null,
-        currentSearch = { _filter.value.criteria(from, to) },
+        currentSearch = { _filter.value.criteria(from, to, excludeJunk = true) },
     )
 
     fun setFilter(filter: StoryFilter) {

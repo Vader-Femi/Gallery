@@ -12,8 +12,8 @@ enum class StoryFilter(val mediaType: MediaType?, private val queryWord: String?
     ;
 
     /** The search for the story [from]..[to] limited to this kind of item. */
-    fun criteria(from: LocalDate, to: LocalDate): SearchCriteria =
-        SearchQueryParser.betweenDays(from, to).copy(mediaType = mediaType)
+    fun criteria(from: LocalDate, to: LocalDate, excludeJunk: Boolean = false): SearchCriteria =
+        SearchQueryParser.betweenDays(from, to).copy(mediaType = mediaType, excludeJunk = excludeJunk)
 
     /** The same search as text, so the viewer can reopen exactly what the grid shows. */
     fun query(from: LocalDate, to: LocalDate): String {

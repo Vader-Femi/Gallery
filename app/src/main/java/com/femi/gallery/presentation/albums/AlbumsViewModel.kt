@@ -16,18 +16,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-import android.content.ContentUris
-import android.provider.MediaStore
-import com.femi.gallery.data.db.PersonDao
-import com.femi.gallery.domain.model.SpecialAlbums
-
 @HiltViewModel
 class AlbumsViewModel @Inject constructor(
     observeAlbums: ObserveAlbumsUseCase,
     selectionFactory: MediaSelectionControllerFactory,
     private val refreshMedia: RefreshMediaUseCase,
     private val settingsRepository: SettingsRepository,
-    private val personDao: PersonDao,
 ) : ViewModel() {
 
     /** Runs album actions (rename) with their system confirmations; there is no selection on this screen. */
@@ -37,26 +31,9 @@ class AlbumsViewModel @Inject constructor(
         observeAlbums(),
         settingsRepository.albumSortOption,
         settingsRepository.hiddenAlbums.map { set -> set.mapNotNull { it.toLongOrNull() }.toSet() },
-        personDao.flowAll(),
-    ) { list, sortOption, hiddenAlbums, people ->
+    ) { list, sortOption, hiddenAlbums ->
         val visible = list.filter { 
             (it.itemCount > 0 || it.bucketId < 0) && !hiddenAlbums.contains(it.bucketId)
-        }.toMutableList()
-
-        if (people.isNotEmpty() && !hiddenAlbums.contains(SpecialAlbums.PEOPLE)) {
-            val topPerson = people.first()
-            val coverUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, topPerson.coverMediaId).toString()
-            visible.add(
-                0,
-                Album(
-                    bucketId = SpecialAlbums.PEOPLE,
-                    name = "People",
-                    relativePath = "",
-                    coverUri = coverUri,
-                    itemCount = people.size,
-                    newestDate = Long.MAX_VALUE,
-                ),
-            )
         }
         AlbumSorting.orderAlbums(visible, sortOption)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

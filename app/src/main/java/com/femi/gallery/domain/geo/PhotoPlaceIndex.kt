@@ -30,6 +30,16 @@ class PhotoPlaceIndex(
         return result
     }
 
+    private val idToCity: Map<Long, String> = run {
+        val map = HashMap<Long, String>()
+        for ((city, ids) in cityMap) {
+            for (id in ids) map[id] = city
+        }
+        map
+    }
+
+    fun cityNameFor(id: Long): String? = idToCity[id]
+
     companion object {
         val Empty = PhotoPlaceIndex(emptyList(), emptyList())
     }

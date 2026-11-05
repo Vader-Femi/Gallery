@@ -24,6 +24,8 @@ class LabelIndex(val entries: List<DetectedLabel>) {
         return result
     }
 
+    fun labelsFor(id: Long): List<String> = labelMap[id].orEmpty()
+
     companion object {
         val Empty = LabelIndex(emptyList())
     }

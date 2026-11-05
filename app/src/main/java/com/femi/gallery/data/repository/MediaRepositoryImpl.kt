@@ -49,6 +49,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
+import com.femi.gallery.data.db.FaceDao
+import com.femi.gallery.data.db.MediaDao
+import com.femi.gallery.data.db.PersonDao
+import com.femi.gallery.data.label.LabelIndexHolder
+import com.femi.gallery.data.map.PhotoPlaceIndexHolder
+import com.femi.gallery.domain.model.SmartStoryDetector
+import java.time.LocalDate
 import java.util.Collections
 import java.time.Instant
 import java.time.ZoneId
@@ -64,6 +71,11 @@ class MediaRepositoryImpl @Inject constructor(
     private val lockedStore: LockedStore,
     private val storyEditStore: StoryEditStore,
     private val settingsRepository: SettingsRepository,
+    private val mediaDao: MediaDao,
+    private val faceDao: FaceDao,
+    private val personDao: PersonDao,
+    private val placeIndexHolder: PhotoPlaceIndexHolder,
+    private val labelIndexHolder: LabelIndexHolder,
 ) : MediaRepository {
 
     /** Live paging sources (grid and viewer each have one); weakly held so they can be collected. */
@@ -164,31 +176,114 @@ class MediaRepositoryImpl @Inject constructor(
     override fun observeStories(): Flow<List<Story>> =
         combine(changeTriggers(), storyEditStore.edits) { _, edits ->
             val order = dataSource.loadOrder()
-            val days = TimelineGrouper.group(LongArray(order.size) { order.datesMillis[it] / 1000 })
+            if (order.size == 0) return@combine emptyList<Story>()
+
+            val junk = try { mediaDao.junkIds().toSet() } catch (e: Exception) { emptySet() }
+            val meaningfulOrder = if (junk.isNotEmpty()) {
+                val kept = order.ids.filter { it !in junk }.toSet()
+                if (kept.isEmpty()) return@combine emptyList<Story>()
+                order.retainIds(kept)
+            } else order
+
+            if (meaningfulOrder.size == 0) return@combine emptyList<Story>()
+
+            val days = TimelineGrouper.group(LongArray(meaningfulOrder.size) { meaningfulOrder.datesMillis[it] / 1000 })
             val candidates = StoryDetector.detect(days).take(MAX_STORIES)
+            if (candidates.isEmpty()) return@combine emptyList<Story>()
+
             val edited = StoryEdits.assign(edits, candidates.map { it.fromDay to it.toDay })
 
-            // One batch of queries for all the covers: the one the person chose, else a photo from the middle.
-            val autoCoverIds = candidates.map { order.ids[it.coverIndex] }
+            // One batch of queries for all the covers
+            val autoCoverIds = candidates.map { meaningfulOrder.ids[it.coverIndex] }
             val chosenCoverIds = edited.mapNotNull { it?.coverId }
             val covers = (autoCoverIds + chosenCoverIds).distinct().chunked(COVER_BATCH_SIZE)
                 .flatMap { dataSource.loadByIds(it.toLongArray()) }
                 .associateBy { it.id }
 
             val videoDays = videoDays()
+            val zone = ZoneId.systemDefault()
+            val placeIndex = try { placeIndexHolder.current() } catch (e: Exception) { null }
+            val labelIndex = try { labelIndexHolder.current() } catch (e: Exception) { null }
+            val namedPeople = try { personDao.all().filter { it.isNamed }.associateBy { it.id } } catch (e: Exception) { emptyMap() }
+
             candidates.mapIndexedNotNull { index, candidate ->
                 val edit = edited[index]
                 val cover = edit?.coverId?.let { covers[it] } ?: covers[autoCoverIds[index]]
-                cover?.let {
-                    Story(
-                        fromDay = candidate.fromDay,
-                        toDay = candidate.toDay,
-                        count = candidate.count,
-                        coverUri = it.uri,
-                        title = edit?.title,
-                        videoCount = StoryVideos.countInRange(videoDays, candidate.fromDay, candidate.toDay),
-                    )
+                if (cover == null) return@mapIndexedNotNull null
+
+                // Collect the IDs of photos in this candidate's date range
+                val storyIds = mutableListOf<Long>()
+                for (i in 0 until meaningfulOrder.size) {
+                    val epochDay = Instant.ofEpochMilli(meaningfulOrder.datesMillis[i]).atZone(zone).toLocalDate().toEpochDay()
+                    if (epochDay in candidate.fromDay..candidate.toDay) {
+                        storyIds.add(meaningfulOrder.ids[i])
+                    }
                 }
+
+                // 1. Resolve dominant place
+                val placeName = placeIndex?.let { pIndex ->
+                    val cityCounts = mutableMapOf<String, Int>()
+                    for (id in storyIds) {
+                        val city = pIndex.cityNameFor(id)
+                        if (city != null) {
+                            cityCounts[city] = (cityCounts[city] ?: 0) + 1
+                        }
+                    }
+                    cityCounts.maxByOrNull { it.value }?.takeIf { it.value >= 2 }?.key
+                }
+
+                // 2. Resolve prominent named people
+                val prominentPeople = if (namedPeople.isNotEmpty() && storyIds.isNotEmpty()) {
+                    val personCounts = mutableMapOf<Long, Int>()
+                    for (id in storyIds) {
+                        val faces = faceDao.getForMedia(id)
+                        for (face in faces) {
+                            if (face.personId in namedPeople) {
+                                personCounts[face.personId] = (personCounts[face.personId] ?: 0) + 1
+                            }
+                        }
+                    }
+                    personCounts.entries
+                        .sortedByDescending { it.value }
+                        .filter { it.value >= 2 }
+                        .mapNotNull { namedPeople[it.key]?.name }
+                        .take(2)
+                } else emptyList()
+
+                // 3. Resolve top scene
+                val topScene = labelIndex?.let { lIndex ->
+                    val sceneCounts = mutableMapOf<String, Int>()
+                    val keyScenes = listOf("beach", "nature", "mountain", "food", "pet", "dog", "cat", "sunset", "lake", "party")
+                    for (id in storyIds) {
+                        val labels = lIndex.labelsFor(id)
+                        for (s in keyScenes) {
+                            if (labels.any { it.contains(s, ignoreCase = true) }) {
+                                sceneCounts[s] = (sceneCounts[s] ?: 0) + 1
+                            }
+                        }
+                    }
+                    sceneCounts.maxByOrNull { it.value }?.takeIf { it.value >= 3 }?.key
+                }
+
+                val signals = SmartStoryDetector.ContextSignals(
+                    placeName = placeName,
+                    prominentPeople = prominentPeople,
+                    topScene = topScene,
+                )
+                val (smartTitle, theme) = SmartStoryDetector.determineTitleAndTheme(candidate.fromDay, candidate.toDay, signals)
+                val subtitle = SmartStoryDetector.buildSubtitle(candidate.fromDay, candidate.toDay, signals, theme, candidate.count)
+
+                Story(
+                    fromDay = candidate.fromDay,
+                    toDay = candidate.toDay,
+                    count = candidate.count,
+                    coverUri = cover.uri,
+                    title = edit?.title,
+                    videoCount = StoryVideos.countInRange(videoDays, candidate.fromDay, candidate.toDay),
+                    smartTitle = smartTitle,
+                    subtitle = subtitle,
+                    theme = theme,
+                )
             }
         }.distinctUntilChanged()
 
