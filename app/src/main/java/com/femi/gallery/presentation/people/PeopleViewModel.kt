@@ -10,6 +10,7 @@ import com.femi.gallery.domain.repository.FaceIndexRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -21,9 +22,11 @@ class PeopleViewModel @Inject constructor(
     private val faceDao: FaceDao,
     private val faceRepo: FaceIndexRepository,
     private val settingsRepository: com.femi.gallery.domain.repository.SettingsRepository,
+    private val visiblePeople: com.femi.gallery.data.face.VisiblePeople,
 ) : ViewModel() {
 
-    val people: StateFlow<List<PersonRow>> = personDao.flowAll()
+    val people: StateFlow<List<PersonRow>> = combine(personDao.flowAll(), settingsRepository.hiddenAlbums) { list, _ -> list }
+        .map { visiblePeople.filter(it) }
         .map { list ->
             list.sortedWith(
                 compareByDescending<PersonRow> { it.isNamed }

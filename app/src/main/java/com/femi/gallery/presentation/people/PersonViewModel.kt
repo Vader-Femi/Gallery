@@ -12,8 +12,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,11 +27,14 @@ class PersonViewModel @Inject constructor(
     private val personDao: PersonDao,
     private val faceDao: FaceDao,
     private val dataSource: MediaStoreDataSource,
+    private val settingsRepository: com.femi.gallery.domain.repository.SettingsRepository,
+    private val visiblePeople: com.femi.gallery.data.face.VisiblePeople,
 ) : ViewModel() {
 
     val personId: Long = checkNotNull(savedStateHandle["personId"])
 
-    val person: StateFlow<PersonRow?> = personDao.flow(personId)
+    val person: StateFlow<PersonRow?> = combine(personDao.flow(personId), settingsRepository.hiddenAlbums) { row, _ -> row }
+        .map { row -> row?.let { visiblePeople.filter(listOf(it)).firstOrNull() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val photos: StateFlow<List<MediaItem>> = faceDao.flowMediaIdsForPerson(personId)

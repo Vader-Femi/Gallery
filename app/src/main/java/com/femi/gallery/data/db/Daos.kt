@@ -347,6 +347,24 @@ abstract class FaceDao {
     @Query("SELECT COUNT(DISTINCT mediaId) FROM face WHERE personId = :personId")
     abstract suspend fun countPhotosForPerson(personId: Long): Int
 
+    /** The photos of each person that are not in one of the [hidden] albums. */
+    @Query(
+        "SELECT personId, COUNT(DISTINCT mediaId) AS photos FROM face " +
+            "WHERE mediaId NOT IN (SELECT id FROM media WHERE bucketId IN (:hidden)) GROUP BY personId",
+    )
+    abstract suspend fun visibleCounts(hidden: List<Long>): List<PersonPhotoCount>
+
+    /** Which of the photos [mediaIds] are in one of the [hidden] albums. */
+    @Query("SELECT id FROM media WHERE id IN (:mediaIds) AND bucketId IN (:hidden)")
+    abstract suspend fun hiddenAmong(mediaIds: List<Long>, hidden: List<Long>): List<Long>
+
+    /** A face of the person that is not in a hidden album, to show as the cover. */
+    @Query(
+        "SELECT mediaId, bounds FROM face WHERE personId = :personId " +
+            "AND mediaId NOT IN (SELECT id FROM media WHERE bucketId IN (:hidden)) LIMIT 1",
+    )
+    abstract suspend fun visibleCover(personId: Long, hidden: List<Long>): FaceCover?
+
     @Query("DELETE FROM face")
     abstract suspend fun deleteAll()
 }

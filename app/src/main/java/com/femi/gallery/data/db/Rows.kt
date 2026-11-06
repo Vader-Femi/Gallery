@@ -151,6 +151,12 @@ data class FaceRow(
     val feature: ByteArray = ByteArray(0),
 )
 
+/** How many photos of one person pass a filter (a query result, not a table). */
+data class PersonPhotoCount(val personId: Long, val photos: Int)
+
+/** One face's photo and where the face is in it (a query result, not a table). */
+data class FaceCover(val mediaId: Long, val bounds: String)
+
 /** Which photos have been scanned for faces and when. */
 @Entity(tableName = "scan_face")
 data class FaceScanRow(

@@ -120,8 +120,8 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override val albumSortOption: Flow<AlbumSortOption> = dataStore.data.map {
-        val name = it[KEY_ALBUM_SORT] ?: AlbumSortOption.Recency.name
-        try { AlbumSortOption.valueOf(name) } catch (e: Exception) { AlbumSortOption.Recency }
+        val name = it[KEY_ALBUM_SORT] ?: AlbumSortOption.Name.name
+        try { AlbumSortOption.valueOf(name) } catch (e: Exception) { AlbumSortOption.Name }
     }
 
     override val hiddenAlbums: Flow<Set<String>> = dataStore.data.map {

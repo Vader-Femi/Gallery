@@ -64,7 +64,7 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.femi.gallery.domain.repository.SemanticSearchStrictness.Normal)
 
     val albumSortOption: StateFlow<AlbumSortOption> = settingsRepository.albumSortOption
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AlbumSortOption.Recency)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AlbumSortOption.Name)
 
     val hiddenAlbums: StateFlow<Set<Long>> = settingsRepository.hiddenAlbums
         .map { set -> set.mapNotNull { it.toLongOrNull() }.toSet() }

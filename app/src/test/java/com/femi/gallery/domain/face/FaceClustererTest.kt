@@ -1,8 +1,10 @@
 package com.femi.gallery.domain.face
 
+import com.femi.gallery.data.db.FaceCover
 import com.femi.gallery.data.db.FaceDao
 import com.femi.gallery.data.db.FaceRow
 import com.femi.gallery.data.db.PersonDao
+import com.femi.gallery.data.db.PersonPhotoCount
 import com.femi.gallery.data.db.PersonRow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -74,6 +76,9 @@ class FaceClustererTest {
         override suspend fun deleteAll() {
             faces.clear()
         }
+        override suspend fun visibleCounts(hidden: List<Long>): List<PersonPhotoCount> = emptyList()
+        override suspend fun hiddenAmong(mediaIds: List<Long>, hidden: List<Long>): List<Long> = emptyList()
+        override suspend fun visibleCover(personId: Long, hidden: List<Long>): FaceCover? = null
     }
 
     private fun normalize(v: FloatArray): FloatArray {
