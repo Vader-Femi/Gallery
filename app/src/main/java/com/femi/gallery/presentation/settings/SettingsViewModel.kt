@@ -28,6 +28,7 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     observeAlbums: ObserveAlbumsUseCase,
     private val settingsRepository: SettingsRepository,
+    private val faces: com.femi.gallery.domain.repository.FaceIndexRepository,
 ) : ViewModel() {
 
     val themeMode: StateFlow<Int> = settingsRepository.themeMode
@@ -44,6 +45,17 @@ class SettingsViewModel @Inject constructor(
 
     val scanOnlyWhileCharging: StateFlow<Boolean> = settingsRepository.scanOnlyWhileCharging
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val faceRecognition: StateFlow<Boolean> = settingsRepository.faceRecognition
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    /** Turning it off also erases everything learned about faces; turning it on starts looking again. */
+    fun setFaceRecognition(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setFaceRecognition(enabled)
+            if (enabled) faces.startScan() else faces.eraseAll()
+        }
+    }
 
     val semanticSearch: StateFlow<Boolean> = settingsRepository.semanticSearch
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)

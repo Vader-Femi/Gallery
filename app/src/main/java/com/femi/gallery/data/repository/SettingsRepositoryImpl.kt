@@ -43,6 +43,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_SLIDESHOW_CUSTOM_MUSIC_NAME = stringPreferencesKey("slideshow_custom_music_name")
         private val KEY_TIMELINE_ZOOM = stringPreferencesKey("timeline_zoom")
         private val KEY_SEMANTIC_SEARCH = booleanPreferencesKey("semantic_search")
+        private val KEY_FACE_RECOGNITION = booleanPreferencesKey("face_recognition")
         private val KEY_SEMANTIC_SEARCH_STRICTNESS = stringPreferencesKey("semantic_search_strictness")
         private val KEY_CLIP_NORMALIZATION = stringPreferencesKey("clip_normalization")
         private val KEY_ALBUM_SORT = stringPreferencesKey("album_sort_option")
@@ -102,6 +103,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val semanticSearch: Flow<Boolean> = dataStore.data.map {
         it[KEY_SEMANTIC_SEARCH] ?: true
+    }
+
+    override val faceRecognition: Flow<Boolean> = dataStore.data.map {
+        it[KEY_FACE_RECOGNITION] ?: true
     }
 
     override val semanticSearchStrictness: Flow<com.femi.gallery.domain.repository.SemanticSearchStrictness> = dataStore.data.map {
@@ -173,6 +178,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setSemanticSearch(enabled: Boolean) {
         dataStore.edit { it[KEY_SEMANTIC_SEARCH] = enabled }
+    }
+
+    override suspend fun setFaceRecognition(enabled: Boolean) {
+        dataStore.edit { it[KEY_FACE_RECOGNITION] = enabled }
     }
 
     override suspend fun setSemanticSearchStrictness(strictness: com.femi.gallery.domain.repository.SemanticSearchStrictness) {

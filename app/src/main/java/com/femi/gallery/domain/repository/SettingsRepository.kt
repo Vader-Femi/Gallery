@@ -20,6 +20,8 @@ interface SettingsRepository {
     val slideshowCustomMusicName: Flow<String?>
     val timelineZoom: Flow<TimelineZoom>
     val semanticSearch: Flow<Boolean>
+    /** Whether faces are looked for in the photos, to group them by person (on this phone only). */
+    val faceRecognition: Flow<Boolean>
     val semanticSearchStrictness: Flow<SemanticSearchStrictness>
     val clipNormalization: Flow<ClipNormalization>
     val albumSortOption: Flow<AlbumSortOption>
@@ -37,6 +39,7 @@ interface SettingsRepository {
     suspend fun setSlideshowCustomMusic(uri: String?, name: String?)
     suspend fun setTimelineZoom(zoom: TimelineZoom)
     suspend fun setSemanticSearch(enabled: Boolean)
+    suspend fun setFaceRecognition(enabled: Boolean)
     suspend fun setSemanticSearchStrictness(strictness: SemanticSearchStrictness)
     suspend fun setClipNormalization(normalization: ClipNormalization)
     suspend fun setAlbumSortOption(option: AlbumSortOption)

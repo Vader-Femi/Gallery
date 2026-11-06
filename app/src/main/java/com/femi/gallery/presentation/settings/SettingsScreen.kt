@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Brightness6
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -137,6 +138,8 @@ fun SettingsScreen(
     val autoplayEnabled by viewModel.autoplayVideos.collectAsStateWithLifecycle()
     val muteEnabled by viewModel.muteVideos.collectAsStateWithLifecycle()
     val backgroundScan by viewModel.backgroundScan.collectAsStateWithLifecycle()
+    val faceRecognition by viewModel.faceRecognition.collectAsStateWithLifecycle()
+    var showEraseFaces by remember { mutableStateOf(false) }
     val scanOnlyCharging by viewModel.scanOnlyWhileCharging.collectAsStateWithLifecycle()
 
     val currentSortOption by viewModel.albumSortOption.collectAsStateWithLifecycle()
@@ -188,6 +191,21 @@ fun SettingsScreen(
     }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    if (showEraseFaces) {
+        AlertDialog(
+            onDismissRequest = { showEraseFaces = false },
+            title = { Text(stringResource(R.string.settings_face_erase_title)) },
+            text = { Text(stringResource(R.string.settings_face_erase_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showEraseFaces = false
+                    viewModel.setFaceRecognition(false)
+                }) { Text(stringResource(R.string.settings_face_erase_confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { showEraseFaces = false }) { Text(stringResource(R.string.picker_cancel)) } },
+        )
+    }
 
     Scaffold(
         modifier = modifier
@@ -422,6 +440,15 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            // Looking for faces to group the photos by person; turning it off erases what was learned.
+            SettingSwitchCard(
+                icon = Icons.Outlined.Face,
+                title = stringResource(R.string.settings_face_recognition),
+                summary = stringResource(R.string.settings_face_recognition_summary),
+                checked = faceRecognition,
+                onCheckedChange = { enable -> if (enable) viewModel.setFaceRecognition(true) else showEraseFaces = true },
+            )
 
             ClipModelCard()
 

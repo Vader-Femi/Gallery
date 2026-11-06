@@ -8,4 +8,7 @@ interface FaceIndexRepository {
     val isRunning: Boolean
     fun startScan()
     fun stopScan()
+
+    /** Stops the scan and deletes everything learned about faces: the people, their faces and what was scanned. */
+    suspend fun eraseAll()
 }

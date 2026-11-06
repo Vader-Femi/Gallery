@@ -80,6 +80,7 @@ fun PeopleScreen(
 ) {
     val people by viewModel.people.collectAsStateWithLifecycle()
     val scanState by viewModel.scanState.collectAsStateWithLifecycle()
+    val faceRecognitionOn by viewModel.enabled.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     var renamingPerson by remember { mutableStateOf<PersonRow?>(null) }
@@ -113,7 +114,7 @@ fun PeopleScreen(
                     ) {
                         IconButton(
                             onClick = { showMenu = true },
-                            enabled = scanState.status != FaceScanStatus.Scanning,
+                            enabled = faceRecognitionOn && scanState.status != FaceScanStatus.Scanning,
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
@@ -207,7 +208,9 @@ fun PeopleScreen(
                 }
             }
 
-            if (people.isEmpty()) {
+            if (!faceRecognitionOn) {
+                PeopleOff(onTurnOn = viewModel::turnOn)
+            } else if (people.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -582,5 +585,33 @@ fun PersonAvatar(
                     transformOrigin = TransformOrigin(cx, cy)
                 },
         )
+    }
+}
+
+
+/** Shown instead of the people while face recognition is off in Settings. */
+@Composable
+private fun PeopleOff(onTurnOn: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringResource(R.string.people_off_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.people_off_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = onTurnOn) { Text(stringResource(R.string.people_off_button)) }
+        }
     }
 }

@@ -26,7 +26,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -42,6 +44,8 @@ class FaceIndexRepositoryImpl @Inject constructor(
     private val clusterer: FaceClusterer,
     private val scanDao: FaceScanDao,
     private val faceDao: FaceDao,
+    private val personDao: com.femi.gallery.data.db.PersonDao,
+    private val settings: com.femi.gallery.domain.repository.SettingsRepository,
     private val permissions: MediaPermissionChecker,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) : FaceIndexRepository {
@@ -71,7 +75,22 @@ class FaceIndexRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun eraseAll() {
+        // The scan must be over before its results are deleted, or it would write them again.
+        val running = synchronized(lock) { job.also { job = null } }
+        running?.cancelAndJoin()
+        faceDao.deleteAll()
+        personDao.deleteAll()
+        scanDao.deleteAll()
+        _scan.value = FaceScanState()
+        Log.i(TAG, "Face data erased")
+    }
+
     private suspend fun runScan() {
+        if (!settings.faceRecognition.first()) {
+            synchronized(lock) { job = null }
+            return
+        }
         _scan.update { it.copy(status = FaceScanStatus.Scanning) }
         try {
             val order = dataSource.loadOrder(search = SearchCriteria(mediaType = MediaType.Image))

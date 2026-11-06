@@ -23,10 +23,11 @@ class AppViewModel @Inject constructor(
     private val startColorScan: StartColorScanUseCase,
     private val startLabelScan: StartLabelScanUseCase,
     private val startClipScan: StartClipScanUseCase,
+    private val startFaceScan: com.femi.gallery.domain.usecase.StartFaceScanUseCase,
 ) : ViewModel() {
 
     /**
-     * Starts the background scans of new photos: where they were taken, text, colours, labels, and embeddings.
+     * Starts the background scans of new photos: where they were taken, text, colours, labels, embeddings and faces.
      * Cheap when there is nothing new.
      */
     fun scanLocations() {
@@ -35,6 +36,7 @@ class AppViewModel @Inject constructor(
         startColorScan()
         startLabelScan()
         startClipScan()
+        startFaceScan()
         // So that scans still working when the app is closed carry on, and new photos are read even if it is not opened.
         BackgroundScans.update(context)
     }

@@ -453,6 +453,14 @@
     <string name="album_people">People</string>
     <string name="people_title">People &amp; Faces</string>
     <string name="people_empty_title">No people found yet</string>
+    <string name="settings_face_recognition">Recognize people</string>
+    <string name="settings_face_recognition_summary">Group your photos by di people wey dey inside dem. Dem dey find di faces for dis phone only and dem no dey send anything anywhere.</string>
+    <string name="settings_face_erase_title">Turn off and erase face data?</string>
+    <string name="settings_face_erase_body">Dem go delete di people and faces wey dem find for your photos from dis phone, with di names wey you give dem. Dem no touch your photos.</string>
+    <string name="settings_face_erase_confirm">Turn off and erase</string>
+    <string name="people_off_title">Face recognition don off</string>
+    <string name="people_off_desc">Turn am on to group your photos by person. Dem dey find di faces for dis phone only.</string>
+    <string name="people_off_button">Turn on</string>
     <string name="people_empty_desc">Photos go dey scanned to find and group faces into people.</string>
     <string name="people_scan_button">Scan for faces</string>
     <string name="people_rescan_all">Reset &amp; scan all faces again</string>

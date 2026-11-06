@@ -454,6 +454,14 @@
     <string name="album_people">Mutane</string>
     <string name="people_title">Mutane da Fuskoki</string>
     <string name="people_empty_title">Ba a sami mutane ba tukuna</string>
+    <string name="settings_face_recognition">Gane mutane</string>
+    <string name="settings_face_recognition_summary">Haɗa hotunanka bisa ga mutanen da ke cikinsu. Ana neman fuskoki a wannan waya kawai kuma ba a aika komai koina ba.</string>
+    <string name="settings_face_erase_title">Kashe kuma goge bayanan fuska?</string>
+    <string name="settings_face_erase_body">Za a goge mutanen da fuskokin da aka samu a hotunanka daga wannan waya, tare da sunayen da ka ba su. Ba a taɓa hotunanka ba.</string>
+    <string name="settings_face_erase_confirm">Kashe kuma goge</string>
+    <string name="people_off_title">Gane fuska yana a kashe</string>
+    <string name="people_off_desc">Kunna shi don haɗa hotunanka bisa ga mutum. Ana neman fuskoki a wannan waya kawai.</string>
+    <string name="people_off_button">Kunna</string>
     <string name="people_empty_desc">Za a bincika hotuna don gano fuskoki da tattara su zuwa rukunin mutane.</string>
     <string name="people_scan_button">Bincika fuskoki</string>
     <string name="people_rescan_all">Sake bincika duk fuskoki</string>

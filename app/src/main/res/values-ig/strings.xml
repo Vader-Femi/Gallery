@@ -453,6 +453,14 @@
     <string name="album_people">Ndị mmadụ</string>
     <string name="people_title">Ndị mmadụ na Ihu</string>
     <string name="people_empty_title">Ahụbeghị ndị mmadụ</string>
+    <string name="settings_face_recognition">Mara ndị mmadụ</string>
+    <string name="settings_face_recognition_summary">Kpọkọta foto gị dị ka ndị mmadụ nọ n\'ime ha. A na-achọ ihu naanị na ekwentị a, e zigaghị ihe ọ bụla ebe ọ bụla.</string>
+    <string name="settings_face_erase_title">Gbanyụọ ma hichapụ data ihu?</string>
+    <string name="settings_face_erase_body">A ga-ehichapụ ndị mmadụ na ihu ndị a chọtara n\'ime foto gị na ekwentị a, ya na aha ndị i nyere. A naghị emetụ foto gị aka.</string>
+    <string name="settings_face_erase_confirm">Gbanyụọ ma hichapụ</string>
+    <string name="people_off_title">Ịmata ihu agbanyụọla</string>
+    <string name="people_off_desc">Gbanye ya ka ị kpọkọta foto gị dị ka mmadụ. A na-achọ ihu naanị na ekwentị a.</string>
+    <string name="people_off_button">Gbanye</string>
     <string name="people_empty_desc">A ga-enyocha foto iji chọpụta ma chịkọta ihu ndị mmadụ.</string>
     <string name="people_scan_button">Nyochaa maka ihu</string>
     <string name="people_rescan_all">Nyochaa ihu niile ọzọ</string>

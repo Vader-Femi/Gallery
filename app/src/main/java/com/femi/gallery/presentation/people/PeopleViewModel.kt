@@ -19,8 +19,8 @@ import javax.inject.Inject
 class PeopleViewModel @Inject constructor(
     private val personDao: PersonDao,
     private val faceDao: FaceDao,
-    private val faceScanDao: com.femi.gallery.data.db.FaceScanDao,
     private val faceRepo: FaceIndexRepository,
+    private val settingsRepository: com.femi.gallery.domain.repository.SettingsRepository,
 ) : ViewModel() {
 
     val people: StateFlow<List<PersonRow>> = personDao.flowAll()
@@ -37,11 +37,20 @@ class PeopleViewModel @Inject constructor(
 
     fun startScan() = faceRepo.startScan()
 
+    /** Whether face recognition is on (Settings); when it is off the screen says so instead of offering a scan. */
+    val enabled: StateFlow<Boolean> = settingsRepository.faceRecognition
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun turnOn() {
+        viewModelScope.launch {
+            settingsRepository.setFaceRecognition(true)
+            faceRepo.startScan()
+        }
+    }
+
     fun rescan() {
         viewModelScope.launch {
-            personDao.deleteAll()
-            faceDao.deleteAll()
-            faceScanDao.deleteAll()
+            faceRepo.eraseAll()
             faceRepo.startScan()
         }
     }

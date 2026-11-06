@@ -453,6 +453,14 @@
     <string name="album_people">Àwọn ènìyàn</string>
     <string name="people_title">Àwọn ènìyàn &amp; Ojú</string>
     <string name="people_empty_title">Kò tíì sí ènìyàn tí a rí</string>
+    <string name="settings_face_recognition">Dá àwọn ènìyàn mọ̀</string>
+    <string name="settings_face_recognition_summary">Ṣe àkójọpọ̀ àwọn fọ́tò rẹ ní ìbámu pẹ̀lú àwọn ènìyàn tó wà nínú wọn. A ń wá ojú lórí fóònù yìí nìkan, a kò sì fi nǹkan kan ránṣẹ́ sí ibikíbi.</string>
+    <string name="settings_face_erase_title">Pa á kí o sì pa àwọn dátà ojú rẹ́?</string>
+    <string name="settings_face_erase_body">A ó pa àwọn ènìyàn àti ojú tí a rí nínú àwọn fọ́tò rẹ rẹ́ kúrò lórí fóònù yìí, pẹ̀lú àwọn orúkọ tí o fún wọn. A kò fọwọ́ kan àwọn fọ́tò rẹ.</string>
+    <string name="settings_face_erase_confirm">Pa á kí o sì pa á rẹ́</string>
+    <string name="people_off_title">Ìdámọ̀ ojú ti wà ní pípa</string>
+    <string name="people_off_desc">Tan án láti ṣe àkójọpọ̀ àwọn fọ́tò rẹ ní ìbámu pẹ̀lú ènìyàn. A ń wá ojú lórí fóònù yìí nìkan.</string>
+    <string name="people_off_button">Tan</string>
     <string name="people_empty_desc">A óò ṣàyẹ̀wò àwọn fọ́tò láti mọ àti láti kó àwọn ojú ènìyàn jọ.</string>
     <string name="people_scan_button">Ṣàyẹ̀wò fún àwọn ojú</string>
     <string name="people_rescan_all">Tun gbogbo awọn oju ṣayẹwo</string>
