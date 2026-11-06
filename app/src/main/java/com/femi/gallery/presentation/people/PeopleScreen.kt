@@ -29,6 +29,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -42,12 +43,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -83,17 +87,48 @@ fun PeopleScreen(
     val faceRecognitionOn by viewModel.enabled.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
+    val coroutineScope = rememberCoroutineScope()
     var renamingPerson by remember { mutableStateOf<PersonRow?>(null) }
+    var mergeCandidate by remember { mutableStateOf<Pair<PersonRow, PersonRow>?>(null) }
+
     renamingPerson?.let { person ->
         NameDialog(
             title = stringResource(R.string.people_rename_title),
             confirmLabel = stringResource(R.string.people_rename_confirm),
             initialName = if (person.isNamed) person.name else "",
             onConfirm = { name ->
-                viewModel.renamePerson(person.id, name)
+                coroutineScope.launch {
+                    val existing = viewModel.findExistingPerson(name, person.id)
+                    if (existing != null) {
+                        mergeCandidate = person to existing.copy(name = name)
+                    } else {
+                        viewModel.renamePerson(person.id, name)
+                    }
+                }
                 renamingPerson = null
             },
             onDismiss = { renamingPerson = null },
+        )
+    }
+
+    mergeCandidate?.let { (source, target) ->
+        AlertDialog(
+            onDismissRequest = { mergeCandidate = null },
+            title = { Text(stringResource(R.string.people_merge_title)) },
+            text = { Text(stringResource(R.string.people_merge_message, target.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.mergePeople(survivorId = target.id, absorbedId = source.id, newName = target.name)
+                    mergeCandidate = null
+                }) {
+                    Text(stringResource(R.string.people_merge_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mergeCandidate = null }) {
+                    Text(stringResource(R.string.picker_cancel))
+                }
+            },
         )
     }
 

@@ -97,6 +97,26 @@ class FaceClusterer @Inject constructor(
         return updated
     }
 
+    fun mergeCentroids(c1: FloatArray, count1: Int, c2: FloatArray, count2: Int): FloatArray {
+        if (c1.isEmpty() || c1.size != c2.size) return if (c2.isNotEmpty()) c2 else c1
+        if (c2.isEmpty()) return c1
+        val w1 = count1.coerceAtLeast(1).coerceAtMost(50).toFloat()
+        val w2 = count2.coerceAtLeast(1).coerceAtMost(50).toFloat()
+        val total = w1 + w2
+        val updated = FloatArray(c1.size)
+        var normSq = 0f
+        for (i in updated.indices) {
+            val v = (c1[i] * w1 + c2[i] * w2) / total
+            updated[i] = v
+            normSq += v * v
+        }
+        val norm = sqrt(normSq)
+        if (norm > 1e-6f) {
+            for (i in updated.indices) updated[i] /= norm
+        }
+        return updated
+    }
+
     companion object {
         const val MOBILE_FACENET_THRESHOLD = 0.62f
         const val CLIP_CLUSTER_THRESHOLD = 0.76f

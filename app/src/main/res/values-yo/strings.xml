@@ -481,4 +481,9 @@
     <string name="clip_normalization_summary">Yan ètò ìṣètò fún àwòṣe ONNX rẹ.</string>
     <string name="clip_normalization_openai">OpenAI CLIP (Standard)</string>
     <string name="clip_normalization_imagenet">ImageNet (MobileCLIP / SigLIP)</string>
+    <string name="people_merge_title">Da awọn eniyan pọ?</string>
+    <string name="people_merge_message">Ẹnìkan tí orúkọ rẹ̀ ń jẹ́ \"%1$s\" wà tẹ́lẹ̀. Ṣe o fẹ́ da àwọn ènìyàn méjèèjì wọ̀nyí pọ̀ sí ọ̀kan?</string>
+    <string name="people_merge_confirm">Da pọ̀</string>
+    <string name="people_merge_with_title">Da pọ̀ mọ́ ẹlòmíràn</string>
+    <string name="people_merge_with_message">Da \"%1$s\" pọ̀ mọ́ \"%2$s\"? Gbogbo àwọn fọ́tò yóò wà papọ̀ ní àkójọ kan.</string>
 </resources>

@@ -484,5 +484,10 @@
     <string name="people_section_unnamed">Other faces</string>
     <string name="people_add_name">Add name</string>
     <string name="people_edit_name">Edit name</string>
+    <string name="people_merge_title">Merge people?</string>
+    <string name="people_merge_message">A person named \"%1$s\" already exists. Merge these two people into one group?</string>
+    <string name="people_merge_confirm">Merge</string>
+    <string name="people_merge_with_title">Merge with another person</string>
+    <string name="people_merge_with_message">Merge \"%1$s\" into \"%2$s\"? All photos will be combined into one group.</string>
 </resources>
 

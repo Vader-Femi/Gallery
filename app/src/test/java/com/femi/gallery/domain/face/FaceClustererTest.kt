@@ -53,12 +53,21 @@ class FaceClustererTest {
 
         override suspend fun searchByName(query: String): List<PersonRow> = emptyList()
         override suspend fun mediaIdsForName(query: String): List<Long> = emptyList()
+        override suspend fun findByNameExcluding(name: String, excludeId: Long): PersonRow? =
+            people.values.firstOrNull { it.id != excludeId && it.name.equals(name, ignoreCase = true) }
     }
 
     private class FakeFaceDao : FaceDao() {
         val faces = mutableListOf<FaceRow>()
 
         override suspend fun all(): List<FaceRow> = faces
+        override suspend fun reassignPerson(fromPersonId: Long, toPersonId: Long) {
+            for (i in faces.indices) {
+                if (faces[i].personId == fromPersonId) {
+                    faces[i] = faces[i].copy(personId = toPersonId)
+                }
+            }
+        }
         override suspend fun getForMedia(mediaId: Long): List<FaceRow> = faces.filter { it.mediaId == mediaId }
         override suspend fun getForPerson(personId: Long): List<FaceRow> = faces.filter { it.personId == personId }
         override suspend fun mediaIdsForPerson(personId: Long): List<Long> = faces.filter { it.personId == personId }.map { it.mediaId }.distinct()
@@ -182,5 +191,21 @@ class FaceClustererTest {
         )
 
         assertEquals(listOf("Bob", "Alice", "Person 1", "Person 2"), sorted.map { it.name })
+    }
+
+    @Test
+    fun mergeCentroidsCombinesVectorsWithWeights() {
+        val personDao = FakePersonDao()
+        val faceDao = FakeFaceDao()
+        val clusterer = FaceClusterer(personDao, faceDao)
+
+        val v1 = FloatArray(512) { 1f }
+        val v2 = FloatArray(512) { 0f }
+        val merged = clusterer.mergeCentroids(v1, 10, v2, 10)
+
+        assertEquals(512, merged.size)
+        var normSq = 0f
+        for (x in merged) normSq += x * x
+        assertEquals(1.0f, normSq, 1e-4f)
     }
 }

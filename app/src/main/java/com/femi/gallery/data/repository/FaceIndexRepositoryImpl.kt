@@ -7,6 +7,9 @@ import com.femi.gallery.core.permission.MediaPermissionChecker
 import com.femi.gallery.data.db.FaceDao
 import com.femi.gallery.data.db.FaceScanDao
 import com.femi.gallery.data.db.FaceScanRow
+import com.femi.gallery.data.db.PersonRow
+import com.femi.gallery.domain.face.FaceFeatureHelper.toByteArray
+import com.femi.gallery.domain.face.FaceFeatureHelper.toFloatArray
 import com.femi.gallery.data.mediastore.MediaStoreDataSource
 import com.femi.gallery.di.ApplicationScope
 import com.femi.gallery.domain.face.FaceClusterer
@@ -84,6 +87,42 @@ class FaceIndexRepositoryImpl @Inject constructor(
         scanDao.deleteAll()
         _scan.value = FaceScanState()
         Log.i(TAG, "Face data erased")
+    }
+
+    override suspend fun findExistingPerson(name: String, excludeId: Long): PersonRow? {
+        val clean = name.trim()
+        if (clean.isEmpty()) return null
+        return personDao.findByNameExcluding(clean, excludeId)
+    }
+
+    override suspend fun mergePeople(survivorId: Long, absorbedId: Long, newName: String?) {
+        if (survivorId == absorbedId) return
+        withContext(Dispatchers.IO) {
+            val survivor = personDao.get(survivorId) ?: return@withContext
+            val absorbed = personDao.get(absorbedId) ?: return@withContext
+
+            faceDao.reassignPerson(fromPersonId = absorbedId, toPersonId = survivorId)
+
+            val c1 = survivor.centroid.toFloatArray()
+            val c2 = absorbed.centroid.toFloatArray()
+            val mergedCentroid = clusterer.mergeCentroids(c1, survivor.photoCount, c2, absorbed.photoCount)
+
+            val totalPhotos = faceDao.countPhotosForPerson(survivorId)
+            val finalName = newName?.trim()?.takeIf { it.isNotEmpty() }
+                ?: if (survivor.isNamed) survivor.name
+                else if (absorbed.isNamed) absorbed.name
+                else survivor.name
+
+            personDao.update(
+                survivor.copy(
+                    name = finalName,
+                    photoCount = totalPhotos,
+                    centroid = mergedCentroid.toByteArray(),
+                ),
+            )
+            personDao.delete(absorbedId)
+            Log.i(TAG, "Merged person $absorbedId into $survivorId as '$finalName' ($totalPhotos photos)")
+        }
     }
 
     private suspend fun runScan() {

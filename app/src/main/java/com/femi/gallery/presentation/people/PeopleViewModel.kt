@@ -67,6 +67,15 @@ class PeopleViewModel @Inject constructor(
         }
     }
 
+    suspend fun findExistingPerson(name: String, excludeId: Long): PersonRow? =
+        faceRepo.findExistingPerson(name, excludeId)
+
+    fun mergePeople(survivorId: Long, absorbedId: Long, newName: String? = null) {
+        viewModelScope.launch {
+            faceRepo.mergePeople(survivorId = survivorId, absorbedId = absorbedId, newName = newName)
+        }
+    }
+
     fun removePerson(personId: Long) {
         viewModelScope.launch {
             personDao.delete(personId)

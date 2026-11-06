@@ -26,6 +26,7 @@ class PersonViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val personDao: PersonDao,
     private val faceDao: FaceDao,
+    private val faceRepo: com.femi.gallery.domain.repository.FaceIndexRepository,
     private val dataSource: MediaStoreDataSource,
     private val settingsRepository: com.femi.gallery.domain.repository.SettingsRepository,
     private val visiblePeople: com.femi.gallery.data.face.VisiblePeople,
@@ -37,6 +38,11 @@ class PersonViewModel @Inject constructor(
         .map { row -> row?.let { visiblePeople.filter(listOf(it)).firstOrNull() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val otherPeople: StateFlow<List<PersonRow>> = combine(personDao.flowAll(), settingsRepository.hiddenAlbums) { list, _ -> list }
+        .map { visiblePeople.filter(it) }
+        .map { list -> list.filter { it.id != personId } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val photos: StateFlow<List<MediaItem>> = faceDao.flowMediaIdsForPerson(personId)
         .flatMapLatest { ids ->
             flow {
@@ -47,6 +53,15 @@ class PersonViewModel @Inject constructor(
                 }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    suspend fun findExistingPerson(name: String): PersonRow? =
+        faceRepo.findExistingPerson(name, personId)
+
+    fun mergeWith(targetPersonId: Long, newName: String? = null) {
+        viewModelScope.launch {
+            faceRepo.mergePeople(survivorId = personId, absorbedId = targetPersonId, newName = newName)
+        }
+    }
 
     fun rename(name: String) {
         viewModelScope.launch {

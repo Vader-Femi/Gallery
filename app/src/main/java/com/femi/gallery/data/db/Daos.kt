@@ -316,12 +316,18 @@ abstract class PersonDao {
         WHERE LOWER(p.name) LIKE '%' || LOWER(:query) || '%'
     """)
     abstract suspend fun mediaIdsForName(query: String): List<Long>
+
+    @Query("SELECT * FROM person WHERE LOWER(name) = LOWER(:name) AND id != :excludeId LIMIT 1")
+    abstract suspend fun findByNameExcluding(name: String, excludeId: Long): PersonRow?
 }
 
 @Dao
 abstract class FaceDao {
     @Query("SELECT * FROM face")
     abstract suspend fun all(): List<FaceRow>
+
+    @Query("UPDATE face SET personId = :toPersonId WHERE personId = :fromPersonId")
+    abstract suspend fun reassignPerson(fromPersonId: Long, toPersonId: Long)
 
     @Query("SELECT * FROM face WHERE mediaId = :mediaId")
     abstract suspend fun getForMedia(mediaId: Long): List<FaceRow>
