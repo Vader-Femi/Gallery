@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.aspectRatio
@@ -108,18 +109,23 @@ fun StoriesScreen(
                         .padding(horizontal = 16.dp, vertical = 2.dp),
                 )
             }
-            if (stories.isEmpty() && isUpdating) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    LoadingIndicator(
+            val currentStories = stories
+            if (currentStories == null || (currentStories.isEmpty() && isUpdating)) {
+                if (isUpdating) {
+                    Box(
                         modifier = Modifier
-                            .size(64.dp)
-                            .offset(y = (-48).dp),
-                    )
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        LoadingIndicator(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .offset(y = (-48).dp),
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             } else {
                 LazyVerticalGrid(
@@ -145,7 +151,7 @@ fun StoriesScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    if (stories.isEmpty()) {
+                    if (currentStories.isEmpty()) {
                         item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
                             Text(
                                 text = stringResource(R.string.stories_empty),
@@ -158,7 +164,7 @@ fun StoriesScreen(
                             )
                         }
                     }
-                    items(stories, key = { "${it.fromDay}-${it.toDay}" }) { story ->
+                    items(currentStories, key = { "${it.fromDay}-${it.toDay}" }) { story ->
                         StoryCard(story = story, onClick = { onStoryClick(story.fromDay, story.toDay) })
                     }
                 }

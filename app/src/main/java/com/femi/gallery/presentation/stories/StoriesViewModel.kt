@@ -22,8 +22,8 @@ class StoriesViewModel @Inject constructor(
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
-    val stories: StateFlow<List<Story>> = observeStories()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val stories: StateFlow<List<Story>?> = observeStories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val isUpdating: StateFlow<Boolean> = observeStoriesUpdating()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)

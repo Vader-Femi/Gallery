@@ -57,6 +57,7 @@ import kotlinx.coroutines.withContext
 import android.util.Log
 import com.femi.gallery.data.db.FaceDao
 import com.femi.gallery.data.db.MediaDao
+import com.femi.gallery.data.db.MetaRow
 import com.femi.gallery.data.db.PersonDao
 import com.femi.gallery.data.db.StoryDao
 import com.femi.gallery.data.db.StoryRow
@@ -190,12 +191,24 @@ class MediaRepositoryImpl @Inject constructor(
             .map { rows -> rows.map { it.toStory() } }
             .distinctUntilChanged()
 
-    override suspend fun refreshStories() {
+    @Volatile
+    private var storiesGeneration = -1L
+
+    override suspend fun refreshStories(force: Boolean) {
+        val currentGen = dataSource.generation()
+        if (storiesGeneration == -1L) {
+            storiesGeneration = storyDao.meta(StoryDao.STORIES_GENERATION) ?: -1L
+        }
+        if (!force && storiesGeneration != -1L && storiesGeneration == currentGen) {
+            return
+        }
         if (_isStoriesUpdating.value) return
         _isStoriesUpdating.value = true
         try {
             withContext(Dispatchers.IO) {
                 computeAndCacheStories()
+                storiesGeneration = currentGen
+                storyDao.putMeta(MetaRow(StoryDao.STORIES_GENERATION, currentGen))
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error refreshing stories", e)
@@ -207,14 +220,18 @@ class MediaRepositoryImpl @Inject constructor(
     private suspend fun computeAndCacheStories() {
         val order = dataSource.loadOrder(search = SearchCriteria(excludeJunk = true))
         if (order.size == 0) {
-            storyDao.replaceAll(emptyList())
+            if (storyDao.all().isNotEmpty()) {
+                storyDao.replaceAll(emptyList())
+            }
             return
         }
 
         val days = TimelineGrouper.group(LongArray(order.size) { order.datesMillis[it] / 1000 })
         val candidates = StoryDetector.detect(days).take(MAX_STORIES)
         if (candidates.isEmpty()) {
-            storyDao.replaceAll(emptyList())
+            if (storyDao.all().isNotEmpty()) {
+                storyDao.replaceAll(emptyList())
+            }
             return
         }
 
@@ -314,7 +331,11 @@ class MediaRepositoryImpl @Inject constructor(
             )
         }
 
-        storyDao.replaceAll(stories.map { StoryRow.fromStory(it) })
+        val newRows = stories.map { StoryRow.fromStory(it) }
+        val existingRows = storyDao.all()
+        if (newRows != existingRows) {
+            storyDao.replaceAll(newRows)
+        }
     }
 
     /** The calendar day (as an epoch day) of every video, oldest first. */
@@ -332,12 +353,12 @@ class MediaRepositoryImpl @Inject constructor(
     override suspend fun renameStory(fromDay: Long, toDay: Long, title: String?) {
         val cleaned = title?.let(StoryTitle::clean)
         storyEditStore.update { StoryEdits.update(it, fromDay, toDay) { edit -> edit.copy(title = cleaned) } }
-        refreshStories()
+        refreshStories(force = true)
     }
 
     override suspend fun setStoryCover(fromDay: Long, toDay: Long, mediaId: Long?) {
         storyEditStore.update { StoryEdits.update(it, fromDay, toDay) { edit -> edit.copy(coverId = mediaId) } }
-        refreshStories()
+        refreshStories(force = true)
     }
 
     /** Emits once on start, then (debounced) whenever MediaStore changes or the app resumes after a change. */

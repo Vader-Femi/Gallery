@@ -20,5 +20,5 @@ class ObserveStoriesUpdatingUseCase @Inject constructor(
 class RefreshStoriesUseCase @Inject constructor(
     private val repository: MediaRepository,
 ) {
-    suspend operator fun invoke() = repository.refreshStories()
+    suspend operator fun invoke(force: Boolean = false) = repository.refreshStories(force)
 }

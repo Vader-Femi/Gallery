@@ -416,4 +416,14 @@ abstract class StoryDao {
             deleteOld(stories.map { it.id })
         }
     }
+
+    @Query("SELECT value FROM index_meta WHERE `key` = :key")
+    abstract suspend fun meta(key: String): Long?
+
+    @Upsert
+    abstract suspend fun putMeta(row: MetaRow)
+
+    companion object {
+        const val STORIES_GENERATION = "stories_generation"
+    }
 }

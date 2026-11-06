@@ -31,7 +31,7 @@ interface MediaRepository {
     fun isStoriesUpdating(): Flow<Boolean>
 
     /** Recomputes stories from the media library and updates the local cache. */
-    suspend fun refreshStories()
+    suspend fun refreshStories(force: Boolean = false)
 
     /** The title and cover the person chose for the story [fromDay]..[toDay]; null when it has none. */
     fun observeStoryEdit(fromDay: Long, toDay: Long): Flow<StoryEdit?>
