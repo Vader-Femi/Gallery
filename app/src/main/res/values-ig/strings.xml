@@ -404,8 +404,9 @@
     <string name="settings_album_sort_count">Ọnụọgụ ihe</string>
 
     <string name="settings_hide_albums">Zoze album</string>
-    <string name="settings_hide_albums_summary">Họrọ album ị ga-azoze site na taabụ Album</string>
+    <string name="settings_hide_albums_summary">Foto na vidiyo ndị dị na album ezoro ezo agaghị apụta ebe ọ bụla na ngwa a</string>
     <string name="settings_hide_albums_dialog_title">Họrọ album ị ga-azoze</string>
+    <string name="settings_hide_albums_dialog_description">Foto na vidiyo ndị dị na album ezoro ezo agaghị apụta ebe ọ bụla na ngwa a.</string>
 
     <string name="settings_delete_empty_albums">Hichapụ folda efu</string>
     <string name="settings_delete_empty_albums_summary">Chọta ma hichapụ folda efu n\'nchekwa gị</string>

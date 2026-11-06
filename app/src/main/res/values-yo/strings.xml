@@ -404,8 +404,9 @@
     <string name="settings_album_sort_count">Iye ohun</string>
 
     <string name="settings_hide_albums">Fipamọ́ àwọn àwo fọ́tò</string>
-    <string name="settings_hide_albums_summary">Sọ àwọn àwo fọ́tò tí o fẹ́ fipamọ́ kúrò ní àyè Àwo fọ́tò</string>
+    <string name="settings_hide_albums_summary">Àwọn fọ́tò àti fídíò tí ó wà nínú àwọn àwo fọ́tò tí a fipamọ́ kò ní hàn níbikíbi nínú àpù yìí</string>
     <string name="settings_hide_albums_dialog_title">Àyànfẹ́ àwọn àwo fọ́tò tí a ó fipamọ́</string>
+    <string name="settings_hide_albums_dialog_description">Àwọn fọ́tò àti fídíò tí ó wà nínú àwọn àwo fọ́tò tí a fipamọ́ kò ní hàn níbikíbi nínú àpù yìí.</string>
 
     <string name="settings_delete_empty_albums">Pa àwọn fọ́lídà tí ó ṣófo rẹ́</string>
     <string name="settings_delete_empty_albums_summary">Rí àti pa àwọn fọ́lídà tí ó ṣófo rẹ́ kúrò ní ààyè ìtọ́jú rẹ</string>

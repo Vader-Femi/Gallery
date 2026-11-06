@@ -460,32 +460,46 @@ fun SettingsScreen(
                 onDismissRequest = { showHideAlbumsDialog = false },
                 title = { Text(stringResource(R.string.settings_hide_albums_dialog_title)) },
                 text = {
-                    LazyColumn {
-                        items(albums, key = { it.bucketId }) { album ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        val newHidden = hiddenAlbums.toMutableSet()
-                                        if (newHidden.contains(album.bucketId)) {
-                                            newHidden.remove(album.bucketId)
-                                        } else {
-                                            newHidden.add(album.bucketId)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_hide_albums_dialog_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false),
+                        ) {
+                            items(albums, key = { it.bucketId }) { album ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val newHidden = hiddenAlbums.toMutableSet()
+                                            if (newHidden.contains(album.bucketId)) {
+                                                newHidden.remove(album.bucketId)
+                                            } else {
+                                                newHidden.add(album.bucketId)
+                                            }
+                                            viewModel.setHiddenAlbums(newHidden)
                                         }
-                                        viewModel.setHiddenAlbums(newHidden)
-                                    }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = hiddenAlbums.contains(album.bucketId),
-                                    onCheckedChange = null
-                                )
-                                Text(
-                                    text = album.name,
-                                    modifier = Modifier.padding(start = 16.dp),
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
+                                        .padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = hiddenAlbums.contains(album.bucketId),
+                                        onCheckedChange = null
+                                    )
+                                    Text(
+                                        text = album.name,
+                                        modifier = Modifier.padding(start = 16.dp),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
                             }
                         }
                     }

@@ -404,8 +404,9 @@
     <string name="settings_album_sort_count">Number of items</string>
 
     <string name="settings_hide_albums">Hide album dem</string>
-    <string name="settings_hide_albums_summary">Choose which album dem to hide from Albums tab</string>
+    <string name="settings_hide_albums_summary">Photos and videos inside hidden album dem no go show anywhere for di app</string>
     <string name="settings_hide_albums_dialog_title">Select album dem wey you wan hide</string>
+    <string name="settings_hide_albums_dialog_description">Photos and videos inside hidden album dem no go show anywhere for di app.</string>
 
     <string name="settings_delete_empty_albums">Delete empty album dem</string>
     <string name="settings_delete_empty_albums_summary">Find and delete empty folder dem inside storage</string>

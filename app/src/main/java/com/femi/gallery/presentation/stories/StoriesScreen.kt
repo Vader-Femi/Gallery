@@ -58,7 +58,7 @@ import com.femi.gallery.domain.model.Story
 import com.femi.gallery.presentation.common.HugeTopAppBar
 import com.femi.gallery.presentation.common.pinchToChangeColumns
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun StoriesScreen(
     onBack: () -> Unit = {},
