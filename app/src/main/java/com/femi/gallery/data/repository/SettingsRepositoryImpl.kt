@@ -67,7 +67,7 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override val scanOnlyWhileCharging: Flow<Boolean> = dataStore.data.map {
-        it[KEY_SCAN_ONLY_CHARGING] ?: true
+        it[KEY_SCAN_ONLY_CHARGING] ?: false
     }
 
     override val slideshowSpeed: Flow<SlideshowSpeed> = dataStore.data.map {
