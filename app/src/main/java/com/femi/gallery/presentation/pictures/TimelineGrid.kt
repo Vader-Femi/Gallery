@@ -210,12 +210,18 @@ fun TimelineGrid(
                 }
             ),
     ) {
+        val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val widthDp = with(density) { windowInfo.containerSize.width.toDp() }
+        val actualColumns = remember(widthDp, zoom) {
+            responsiveTimelineColumns(zoom, widthDp.value.toInt())
+        }
         val isLoaded = items.loadState.refresh is androidx.paging.LoadState.NotLoading
         if (isLoaded && items.itemCount == 0 && emptyContent != null) {
             emptyContent()
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(zoom.columns),
+                columns = GridCells.Fixed(actualColumns),
                 state = gridState,
                 modifier = Modifier
                     .fillMaxSize()
@@ -466,3 +472,28 @@ private fun LazyPagingItems<MediaItem>.peekOrNull(index: Int): MediaItem? =
 
 private fun LazyPagingItems<MediaItem>.getOrNull(index: Int): MediaItem? =
     if (index in 0 until itemCount) get(index) else null
+
+/**
+ * Scales the number of grid columns on wider screens (tablets, foldables, desktops)
+ * while preserving the user's selected [TimelineZoom] granularity and relative thumbnail sizing.
+ */
+internal fun responsiveTimelineColumns(zoom: TimelineZoom, screenWidthDp: Int): Int = when {
+    screenWidthDp >= 900 -> when (zoom) {
+        TimelineZoom.Day2 -> 4
+        TimelineZoom.Day3 -> 5
+        TimelineZoom.Day4 -> 6
+        TimelineZoom.Day5 -> 8
+        TimelineZoom.Month6 -> 10
+        TimelineZoom.Year7 -> 14
+    }
+    screenWidthDp >= 600 -> when (zoom) {
+        TimelineZoom.Day2 -> 3
+        TimelineZoom.Day3 -> 4
+        TimelineZoom.Day4 -> 5
+        TimelineZoom.Day5 -> 6
+        TimelineZoom.Month6 -> 8
+        TimelineZoom.Year7 -> 10
+    }
+    else -> zoom.columns
+}
+

@@ -152,16 +152,21 @@ private fun GalleryScaffold() {
             val density = LocalDensity.current
             val isExpanded = with(density) { windowInfo.containerSize.width.toDp() } >= 600.dp
 
+            val isFullScreen = currentDestination?.hasRoute<GalleryRoutes.Slideshow>() == true ||
+                currentDestination?.hasRoute<GalleryRoutes.Editor>() == true ||
+                currentDestination?.hasRoute<GalleryRoutes.Trim>() == true ||
+                route?.startsWith("slideshow") == true || route?.startsWith("editor") == true || route?.startsWith("trim") == true
+            val isSearchRoute = currentDestination?.hasRoute<GalleryRoutes.Search>() == true || route?.startsWith("search") == true
+            val showNavRail = isExpanded && !chrome.bottomBarHidden && !isFullScreen && !viewerShowing
+            val showBottomBar = !isExpanded && isTopLevel && !chrome.bottomBarHidden && !isFullScreen && !viewerShowing
+            val showNavBar = showNavRail || showBottomBar
+
             Box(Modifier.fillMaxSize()) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                 ) { innerPadding ->
-                    val isFullScreen = currentDestination?.hasRoute<GalleryRoutes.Slideshow>() == true ||
-                        currentDestination?.hasRoute<GalleryRoutes.Editor>() == true ||
-                        currentDestination?.hasRoute<GalleryRoutes.Trim>() == true ||
-                        route?.startsWith("slideshow") == true || route?.startsWith("editor") == true || route?.startsWith("trim") == true
                     val topPadding = if (isFullScreen) 0.dp else innerPadding.calculateTopPadding()
-                    val startPadding = if (isExpanded && isTopLevel && !chrome.bottomBarHidden && !isFullScreen) 104.dp else 0.dp
+                    val startPadding = if (showNavRail) 104.dp else 0.dp
                     GalleryNavHost(
                         navController = navController,
                         viewerSession = viewerSession,
@@ -171,7 +176,7 @@ private fun GalleryScaffold() {
                     )
                 }
 
-                if (isTopLevel && !chrome.bottomBarHidden) {
+                if (showNavBar) {
                     FloatingNavigationBar(
                         modifier = Modifier.align(if (isExpanded) Alignment.CenterStart else Alignment.BottomCenter),
                         isVertical = isExpanded,
@@ -203,11 +208,14 @@ private fun GalleryScaffold() {
                         },
                         onSearchClick = {
                             menuSheetOpen = false
-                            navController.navigate(GalleryRoutes.Search())
+                            if (!isSearchRoute) {
+                                navController.navigate(GalleryRoutes.Search())
+                            }
                         },
                         onMenuClick = {
                             menuSheetOpen = !menuSheetOpen
                         },
+                        isSearchSelected = isSearchRoute,
                         isMenuSelected = menuSheetOpen,
                     )
                 }

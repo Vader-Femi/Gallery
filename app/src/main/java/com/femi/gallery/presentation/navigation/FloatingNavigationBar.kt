@@ -65,6 +65,7 @@ fun FloatingNavigationBar(
     onSearchClick: () -> Unit,
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isSearchSelected: Boolean = false,
     isMenuSelected: Boolean = false,
     isVertical: Boolean = false,
     alwaysShowLabel: Boolean = true,
@@ -92,6 +93,26 @@ fun FloatingNavigationBar(
         enter = enterTransition,
         modifier = modifier,
     ) {
+        val searchButtonColor by animateColorAsState(
+            targetValue = if (isSearchSelected) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else if (isVertical) {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+            label = "searchButtonColor",
+        )
+        val searchIconTint by animateColorAsState(
+            targetValue = if (isSearchSelected) {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+            label = "searchIconTint",
+        )
         val menuButtonColor by animateColorAsState(
             targetValue = if (isMenuSelected) {
                 MaterialTheme.colorScheme.secondaryContainer
@@ -156,7 +177,7 @@ fun FloatingNavigationBar(
                             Surface(
                                 onClick = onSearchClick,
                                 shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                color = searchButtonColor,
                                 tonalElevation = 2.dp,
                                 modifier = Modifier.size(52.dp),
                             ) {
@@ -167,7 +188,7 @@ fun FloatingNavigationBar(
                                     Icon(
                                         imageVector = Icons.Filled.Search,
                                         contentDescription = stringResource(R.string.search_open),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = searchIconTint,
                                         modifier = Modifier.size(24.dp),
                                     )
                                 }
@@ -248,7 +269,7 @@ fun FloatingNavigationBar(
                         Surface(
                             onClick = onSearchClick,
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            color = searchButtonColor,
                             tonalElevation = 6.dp,
                             shadowElevation = 8.dp,
                             modifier = Modifier.size(56.dp),
@@ -260,7 +281,7 @@ fun FloatingNavigationBar(
                                 Icon(
                                     imageVector = Icons.Filled.Search,
                                     contentDescription = stringResource(R.string.search_open),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = searchIconTint,
                                     modifier = Modifier.size(26.dp),
                                 )
                             }
