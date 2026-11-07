@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Brightness6
 import androidx.compose.material.icons.outlined.DeleteOutline
@@ -138,6 +139,7 @@ fun SettingsScreen(
 
     val autoplayEnabled by viewModel.autoplayVideos.collectAsStateWithLifecycle()
     val muteEnabled by viewModel.muteVideos.collectAsStateWithLifecycle()
+    val playAudioInBackground by viewModel.playAudioInBackground.collectAsStateWithLifecycle()
     val backgroundScan by viewModel.backgroundScan.collectAsStateWithLifecycle()
     val faceRecognition by viewModel.faceRecognition.collectAsStateWithLifecycle()
     var showEraseFaces by remember { mutableStateOf(false) }
@@ -378,6 +380,15 @@ fun SettingsScreen(
                         summary = stringResource(R.string.settings_mute_videos_summary),
                         checked = muteEnabled,
                         onCheckedChange = { viewModel.setMuteVideos(it) },
+                    )
+
+                    // Play Video Audio in Background Setting Card
+                    SettingSwitchCard(
+                        icon = Icons.AutoMirrored.Outlined.VolumeUp,
+                        title = stringResource(R.string.settings_play_audio_in_background),
+                        summary = stringResource(R.string.settings_play_audio_in_background_summary),
+                        checked = playAudioInBackground,
+                        onCheckedChange = { viewModel.setPlayAudioInBackground(it) },
                     )
                 }
             }

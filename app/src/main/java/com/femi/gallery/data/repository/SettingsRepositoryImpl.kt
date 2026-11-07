@@ -47,6 +47,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_THEME_MODE = intPreferencesKey("theme_mode")
         private val KEY_AUTOPLAY_VIDEOS = booleanPreferencesKey("autoplay_videos")
         private val KEY_MUTE_VIDEOS = booleanPreferencesKey("mute_videos")
+        private val KEY_PLAY_AUDIO_IN_BACKGROUND = booleanPreferencesKey("play_audio_in_background")
         private val KEY_BACKGROUND_SCAN = booleanPreferencesKey("background_scan")
         private val KEY_SCAN_ONLY_CHARGING = booleanPreferencesKey("scan_only_while_charging")
         private val KEY_SLIDESHOW_SPEED = stringPreferencesKey("slideshow_speed")
@@ -68,6 +69,7 @@ class SettingsRepositoryImpl @Inject constructor(
         @Volatile private var cachedSemanticSearch: Boolean? = null
         @Volatile private var cachedBackgroundScan: Boolean? = null
         @Volatile private var cachedScanOnlyWhileCharging: Boolean? = null
+        @Volatile private var cachedPlayAudioInBackground: Boolean? = null
         @Volatile private var cachedTimelineZoom: TimelineZoom? = null
         @Volatile private var cachedClipNormalization: ClipNormalization? = null
     }
@@ -85,6 +87,7 @@ class SettingsRepositoryImpl @Inject constructor(
         cachedSemanticSearch = prefs[KEY_SEMANTIC_SEARCH] ?: true
         cachedBackgroundScan = prefs[KEY_BACKGROUND_SCAN] ?: true
         cachedScanOnlyWhileCharging = prefs[KEY_SCAN_ONLY_CHARGING] ?: false
+        cachedPlayAudioInBackground = prefs[KEY_PLAY_AUDIO_IN_BACKGROUND] ?: false
 
         val zoomName = prefs[KEY_TIMELINE_ZOOM] ?: TimelineZoom.Default.name
         cachedTimelineZoom = TimelineZoom.entries.find { it.name == zoomName } ?: TimelineZoom.Default
@@ -103,6 +106,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val muteVideos: Flow<Boolean> = dataStore.data.map {
         it[KEY_MUTE_VIDEOS] ?: true
+    }.distinctUntilChanged()
+
+    override val playAudioInBackground: Flow<Boolean> = dataStore.data.map {
+        it[KEY_PLAY_AUDIO_IN_BACKGROUND] ?: false
     }.distinctUntilChanged()
 
     override val backgroundScan: Flow<Boolean> = dataStore.data.map {
@@ -183,6 +190,11 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setMuteVideos(enabled: Boolean) {
         dataStore.edit { it[KEY_MUTE_VIDEOS] = enabled }
+    }
+
+    override suspend fun setPlayAudioInBackground(enabled: Boolean) {
+        cachedPlayAudioInBackground = enabled
+        dataStore.edit { it[KEY_PLAY_AUDIO_IN_BACKGROUND] = enabled }
     }
 
     override suspend fun setBackgroundScan(enabled: Boolean) {
@@ -291,5 +303,12 @@ class SettingsRepositoryImpl @Inject constructor(
             val norm = try { ClipNormalization.valueOf(name) } catch (_: Exception) { ClipNormalization.OpenAiClip }
             cachedClipNormalization = norm
             norm
+        }
+
+    override fun getPlayAudioInBackgroundSync(): Boolean =
+        cachedPlayAudioInBackground ?: runBlocking {
+            val enabled = dataStore.data.first()[KEY_PLAY_AUDIO_IN_BACKGROUND] ?: false
+            cachedPlayAudioInBackground = enabled
+            enabled
         }
 }

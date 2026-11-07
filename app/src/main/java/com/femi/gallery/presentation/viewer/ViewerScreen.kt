@@ -116,6 +116,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
@@ -282,8 +283,12 @@ private fun ViewerContent(
                     onDispose { }
                 } else {
                     val autoPlay = autoPlayDefault
+                    val audioAttributes = AudioAttributes.Builder()
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .setUsage(C.USAGE_MEDIA)
+                        .build()
                     val newPlayer = playerHolder.acquire(!isMuted).apply {
-                        setAudioAttributes(AudioAttributes.DEFAULT, !isMuted)
+                        setAudioAttributes(audioAttributes, !isMuted)
                         setMediaItem(PlayerMediaItem.fromUri(activeVideoUri!!))
                         playWhenReady = autoPlay
                         volume = if (isMuted) 0f else 1f
@@ -314,7 +319,11 @@ private fun ViewerContent(
             }
 
             LaunchedEffect(isMuted) {
-                activePlayer?.setAudioAttributes(AudioAttributes.DEFAULT, !isMuted)
+                val audioAttributes = AudioAttributes.Builder()
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .setUsage(C.USAGE_MEDIA)
+                    .build()
+                activePlayer?.setAudioAttributes(audioAttributes, !isMuted)
                 activePlayer?.volume = if (isMuted) 0f else 1f
             }
 
@@ -639,9 +648,11 @@ private fun ViewerContent(
             }
 
             fullPlayerUri?.let { uri ->
+                val playAudioInBackground by viewModel.playAudioInBackground.collectAsStateWithLifecycle()
                 FullVideoPlayer(
                     uri = uri,
                     startPositionMs = fullPlayerStartMs,
+                    playAudioInBackground = playAudioInBackground,
                     onClose = {
                         fullPlayerUri = null
                         chromeVisible = true // the player gives the system bars back, so the viewer shows its own bars too
@@ -895,11 +906,17 @@ private fun VideoPlayer(
     val context = LocalContext.current
     val fallbackPlayer = remember(uri, activePlayer) {
         if (activePlayer != null) null
-        else ExoPlayer.Builder(context).build().apply {
-            setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
-            setMediaItem(PlayerMediaItem.fromUri(uri))
-            playWhenReady = false
-            prepare()
+        else {
+            val audioAttributes = AudioAttributes.Builder()
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                .setUsage(C.USAGE_MEDIA)
+                .build()
+            ExoPlayer.Builder(context).build().apply {
+                setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
+                setMediaItem(PlayerMediaItem.fromUri(uri))
+                playWhenReady = false
+                prepare()
+            }
         }
     }
     val player = activePlayer ?: fallbackPlayer!!

@@ -489,5 +489,13 @@
     <string name="people_merge_confirm">Merge</string>
     <string name="people_merge_with_title">Merge with another person</string>
     <string name="people_merge_with_message">Merge \"%1$s\" into \"%2$s\"? All photos will be combined into one group.</string>
+
+    <string name="settings_play_audio_in_background">Play video audio in background</string>
+    <string name="settings_play_audio_in_background_summary">Keep video audio playing when switching apps or locking the screen</string>
+    <string name="player_pip">Picture-in-picture</string>
+    <string name="player_lock">Lock controls</string>
+    <string name="player_unlock">Unlock</string>
+    <string name="player_locked_hint">Controls locked. Tap Unlock to interact.</string>
+    <string name="player_rotate">Rotate screen</string>
 </resources>
 

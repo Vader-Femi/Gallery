@@ -486,4 +486,12 @@
     <string name="people_merge_confirm">Da pọ̀</string>
     <string name="people_merge_with_title">Da pọ̀ mọ́ ẹlòmíràn</string>
     <string name="people_merge_with_message">Da \"%1$s\" pọ̀ mọ́ \"%2$s\"? Gbogbo àwọn fọ́tò yóò wà papọ̀ ní àkójọ kan.</string>
+
+    <string name="settings_play_audio_in_background">Gba ohùn fídíò láyè lẹ́yìn ojú-iṣẹ́</string>
+    <string name="settings_play_audio_in_background_summary">Tẹ̀síwájú láti gbọ́ ohùn fídíò bí o bá yí sí àwọn ohun-èlo míràn tàbí tí ojú fóònù bá pa</string>
+    <string name="player_pip">Fídíò lórí ojú-iṣẹ́ (PiP)</string>
+    <string name="player_lock">Ti àwọn bọ́tìnì pa</string>
+    <string name="player_unlock">Ṣí i</string>
+    <string name="player_locked_hint">Àwọn bọ́tìnì ti di títì. Tẹ Ṣí i láti lo agbóhùn-fídíò.</string>
+    <string name="player_rotate">Yi ojú fídíò padà</string>
 </resources>

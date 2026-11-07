@@ -54,6 +54,9 @@ class ViewerViewModel @Inject constructor(
     val muteVideos: StateFlow<Boolean> = settingsRepository.muteVideos
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
+    val playAudioInBackground: StateFlow<Boolean> = settingsRepository.playAudioInBackground
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     /** Position of the tapped item in the full, newest-first media list, as the grid had it. */
     val startIndex: Int = savedStateHandle.get<Int>(INDEX_ARG) ?: 0
 

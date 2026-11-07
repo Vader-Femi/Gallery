@@ -10,6 +10,7 @@ interface SettingsRepository {
     val themeMode: Flow<Int>
     val autoplayVideos: Flow<Boolean>
     val muteVideos: Flow<Boolean>
+    val playAudioInBackground: Flow<Boolean>
     val backgroundScan: Flow<Boolean>
     val scanOnlyWhileCharging: Flow<Boolean>
     val slideshowSpeed: Flow<SlideshowSpeed>
@@ -30,6 +31,7 @@ interface SettingsRepository {
     suspend fun setThemeMode(mode: Int)
     suspend fun setAutoplayVideos(enabled: Boolean)
     suspend fun setMuteVideos(enabled: Boolean)
+    suspend fun setPlayAudioInBackground(enabled: Boolean)
     suspend fun setBackgroundScan(enabled: Boolean)
     suspend fun setScanOnlyWhileCharging(enabled: Boolean)
     suspend fun setSlideshowSpeed(speed: SlideshowSpeed)
@@ -52,6 +54,7 @@ interface SettingsRepository {
     fun getScanOnlyWhileChargingSync(): Boolean
     fun getTimelineZoomSync(): TimelineZoom
     fun getClipNormalizationSync(): ClipNormalization
+    fun getPlayAudioInBackgroundSync(): Boolean
 }
 
 enum class SemanticSearchStrictness {
