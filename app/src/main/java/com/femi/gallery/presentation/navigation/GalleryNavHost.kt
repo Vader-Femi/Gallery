@@ -1,7 +1,6 @@
 package com.femi.gallery.presentation.navigation
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,38 +18,30 @@ import androidx.navigation.NavController
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
+import com.femi.gallery.core.perf.ScreenTag
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.presentation.albums.AlbumScreen
-import com.femi.gallery.presentation.albums.AlbumViewModel
 import com.femi.gallery.presentation.albums.AlbumsScreen
-import com.femi.gallery.presentation.people.PeopleScreen
-import com.femi.gallery.presentation.people.PersonScreen
 import com.femi.gallery.presentation.common.LocalAnimatedVisibilityScope
 import com.femi.gallery.presentation.duplicates.DuplicatesScreen
 import com.femi.gallery.presentation.duplicates.SimilarPhotosScreen
 import com.femi.gallery.presentation.editor.EditorScreen
-import com.femi.gallery.presentation.trim.TrimScreen
-import com.femi.gallery.presentation.trim.TrimViewModel
-import com.femi.gallery.presentation.editor.EditorViewModel
-import com.femi.gallery.presentation.pictures.PicturesScreen
+import com.femi.gallery.presentation.images.ImagesScreen
 import com.femi.gallery.presentation.map.MapScreen
+import com.femi.gallery.presentation.people.PeopleScreen
+import com.femi.gallery.presentation.people.PersonScreen
+import com.femi.gallery.presentation.pictures.PicturesScreen
 import com.femi.gallery.presentation.place.PlaceScreen
-import com.femi.gallery.presentation.place.PlaceViewModel
 import com.femi.gallery.presentation.search.SearchScreen
 import com.femi.gallery.presentation.settings.SettingsScreen
-import com.femi.gallery.presentation.images.ImagesScreen
-import com.femi.gallery.presentation.videos.VideosScreen
-import com.femi.gallery.presentation.viewer.ViewerSession
 import com.femi.gallery.presentation.stories.SlideshowScreen
-import com.femi.gallery.presentation.stories.SlideshowViewModel
 import com.femi.gallery.presentation.stories.StoriesScreen
 import com.femi.gallery.presentation.stories.StoryScreen
-import com.femi.gallery.presentation.stories.StoryViewModel
-import com.femi.gallery.core.perf.ScreenTag
+import com.femi.gallery.presentation.trim.TrimScreen
+import com.femi.gallery.presentation.videos.VideosScreen
+import com.femi.gallery.presentation.viewer.ViewerSession
 
 /**
  * All screens of the app. The grid screens and the viewer share a [androidx.compose.animation.SharedTransitionLayout], so a
@@ -69,14 +60,18 @@ private val topLevelRoutes = setOf(
 private fun isTopLevelRoute(route: String?): Boolean {
     if (route == null) return false
     val base = route.substringBefore('/').substringBefore('?')
-    return topLevelRoutes.contains(base)
+    return topLevelRoutes.contains(base) || base.endsWith("Pictures") || base.endsWith("Albums")
 }
 
 // Helper to find the index of a top-level route to determine slide direction
 private fun topLevelIndex(route: String?): Int {
     if (route == null) return -1
     val base = route.substringBefore('/').substringBefore('?')
-    return topLevelRoutes.indexOf(base)
+    return when {
+        base == GalleryDestination.Pictures.route || base.endsWith("Pictures") -> 0
+        base == GalleryDestination.Albums.route || base.endsWith("Albums") -> 1
+        else -> -1
+    }
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -89,7 +84,7 @@ fun GalleryNavHost(
     // Tells the frame monitor which screen is showing, so a slow frame can be blamed on it.
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
-            ScreenTag.base = destination.route.orEmpty().substringBefore('/').substringBefore('?')
+            ScreenTag.base = destination.route.orEmpty().substringBefore('/').substringBefore('?').substringAfterLast('.')
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose { navController.removeOnDestinationChangedListener(listener) }
@@ -97,7 +92,7 @@ fun GalleryNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = GalleryDestination.Pictures.route,
+        startDestination = GalleryRoutes.Pictures,
         modifier = modifier.fillMaxSize(),
         enterTransition = {
             val initialRoute = initialState.destination.route
@@ -155,7 +150,6 @@ fun GalleryNavHost(
                     initialOffsetX = { fullWidth -> slideDirection * fullWidth }
                 ) + fadeIn(tween(EnterFadeMillis))
             } else {
-                val initialRoute = initialState.destination.route
                 if (isTopLevelRoute(initialRoute)) {
                     fadeIn(tween(EnterFadeMillis))
                 } else {
@@ -181,7 +175,6 @@ fun GalleryNavHost(
                     targetOffsetX = { fullWidth -> slideDirection * (fullWidth / 3) }
                 ) + fadeOut(tween(ExitFadeMillis))
             } else {
-                val initialRoute = initialState.destination.route
                 if (isTopLevelRoute(initialRoute)) {
                     fadeOut(tween(ExitFadeMillis))
                 } else {
@@ -194,7 +187,7 @@ fun GalleryNavHost(
             }
         },
     ) {
-        sharedComposable(GalleryDestination.Pictures.route) { entry ->
+        sharedComposable<GalleryRoutes.Pictures> { entry ->
             PicturesScreen(
                 onMediaClick = { mediaIndex, mediaId ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId), origin = entry.id)
@@ -203,32 +196,29 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        composable(GalleryDestination.Albums.route) {
+        composable<GalleryRoutes.Albums> {
             AlbumsScreen(
                 onAlbumClick = { bucketId ->
                     if (bucketId == SpecialAlbums.PEOPLE) {
-                        navController.navigate(GalleryRoutes.PEOPLE)
+                        navController.navigate(GalleryRoutes.People)
                     } else {
-                        navController.navigate(GalleryRoutes.album(bucketId))
+                        navController.navigate(GalleryRoutes.Album(bucketId))
                     }
                 },
             )
         }
-        sharedComposable(
-            route = GalleryRoutes.ALBUM,
-            arguments = listOf(navArgument(AlbumViewModel.BUCKET_ARG) { type = NavType.LongType }),
-        ) { entry ->
+        sharedComposable<GalleryRoutes.Album> { entry ->
             AlbumScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { bucketId, mediaIndex, mediaId ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, bucketId), origin = entry.id)
                 },
-                onPlaySlideshow = { bucketId -> navController.navigate(GalleryRoutes.slideshow(bucketId = bucketId)) },
+                onPlaySlideshow = { bucketId -> navController.navigate(GalleryRoutes.Slideshow(bucketId = bucketId)) },
                 viewed = viewerSession.viewedFor(entry.id),
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        sharedComposable(GalleryRoutes.SEARCH) { entry ->
+        sharedComposable<GalleryRoutes.Search> { entry ->
             SearchScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaIndex, mediaId, query ->
@@ -238,7 +228,7 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        sharedComposable(GalleryRoutes.IMAGES) { entry ->
+        sharedComposable<GalleryRoutes.Images> { entry ->
             ImagesScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaIndex, mediaId, query ->
@@ -248,7 +238,7 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        sharedComposable(GalleryRoutes.VIDEOS) { entry ->
+        sharedComposable<GalleryRoutes.Videos> { entry ->
             VideosScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaIndex, mediaId, query ->
@@ -258,30 +248,24 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        composable(GalleryRoutes.STORIES) {
+        composable<GalleryRoutes.Stories> {
             StoriesScreen(
                 onBack = { navController.popBackStack() },
-                onStoryClick = { fromDay, toDay -> navController.navigate(GalleryRoutes.story(fromDay, toDay)) },
+                onStoryClick = { fromDay, toDay -> navController.navigate(GalleryRoutes.Story(fromDay, toDay)) },
             )
         }
-        sharedComposable(
-            route = GalleryRoutes.STORY,
-            arguments = listOf(
-                navArgument(StoryViewModel.FROM_ARG) { type = NavType.LongType },
-                navArgument(StoryViewModel.TO_ARG) { type = NavType.LongType },
-            ),
-        ) { entry ->
+        sharedComposable<GalleryRoutes.Story> { entry ->
             StoryScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaIndex, mediaId, query ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, query = query), origin = entry.id)
                 },
-                onPlaySlideshow = { query -> navController.navigate(GalleryRoutes.slideshow(query)) },
+                onPlaySlideshow = { query -> navController.navigate(GalleryRoutes.Slideshow(query = query)) },
                 viewed = viewerSession.viewedFor(entry.id),
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        sharedComposable(GalleryRoutes.MAP) { entry ->
+        sharedComposable<GalleryRoutes.Map> { entry ->
             MapScreen(
                 onBack = { navController.popBackStack() },
                 onOpenCluster = { cluster ->
@@ -294,55 +278,25 @@ fun GalleryNavHost(
                             originRoute = GalleryRoutes.MAP,
                         )
                     } else {
-                        navController.navigate(GalleryRoutes.place(query))
+                        navController.navigate(GalleryRoutes.Place(query))
                     }
                 },
                 viewed = viewerSession.viewedFor(entry.id),
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        sharedComposable(
-            route = GalleryRoutes.PLACE,
-            arguments = listOf(navArgument(PlaceViewModel.QUERY_ARG) { type = NavType.StringType }),
-        ) { entry ->
+        sharedComposable<GalleryRoutes.Place> { entry ->
             PlaceScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaIndex, mediaId, query ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, query = query), origin = entry.id)
                 },
-                onPlaySlideshow = { query -> navController.navigate(GalleryRoutes.slideshow(query)) },
+                onPlaySlideshow = { query -> navController.navigate(GalleryRoutes.Slideshow(query = query)) },
                 viewed = viewerSession.viewedFor(entry.id),
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        composable(
-            route = GalleryRoutes.SLIDESHOW,
-            arguments = listOf(
-                navArgument(SlideshowViewModel.QUERY_ARG) {
-                    type = NavType.StringType
-                    defaultValue = ""
-                },
-                navArgument(SlideshowViewModel.BUCKET_ARG) {
-                    type = NavType.LongType
-                    defaultValue = GalleryRoutes.NO_BUCKET
-                },
-            ),
-        ) {
-            SlideshowScreen(onClose = { navController.popBackStack() })
-        }
-        composable(
-            route = GalleryRoutes.EDITOR,
-            arguments = listOf(navArgument(EditorViewModel.URI_ARG) { type = NavType.StringType }),
-        ) {
-            EditorScreen(onClose = { navController.popBackStack() })
-        }
-        composable(
-            route = GalleryRoutes.TRIM,
-            arguments = listOf(navArgument(TrimViewModel.URI_ARG) { type = NavType.StringType }),
-        ) {
-            TrimScreen(onClose = { navController.popBackStack() })
-        }
-        composable(GalleryRoutes.DUPLICATES) { entry ->
+        composable<GalleryRoutes.Duplicates> { entry ->
             DuplicatesScreen(
                 onBack = { navController.popBackStack() },
                 onCompare = { group, initialMediaId ->
@@ -357,7 +311,7 @@ fun GalleryNavHost(
                 },
             )
         }
-        composable(GalleryRoutes.SIMILAR) { entry ->
+        composable<GalleryRoutes.Similar> { entry ->
             SimilarPhotosScreen(
                 onBack = { navController.popBackStack() },
                 onCompare = { group, initialMediaId ->
@@ -372,16 +326,13 @@ fun GalleryNavHost(
                 },
             )
         }
-        composable(GalleryRoutes.PEOPLE) {
+        composable<GalleryRoutes.People> {
             PeopleScreen(
                 onBack = { navController.popBackStack() },
-                onPersonClick = { personId -> navController.navigate(GalleryRoutes.person(personId)) },
+                onPersonClick = { personId -> navController.navigate(GalleryRoutes.Person(personId)) },
             )
         }
-        sharedComposable(
-            route = GalleryRoutes.PERSON,
-            arguments = listOf(navArgument("personId") { type = NavType.LongType }),
-        ) { entry ->
+        sharedComposable<GalleryRoutes.Person> { entry ->
             PersonScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaIndex, mediaId, ids ->
@@ -396,7 +347,22 @@ fun GalleryNavHost(
                 },
             )
         }
-        composable(GalleryRoutes.SETTINGS) {
+        composable<GalleryRoutes.Slideshow> {
+            SlideshowScreen(
+                onClose = { navController.popBackStack() },
+            )
+        }
+        composable<GalleryRoutes.Editor> {
+            EditorScreen(
+                onClose = { navController.popBackStack() },
+            )
+        }
+        composable<GalleryRoutes.Trim> {
+            TrimScreen(
+                onClose = { navController.popBackStack() },
+            )
+        }
+        composable<GalleryRoutes.Settings> {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
             )
@@ -404,7 +370,17 @@ fun GalleryNavHost(
     }
 }
 
-/** A destination that takes part in the grid-to-viewer shared transition. */
+/** A typed destination that takes part in the grid-to-viewer shared transition. */
+internal inline fun <reified T : Any> NavGraphBuilder.sharedComposable(
+    noinline content: @Composable (NavBackStackEntry) -> Unit,
+) {
+    composable<T> { entry ->
+        // `this` is the AnimatedContentScope of this destination, which the transition needs.
+        CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) { content(entry) }
+    }
+}
+
+/** A legacy string destination that takes part in the grid-to-viewer shared transition. */
 internal fun NavGraphBuilder.sharedComposable(
     route: String,
     arguments: List<NamedNavArgument> = emptyList(),

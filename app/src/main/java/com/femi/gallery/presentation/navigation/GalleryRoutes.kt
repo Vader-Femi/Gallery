@@ -2,6 +2,7 @@ package com.femi.gallery.presentation.navigation
 
 import android.net.Uri
 import com.femi.gallery.domain.model.MediaPositions
+import kotlinx.serialization.Serializable
 
 object GalleryRoutes {
     /** Marks "the whole library" in the viewer's optional bucketId argument. */
@@ -14,6 +15,33 @@ object GalleryRoutes {
     const val VIEWED_INDEX_KEY = "viewedMediaIndex"
     const val VIEWED_ID_KEY = "viewedMediaId"
 
+    // --- Type-safe route contracts ---
+    @Serializable object Pictures
+    @Serializable object Albums
+    @Serializable data class Album(val bucketId: Long)
+    @Serializable data class Search(val query: String = "")
+    @Serializable object Map
+    @Serializable object Stories
+    @Serializable object Videos
+    @Serializable object Images
+    @Serializable object Settings
+    @Serializable object Duplicates
+    @Serializable object Similar
+    @Serializable object People
+    @Serializable data class Person(val personId: Long)
+    @Serializable data class Place(val query: String)
+    @Serializable data class Story(val fromDay: Long, val toDay: Long)
+    @Serializable data class Slideshow(val query: String = "", val bucketId: Long = NO_BUCKET)
+    @Serializable data class Editor(val uri: String)
+    @Serializable data class Trim(val uri: String)
+    @Serializable data class Viewer(
+        val index: Int,
+        val mediaId: Long = NO_MEDIA_ID,
+        val bucketId: Long = NO_BUCKET,
+        val query: String? = null,
+    )
+
+    // Legacy string routes (preserved for backwards-compatibility and external intents)
     const val ALBUM = "album/{bucketId}"
     const val SEARCH = "search"
     const val SEARCH_QUERY = "search?query={query}"

@@ -6,9 +6,6 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +28,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -124,15 +122,17 @@ private fun GalleryScaffold() {
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { lockSession.lock() }
     val route = currentDestination?.route
     val arguments = backStackEntry?.arguments
-    val inLockedFolder = (route == GalleryRoutes.ALBUM || route == GalleryRoutes.VIEWER) &&
+    val inLockedFolder = ((currentDestination?.hasRoute<GalleryRoutes.Album>() == true || route == GalleryRoutes.ALBUM || route == GalleryRoutes.VIEWER) &&
         arguments?.containsKey("bucketId") == true &&
-        arguments.getLong("bucketId") == SpecialAlbums.LOCKED
+        arguments.getLong("bucketId") == SpecialAlbums.LOCKED)
     LaunchedEffect(inLockedFolder) { if (!inLockedFolder) lockSession.lock() }
 
-    val isAlbumDetail = currentDestination?.route == GalleryRoutes.ALBUM
-    val isTopLevel = GalleryDestination.entries.any { destination ->
-        currentDestination?.hierarchy?.any { it.route == destination.route } == true
-    }
+    val isAlbumDetail = currentDestination?.hasRoute<GalleryRoutes.Album>() == true || currentDestination?.route == GalleryRoutes.ALBUM
+    val isTopLevel = currentDestination?.hasRoute<GalleryRoutes.Pictures>() == true ||
+        currentDestination?.hasRoute<GalleryRoutes.Albums>() == true ||
+        GalleryDestination.entries.any { destination ->
+            currentDestination?.hierarchy?.any { it.route == destination.route } == true
+        }
 
     var menuSheetOpen by rememberSaveable { mutableStateOf(false) }
 
@@ -156,7 +156,10 @@ private fun GalleryScaffold() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                 ) { innerPadding ->
-                    val isFullScreen = route?.startsWith("slideshow") == true || route?.startsWith("editor") == true || route?.startsWith("trim") == true
+                    val isFullScreen = currentDestination?.hasRoute<GalleryRoutes.Slideshow>() == true ||
+                        currentDestination?.hasRoute<GalleryRoutes.Editor>() == true ||
+                        currentDestination?.hasRoute<GalleryRoutes.Trim>() == true ||
+                        route?.startsWith("slideshow") == true || route?.startsWith("editor") == true || route?.startsWith("trim") == true
                     val topPadding = if (isFullScreen) 0.dp else innerPadding.calculateTopPadding()
                     val startPadding = if (isExpanded && isTopLevel && !chrome.bottomBarHidden && !isFullScreen) 104.dp else 0.dp
                     GalleryNavHost(
@@ -174,17 +177,25 @@ private fun GalleryScaffold() {
                         isVertical = isExpanded,
                         destinations = GalleryDestination.entries,
                         currentDestinationSelected = { destination ->
-                            currentDestination?.hierarchy?.any { it.route == destination.route } == true ||
-                                (isAlbumDetail && destination == GalleryDestination.Albums)
+                            (destination == GalleryDestination.Pictures && currentDestination?.hasRoute<GalleryRoutes.Pictures>() == true) ||
+                                (destination == GalleryDestination.Albums && (currentDestination?.hasRoute<GalleryRoutes.Albums>() == true || isAlbumDetail)) ||
+                                currentDestination?.hierarchy?.any { it.route == destination.route } == true
                         },
                         onDestinationClick = { destination ->
                             menuSheetOpen = false
                             if (isAlbumDetail && destination == GalleryDestination.Albums) {
                                 // Tapping Albums while inside an album goes back to the album list.
-                                navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
+                                val popped = navController.popBackStack<GalleryRoutes.Albums>(inclusive = false)
+                                if (!popped) {
+                                    navController.popBackStack(GalleryDestination.Albums.route, inclusive = false)
+                                }
                             } else {
-                                navController.navigate(destination.route) {
-                                    popUpTo(GalleryDestination.Pictures.route) { saveState = true }
+                                val targetRoute: Any = when (destination) {
+                                    GalleryDestination.Pictures -> GalleryRoutes.Pictures
+                                    GalleryDestination.Albums -> GalleryRoutes.Albums
+                                }
+                                navController.navigate(targetRoute) {
+                                    popUpTo<GalleryRoutes.Pictures> { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
@@ -192,7 +203,7 @@ private fun GalleryScaffold() {
                         },
                         onSearchClick = {
                             menuSheetOpen = false
-                            navController.navigate(GalleryRoutes.SEARCH)
+                            navController.navigate(GalleryRoutes.Search())
                         },
                         onMenuClick = {
                             menuSheetOpen = !menuSheetOpen
@@ -204,17 +215,33 @@ private fun GalleryScaffold() {
                 if (menuSheetOpen) {
                     MenuBottomSheet(
                         onDismiss = { menuSheetOpen = false },
-                        onItemClick = { route ->
+                        onItemClick = { itemRoute ->
                             menuSheetOpen = false
-                            if (route != null) {
-                                if (route == GalleryDestination.Pictures.route || route == GalleryDestination.Albums.route) {
-                                    navController.navigate(route) {
-                                        popUpTo(GalleryDestination.Pictures.route) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
+                            if (itemRoute != null) {
+                                when (itemRoute) {
+                                    GalleryDestination.Pictures.route -> {
+                                        navController.navigate(GalleryRoutes.Pictures) {
+                                            popUpTo<GalleryRoutes.Pictures> { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
                                     }
-                                } else {
-                                    navController.navigate(route)
+                                    GalleryDestination.Albums.route -> {
+                                        navController.navigate(GalleryRoutes.Albums) {
+                                            popUpTo<GalleryRoutes.Pictures> { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                    GalleryRoutes.IMAGES -> navController.navigate(GalleryRoutes.Images)
+                                    GalleryRoutes.VIDEOS -> navController.navigate(GalleryRoutes.Videos)
+                                    GalleryRoutes.STORIES -> navController.navigate(GalleryRoutes.Stories)
+                                    GalleryRoutes.MAP -> navController.navigate(GalleryRoutes.Map)
+                                    GalleryRoutes.PEOPLE -> navController.navigate(GalleryRoutes.People)
+                                    GalleryRoutes.DUPLICATES -> navController.navigate(GalleryRoutes.Duplicates)
+                                    GalleryRoutes.SIMILAR -> navController.navigate(GalleryRoutes.Similar)
+                                    GalleryRoutes.SETTINGS -> navController.navigate(GalleryRoutes.Settings)
+                                    else -> navController.navigate(itemRoute)
                                 }
                             }
                         },
@@ -225,11 +252,11 @@ private fun GalleryScaffold() {
                     session = viewerSession,
                     onEdit = { uri ->
                         viewerSession.close()
-                        navController.navigate(GalleryRoutes.editor(uri))
+                        navController.navigate(GalleryRoutes.Editor(uri))
                     },
                     onTrim = { uri ->
                         viewerSession.close()
-                        navController.navigate(GalleryRoutes.trim(uri))
+                        navController.navigate(GalleryRoutes.Trim(uri))
                     },
                 )
             }
