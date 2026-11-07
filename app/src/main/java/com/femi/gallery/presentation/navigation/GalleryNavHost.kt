@@ -20,6 +20,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.femi.gallery.core.perf.ScreenTag
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.presentation.albums.AlbumScreen
@@ -196,7 +197,7 @@ fun GalleryNavHost(
                 onViewedConsumed = viewerSession::consumeViewed,
             )
         }
-        composable<GalleryRoutes.Albums> {
+        composable<GalleryRoutes.Albums> { entry ->
             AlbumsScreen(
                 onAlbumClick = { bucketId ->
                     if (bucketId == SpecialAlbums.PEOPLE) {
@@ -205,10 +206,20 @@ fun GalleryNavHost(
                         navController.navigate(GalleryRoutes.Album(bucketId))
                     }
                 },
+                onMediaClick = { bucketId, mediaIndex, mediaId ->
+                    viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, bucketId), origin = entry.id)
+                },
+                onPlaySlideshow = { bucketId ->
+                    navController.navigate(GalleryRoutes.Slideshow(bucketId = bucketId))
+                },
+                viewed = viewerSession.viewedFor(entry.id),
+                onViewedConsumed = viewerSession::consumeViewed,
             )
         }
         sharedComposable<GalleryRoutes.Album> { entry ->
+            val route = entry.toRoute<GalleryRoutes.Album>()
             AlbumScreen(
+                bucketId = route.bucketId,
                 onBack = { navController.popBackStack() },
                 onMediaClick = { bucketId, mediaIndex, mediaId ->
                     viewerSession.open(GalleryRoutes.viewer(mediaIndex, mediaId, bucketId), origin = entry.id)

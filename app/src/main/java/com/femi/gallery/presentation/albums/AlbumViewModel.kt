@@ -1,7 +1,5 @@
 package com.femi.gallery.presentation.albums
 
-import com.femi.gallery.domain.repository.SettingsRepository
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -9,33 +7,28 @@ import androidx.paging.cachedIn
 import com.femi.gallery.core.security.LockSession
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.SpecialAlbums
-import com.femi.gallery.domain.usecase.GetAllMediaRefsUseCase
+import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.domain.usecase.GetAlbumNameUseCase
 import com.femi.gallery.domain.usecase.GetPagedMediaUseCase
-import com.femi.gallery.domain.usecase.ObserveAlbumsUseCase
 import com.femi.gallery.domain.usecase.ObserveTimelineUseCase
 import com.femi.gallery.domain.usecase.RefreshMediaUseCase
-import com.femi.gallery.domain.usecase.RequestDeleteUseCase
-import com.femi.gallery.domain.usecase.RequestFavoriteUseCase
-import com.femi.gallery.domain.usecase.RequestTrashUseCase
 import com.femi.gallery.presentation.pictures.TimelineZoomState
 import com.femi.gallery.presentation.selection.MediaSelectionControllerFactory
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** One album's photos, grouped and zoomable just like the Pictures tab. */
-@HiltViewModel
-class AlbumViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = AlbumViewModel.Factory::class)
+class AlbumViewModel @AssistedInject constructor(
     private val settingsRepository: SettingsRepository,
-    savedStateHandle: SavedStateHandle,
+    @Assisted val bucketId: Long,
     getPagedMedia: GetPagedMediaUseCase,
     observeTimeline: ObserveTimelineUseCase,
     getAlbumName: GetAlbumNameUseCase,
@@ -44,7 +37,11 @@ class AlbumViewModel @Inject constructor(
     private val refreshMedia: RefreshMediaUseCase,
 ) : ViewModel() {
 
-    val bucketId: Long = checkNotNull(savedStateHandle.get<Long>(BUCKET_ARG))
+    @AssistedFactory
+    interface Factory {
+        fun create(bucketId: Long): AlbumViewModel
+    }
+
     val isRecycleBin: Boolean = bucketId == SpecialAlbums.TRASH
     val isFavorites: Boolean = bucketId == SpecialAlbums.FAVORITES
     val isLocked: Boolean = bucketId == SpecialAlbums.LOCKED

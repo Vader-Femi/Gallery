@@ -16,6 +16,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,14 +28,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -180,6 +187,10 @@ private fun ViewerContent(
 ) {
     val items = viewModel.media.collectAsLazyPagingItems()
     val scope = rememberCoroutineScope()
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val isExpanded = with(density) { windowInfo.containerSize.width.toDp() } >= 840.dp
+
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     val backgroundColor = if (chromeVisible) MaterialTheme.colorScheme.background else Color.Black
     val details by viewModel.details.collectAsStateWithLifecycle()
@@ -637,15 +648,38 @@ private fun ViewerContent(
                     },
                 )
             }
+
+            if (isExpanded) {
+                AnimatedVisibility(
+                    visible = details != null,
+                    enter = slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }) + fadeIn(),
+                    exit = slideOutHorizontally(targetOffsetX = { fullWidth -> fullWidth }) + fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight()
+                        .systemBarsPadding()
+                        .zIndex(3f),
+                ) {
+                    details?.let {
+                        DetailsPanel(
+                            details = it,
+                            onClose = viewModel::hideDetails,
+                            scrollToBottom = scrollToText,
+                        )
+                    }
+                }
+            }
         }
     }
 
-    details?.let {
-        DetailsSheet(
-            details = it,
-            onDismiss = viewModel::hideDetails,
-            scrollToBottom = scrollToText,
-        )
+    if (!isExpanded) {
+        details?.let {
+            DetailsSheet(
+                details = it,
+                onDismiss = viewModel::hideDetails,
+                scrollToBottom = scrollToText,
+            )
+        }
     }
 }
 

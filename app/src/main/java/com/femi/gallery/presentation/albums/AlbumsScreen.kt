@@ -2,16 +2,20 @@ package com.femi.gallery.presentation.albums
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -24,10 +28,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +47,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +64,7 @@ import com.femi.gallery.domain.model.AlbumPaths
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HugeTopAppBar
+import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.common.pinchToChangeColumns
 import com.femi.gallery.presentation.selection.NameDialog
 import com.femi.gallery.presentation.selection.SelectionHost
@@ -64,10 +74,21 @@ import com.femi.gallery.presentation.selection.SelectionHost
 fun AlbumsScreen(
     onAlbumClick: (bucketId: Long) -> Unit,
     modifier: Modifier = Modifier,
+    onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit = { _, _, _ -> },
+    onPlaySlideshow: (bucketId: Long) -> Unit = {},
+    viewed: ViewedMedia? = null,
+    onViewedConsumed: () -> Unit = {},
     viewModel: AlbumsViewModel = hiltViewModel(),
 ) {
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val isTwoPane = with(density) { windowInfo.containerSize.width.toDp() } >= 840.dp
+
+    var selectedBucketId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val activeBucketId = selectedBucketId ?: albums.firstOrNull()?.bucketId
 
     LifecycleResumeEffect(viewModel) {
         viewModel.onResumed()
@@ -92,6 +113,7 @@ fun AlbumsScreen(
     val handleAlbumClick by rememberUpdatedState(onAlbumClick)
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val defaultColumns = when {
+        isTwoPane -> 2
         configuration.screenWidthDp >= 900 -> 4
         configuration.screenWidthDp >= 600 -> 3
         else -> 2
@@ -99,54 +121,141 @@ fun AlbumsScreen(
     var columns by rememberSaveable(defaultColumns) { mutableIntStateOf(defaultColumns) }
     val haptic = LocalHapticFeedback.current
 
-    Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            HugeTopAppBar(
-                title = stringResource(R.string.nav_albums),
-                scrollBehavior = scrollBehavior,
-            )
-        },
-    ) { innerPadding ->
-        if (albums.isEmpty()) {
-            EmptyState(
-                text = stringResource(R.string.albums_empty),
-                modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
-            )
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
+    if (isTwoPane) {
+        Row(modifier = modifier.fillMaxSize()) {
+            // Left Pane: Albums List
+            Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = innerPadding.calculateTopPadding())
-                    .pinchToChangeColumns(
-                        onZoomIn = {
-                            if (columns > 2) {
-                                columns--
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
-                        },
-                        onZoomOut = {
-                            if (columns < 6) {
-                                columns++
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
-                        },
-                    ),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 150.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .width(360.dp)
+                    .fillMaxHeight(),
+                color = MaterialTheme.colorScheme.surface,
             ) {
-                items(albums, key = { it.bucketId }) { album ->
-                    val handleClick: () -> Unit = remember(album.bucketId) { { handleAlbumClick(album.bucketId) } }
-                    val handleRename: () -> Unit = remember(album.bucketId) { { renaming = album } }
-                    AlbumCard(
-                        album = album,
-                        onClick = handleClick,
-                        onRename = handleRename,
+                Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    topBar = {
+                        HugeTopAppBar(
+                            title = stringResource(R.string.nav_albums),
+                            scrollBehavior = scrollBehavior,
+                        )
+                    },
+                ) { innerPadding ->
+                    if (albums.isEmpty()) {
+                        EmptyState(
+                            text = stringResource(R.string.albums_empty),
+                            modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
+                        )
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(columns),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = innerPadding.calculateTopPadding()),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            items(albums, key = { it.bucketId }) { album ->
+                                val handleClick: () -> Unit = {
+                                    if (album.bucketId == SpecialAlbums.PEOPLE) {
+                                        handleAlbumClick(album.bucketId)
+                                    } else {
+                                        selectedBucketId = album.bucketId
+                                    }
+                                }
+                                val handleRename: () -> Unit = { renaming = album }
+                                AlbumCard(
+                                    album = album,
+                                    isSelected = album.bucketId == activeBucketId,
+                                    onClick = handleClick,
+                                    onRename = handleRename,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            // Right Pane: Selected Album Content
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+            ) {
+                if (activeBucketId != null) {
+                    key(activeBucketId) {
+                        AlbumScreen(
+                            bucketId = activeBucketId,
+                            onBack = { selectedBucketId = null },
+                            onMediaClick = onMediaClick,
+                            onPlaySlideshow = onPlaySlideshow,
+                            viewed = viewed,
+                            onViewedConsumed = onViewedConsumed,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                } else {
+                    EmptyState(
+                        text = stringResource(R.string.albums_empty),
+                        modifier = Modifier.fillMaxSize(),
                     )
+                }
+            }
+        }
+    } else {
+        Scaffold(
+            modifier = modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                HugeTopAppBar(
+                    title = stringResource(R.string.nav_albums),
+                    scrollBehavior = scrollBehavior,
+                )
+            },
+        ) { innerPadding ->
+            if (albums.isEmpty()) {
+                EmptyState(
+                    text = stringResource(R.string.albums_empty),
+                    modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
+                )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = innerPadding.calculateTopPadding())
+                        .pinchToChangeColumns(
+                            onZoomIn = {
+                                if (columns > 2) {
+                                    columns--
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                            onZoomOut = {
+                                if (columns < 6) {
+                                    columns++
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                        ),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 150.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(albums, key = { it.bucketId }) { album ->
+                        val handleClick: () -> Unit = remember(album.bucketId) { { handleAlbumClick(album.bucketId) } }
+                        val handleRename: () -> Unit = remember(album.bucketId) { { renaming = album } }
+                        AlbumCard(
+                            album = album,
+                            isSelected = false,
+                            onClick = handleClick,
+                            onRename = handleRename,
+                        )
+                    }
                 }
             }
         }
@@ -155,11 +264,23 @@ fun AlbumsScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AlbumCard(album: Album, onClick: () -> Unit, onRename: () -> Unit) {
+private fun AlbumCard(
+    album: Album,
+    isSelected: Boolean = false,
+    onClick: () -> Unit,
+    onRename: () -> Unit,
+) {
     var menuOpen by remember { mutableStateOf(false) }
     // Only real folders under DCIM, Pictures or Movies can be renamed (not the camera folder or virtual albums).
     val canRename = album.bucketId !in setOf(SpecialAlbums.FAVORITES, SpecialAlbums.TRASH, SpecialAlbums.LOCKED) &&
         AlbumPaths.canRename(album.relativePath)
+
+    val shape = RoundedCornerShape(20.dp)
+    val selectionModifier = if (isSelected) {
+        Modifier.border(3.dp, MaterialTheme.colorScheme.primary, shape)
+    } else {
+        Modifier
+    }
 
     Column(
         modifier = Modifier.combinedClickable(
@@ -182,7 +303,8 @@ private fun AlbumCard(album: Album, onClick: () -> Unit, onRename: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(20.dp))
+                    .then(selectionModifier)
+                    .clip(shape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
@@ -201,7 +323,8 @@ private fun AlbumCard(album: Album, onClick: () -> Unit, onRename: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(20.dp))
+                    .then(selectionModifier)
+                    .clip(shape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             )
         }

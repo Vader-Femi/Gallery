@@ -11,12 +11,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -131,6 +136,10 @@ fun EditorScreen(
         )
     }
 
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val isExpanded = with(density) { windowInfo.containerSize.width.toDp() } >= 640.dp
+
     Surface(color = Color(0xFF111111), contentColor = Color.White) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
             EditorTopBar(
@@ -141,25 +150,60 @@ fun EditorScreen(
                 onSaveReplace = { confirmReplace = true },
             )
 
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                Preview(state = state, viewModel = viewModel, colorFilter = previewFilter)
-                if (state.saving) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
-                        contentAlignment = Alignment.Center,
-                    ) { LoadingIndicator() }
-                }
-            }
-
-            Surface(color = PanelColor, contentColor = Color.White) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    when (state.tool) {
-                        EditorTool.Crop -> CropPanel(state, viewModel)
-                        EditorTool.Adjust -> AdjustPanel(edit, viewModel)
-                        EditorTool.Filters -> FiltersPanel(state, viewModel)
-                        EditorTool.Markup -> MarkupPanel(state, viewModel)
+            if (isExpanded) {
+                Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        Preview(state = state, viewModel = viewModel, colorFilter = previewFilter)
+                        if (state.saving) {
+                            Box(
+                                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
+                                contentAlignment = Alignment.Center,
+                            ) { LoadingIndicator() }
+                        }
                     }
-                    ToolTabs(selected = state.tool, onSelect = viewModel::selectTool)
+
+                    Surface(
+                        color = PanelColor,
+                        contentColor = Color.White,
+                        modifier = Modifier.width(360.dp).fillMaxHeight(),
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Box(modifier = Modifier.weight(1f, fill = false)) {
+                                when (state.tool) {
+                                    EditorTool.Crop -> CropPanel(state, viewModel)
+                                    EditorTool.Adjust -> AdjustPanel(edit, viewModel)
+                                    EditorTool.Filters -> FiltersPanel(state, viewModel)
+                                    EditorTool.Markup -> MarkupPanel(state, viewModel)
+                                }
+                            }
+                            ToolTabs(selected = state.tool, onSelect = viewModel::selectTool)
+                        }
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    Preview(state = state, viewModel = viewModel, colorFilter = previewFilter)
+                    if (state.saving) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
+                            contentAlignment = Alignment.Center,
+                        ) { LoadingIndicator() }
+                    }
+                }
+
+                Surface(color = PanelColor, contentColor = Color.White) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        when (state.tool) {
+                            EditorTool.Crop -> CropPanel(state, viewModel)
+                            EditorTool.Adjust -> AdjustPanel(edit, viewModel)
+                            EditorTool.Filters -> FiltersPanel(state, viewModel)
+                            EditorTool.Markup -> MarkupPanel(state, viewModel)
+                        }
+                        ToolTabs(selected = state.tool, onSelect = viewModel::selectTool)
+                    }
                 }
             }
         }

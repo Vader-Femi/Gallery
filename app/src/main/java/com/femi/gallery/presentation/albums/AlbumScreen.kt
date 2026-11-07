@@ -58,13 +58,17 @@ import com.femi.gallery.presentation.selection.recycleBinActions
 
 @Composable
 fun AlbumScreen(
+    bucketId: Long,
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onMediaClick: (bucketId: Long, mediaIndex: Int, mediaId: Long) -> Unit,
     onPlaySlideshow: (bucketId: Long) -> Unit = {},
     viewed: ViewedMedia? = null,
     onViewedConsumed: () -> Unit = {},
-    viewModel: AlbumViewModel = hiltViewModel(),
+    viewModel: AlbumViewModel = hiltViewModel(
+        key = "album_$bucketId",
+        creationCallback = { factory: AlbumViewModel.Factory -> factory.create(bucketId) },
+    ),
 ) {
     if (viewModel.isLocked) {
         // Nothing from the Locked folder is shown until the user authenticates.
