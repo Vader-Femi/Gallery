@@ -494,4 +494,9 @@
     <string name="player_unlock">Mepee</string>
     <string name="player_locked_hint">Akpọchiri njikwa. Kpatụ Mepee iji jiri ihe ọkpụkpọ.</string>
     <string name="player_rotate">Tụgharịa ihuenyo</string>
+
+    <string name="search_filter_photos">Foto</string>
+    <string name="search_filter_last_30_days">Ụbọchị 30 gara aga</string>
+    <string name="settings_private_sharing">Kekọrịta na nzuzo</string>
+    <string name="settings_private_sharing_summary">Wepụ ebe na nkọwa igwefoto tupu ị kesaa foto</string>
 </resources>

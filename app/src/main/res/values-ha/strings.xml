@@ -495,4 +495,9 @@
     <string name="player_unlock">Bude</string>
     <string name="player_locked_hint">An kulle sarrafawa. Danna Bude don amfani da na\'ura.</string>
     <string name="player_rotate">Juya allon</string>
+
+    <string name="search_filter_photos">Hotuna</string>
+    <string name="search_filter_last_30_days">Kwanaki 30 da suka gabata</string>
+    <string name="settings_private_sharing">Raba sirri</string>
+    <string name="settings_private_sharing_summary">Cire wurin da bayanan kyamara kafin raba hotuna</string>
 </resources>

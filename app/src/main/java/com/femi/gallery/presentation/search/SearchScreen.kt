@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,6 +69,7 @@ import com.femi.gallery.domain.text.TextScanState
 import com.femi.gallery.domain.text.TextScanStatus
 import java.text.NumberFormat
 
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
@@ -78,12 +82,12 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ElevatedAssistChip
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import java.time.LocalDate
 
 /** Suggestion chips: the label shown, and the (English) query it fills in. */
 private val Suggestions = listOf(
-    Triple(R.string.search_suggestion_videos, "videos", Icons.Filled.VideoLibrary),
-    Triple(R.string.search_suggestion_favorites, "favorites", Icons.Filled.Star),
-    Triple(R.string.search_suggestion_screenshots, "screenshots", Icons.Filled.Screenshot),
     Triple(R.string.search_suggestion_yesterday, "yesterday", Icons.Filled.History),
     Triple(R.string.search_suggestion_sunset, "a sunset", Icons.Filled.WbSunny),
     Triple(R.string.search_suggestion_food, "food", Icons.Filled.Restaurant),
@@ -165,6 +169,12 @@ fun SearchScreen(
                 )
             }
 
+            SearchFilterChips(
+                query = query,
+                onQueryChange = viewModel::onQueryChange,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+
             CombinedScanNotice(combinedScan)
 
             Box(modifier = Modifier.weight(1f)) {
@@ -234,6 +244,109 @@ fun SearchScreen(
             onClose = viewModel.selection::clear,
             onSelectAll = viewModel.selection::selectAll,
         )
+    }
+}
+
+private data class FilterChipItem(
+    val id: String,
+    val labelRes: Int,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val isSelected: (query: String) -> Boolean,
+    val toggle: (currentQuery: String) -> String,
+)
+
+private fun toggleWord(query: String, word: String, removePattern: Regex): String {
+    val matches = removePattern.find(query)
+    return if (matches != null && matches.value.equals(word, ignoreCase = true)) {
+        query.replace(removePattern, "").replace(Regex("\\s+"), " ").trim()
+    } else {
+        val cleaned = query.replace(removePattern, "").replace(Regex("\\s+"), " ").trim()
+        if (cleaned.isEmpty()) word else "$cleaned $word"
+    }
+}
+
+@Composable
+private fun SearchFilterChips(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val filterChips = remember {
+        listOf(
+            FilterChipItem(
+                id = "videos",
+                labelRes = R.string.search_suggestion_videos,
+                icon = Icons.Filled.VideoLibrary,
+                isSelected = { q -> q.contains(Regex("\\bvideos?\\b", RegexOption.IGNORE_CASE)) },
+                toggle = { q -> toggleWord(q, "videos", Regex("\\b(videos?|photos?|pictures?|images?)\\b", RegexOption.IGNORE_CASE)) },
+            ),
+            FilterChipItem(
+                id = "photos",
+                labelRes = R.string.search_filter_photos,
+                icon = Icons.Filled.Image,
+                isSelected = { q -> q.contains(Regex("\\b(photos?|pictures?|images?)\\b", RegexOption.IGNORE_CASE)) },
+                toggle = { q -> toggleWord(q, "photos", Regex("\\b(photos?|pictures?|images?|videos?)\\b", RegexOption.IGNORE_CASE)) },
+            ),
+            FilterChipItem(
+                id = "favorites",
+                labelRes = R.string.search_suggestion_favorites,
+                icon = Icons.Filled.Star,
+                isSelected = { q -> q.contains(Regex("\\bfavorites?\\b|\\bfavourites?\\b", RegexOption.IGNORE_CASE)) },
+                toggle = { q -> toggleWord(q, "favorites", Regex("\\b(favorites?|favourites?)\\b", RegexOption.IGNORE_CASE)) },
+            ),
+            FilterChipItem(
+                id = "screenshots",
+                labelRes = R.string.search_suggestion_screenshots,
+                icon = Icons.Filled.Screenshot,
+                isSelected = { q -> q.contains(Regex("\\bscreenshots?\\b", RegexOption.IGNORE_CASE)) },
+                toggle = { q -> toggleWord(q, "screenshots", Regex("\\bscreenshots?\\b", RegexOption.IGNORE_CASE)) },
+            ),
+            FilterChipItem(
+                id = "last30",
+                labelRes = R.string.search_filter_last_30_days,
+                icon = Icons.Filled.History,
+                isSelected = { q -> q.contains("from:") },
+                toggle = { q ->
+                    val regex = Regex("from:\\S+")
+                    if (q.contains(regex)) {
+                        q.replace(regex, "").replace(Regex("\\s+"), " ").trim()
+                    } else {
+                        val token = "from:${LocalDate.now().minusDays(30)}"
+                        if (q.isBlank()) token else "${q.trim()} $token"
+                    }
+                },
+            ),
+        )
+    }
+
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 840.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(filterChips, key = { it.id }) { item ->
+                val selected = item.isSelected(query)
+                FilterChip(
+                    selected = selected,
+                    onClick = { onQueryChange(item.toggle(query)) },
+                    label = { Text(stringResource(item.labelRes)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (selected) Icons.Filled.Check else item.icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(FilterChipDefaults.IconSize),
+                        )
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                )
+            }
+        }
     }
 }
 

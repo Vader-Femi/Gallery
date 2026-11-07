@@ -43,6 +43,9 @@ class SettingsViewModel @Inject constructor(
     val playAudioInBackground: StateFlow<Boolean> = settingsRepository.playAudioInBackground
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val privateSharing: StateFlow<Boolean> = settingsRepository.privateSharing
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     val backgroundScan: StateFlow<Boolean> = settingsRepository.backgroundScan
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
@@ -98,6 +101,12 @@ class SettingsViewModel @Inject constructor(
     fun setPlayAudioInBackground(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setPlayAudioInBackground(enabled)
+        }
+    }
+
+    fun setPrivateSharing(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setPrivateSharing(enabled)
         }
     }
 

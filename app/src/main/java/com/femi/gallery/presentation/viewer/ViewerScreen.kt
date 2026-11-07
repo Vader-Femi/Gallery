@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.femi.gallery.presentation.common.shareUris
 import android.util.Log
 import android.view.LayoutInflater
 import android.widget.Toast
@@ -1136,13 +1137,7 @@ private fun ImmersiveMode(enabled: Boolean) {
 
 private fun shareMedia(context: Context, item: MediaItem) {
     val uri = Uri.parse(item.uri)
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = item.mimeType.ifEmpty { if (item.isVideo) "video/*" else "image/*" }
-        putExtra(Intent.EXTRA_STREAM, uri)
-        clipData = ClipData.newRawUri(null, uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    context.startActivity(Intent.createChooser(send, null))
+    shareUris(context, listOf(uri), item.mimeType.ifEmpty { if (item.isVideo) "video/*" else "image/*" })
 }
 
 private fun setWallpaper(context: Context, item: MediaItem) {

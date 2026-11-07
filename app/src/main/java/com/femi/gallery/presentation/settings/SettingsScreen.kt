@@ -35,6 +35,7 @@ import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -142,6 +143,7 @@ fun SettingsScreen(
     val playAudioInBackground by viewModel.playAudioInBackground.collectAsStateWithLifecycle()
     val backgroundScan by viewModel.backgroundScan.collectAsStateWithLifecycle()
     val faceRecognition by viewModel.faceRecognition.collectAsStateWithLifecycle()
+    val privateSharing by viewModel.privateSharing.collectAsStateWithLifecycle()
     var showEraseFaces by remember { mutableStateOf(false) }
     val scanOnlyCharging by viewModel.scanOnlyWhileCharging.collectAsStateWithLifecycle()
 
@@ -466,6 +468,15 @@ fun SettingsScreen(
                 summary = stringResource(R.string.settings_face_recognition_summary),
                 checked = faceRecognition,
                 onCheckedChange = { enable -> if (enable) viewModel.setFaceRecognition(true) else showEraseFaces = true },
+            )
+
+            // Strip location and camera metadata before sharing photos.
+            SettingSwitchCard(
+                icon = Icons.Outlined.Share,
+                title = stringResource(R.string.settings_private_sharing),
+                summary = stringResource(R.string.settings_private_sharing_summary),
+                checked = privateSharing,
+                onCheckedChange = { viewModel.setPrivateSharing(it) },
             )
 
             ClipModelCard()

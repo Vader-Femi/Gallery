@@ -63,6 +63,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_CLIP_NORMALIZATION = stringPreferencesKey("clip_normalization")
         private val KEY_ALBUM_SORT = stringPreferencesKey("album_sort_option")
         private val KEY_HIDDEN_ALBUMS = stringSetPreferencesKey("hidden_albums")
+        private val KEY_PRIVATE_SHARING = booleanPreferencesKey("private_sharing")
 
         // Process-wide in-memory cache to eliminate runBlocking calls across components.
         @Volatile private var cachedThemeMode: Int? = null
@@ -70,6 +71,7 @@ class SettingsRepositoryImpl @Inject constructor(
         @Volatile private var cachedBackgroundScan: Boolean? = null
         @Volatile private var cachedScanOnlyWhileCharging: Boolean? = null
         @Volatile private var cachedPlayAudioInBackground: Boolean? = null
+        @Volatile private var cachedPrivateSharing: Boolean? = null
         @Volatile private var cachedTimelineZoom: TimelineZoom? = null
         @Volatile private var cachedClipNormalization: ClipNormalization? = null
     }
@@ -88,6 +90,7 @@ class SettingsRepositoryImpl @Inject constructor(
         cachedBackgroundScan = prefs[KEY_BACKGROUND_SCAN] ?: true
         cachedScanOnlyWhileCharging = prefs[KEY_SCAN_ONLY_CHARGING] ?: false
         cachedPlayAudioInBackground = prefs[KEY_PLAY_AUDIO_IN_BACKGROUND] ?: false
+        cachedPrivateSharing = prefs[KEY_PRIVATE_SHARING] ?: false
 
         val zoomName = prefs[KEY_TIMELINE_ZOOM] ?: TimelineZoom.Default.name
         cachedTimelineZoom = TimelineZoom.entries.find { it.name == zoomName } ?: TimelineZoom.Default
@@ -178,6 +181,10 @@ class SettingsRepositoryImpl @Inject constructor(
         it[KEY_HIDDEN_ALBUMS] ?: emptySet()
     }.distinctUntilChanged()
 
+    override val privateSharing: Flow<Boolean> = dataStore.data.map {
+        it[KEY_PRIVATE_SHARING] ?: false
+    }.distinctUntilChanged()
+
     override suspend fun setThemeMode(mode: Int) {
         cachedThemeMode = mode
         dataStore.edit { it[KEY_THEME_MODE] = mode }
@@ -261,6 +268,11 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[KEY_HIDDEN_ALBUMS] = albums }
     }
 
+    override suspend fun setPrivateSharing(enabled: Boolean) {
+        cachedPrivateSharing = enabled
+        dataStore.edit { it[KEY_PRIVATE_SHARING] = enabled }
+    }
+
     override fun getThemeModeSync(): Int =
         cachedThemeMode ?: runBlocking {
             val mode = dataStore.data.first()[KEY_THEME_MODE] ?: AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
@@ -309,6 +321,13 @@ class SettingsRepositoryImpl @Inject constructor(
         cachedPlayAudioInBackground ?: runBlocking {
             val enabled = dataStore.data.first()[KEY_PLAY_AUDIO_IN_BACKGROUND] ?: false
             cachedPlayAudioInBackground = enabled
+            enabled
+        }
+
+    override fun getPrivateSharingSync(): Boolean =
+        cachedPrivateSharing ?: runBlocking {
+            val enabled = dataStore.data.first()[KEY_PRIVATE_SHARING] ?: false
+            cachedPrivateSharing = enabled
             enabled
         }
 }

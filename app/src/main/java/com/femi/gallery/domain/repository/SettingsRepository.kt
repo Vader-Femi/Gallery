@@ -27,6 +27,7 @@ interface SettingsRepository {
     val clipNormalization: Flow<ClipNormalization>
     val albumSortOption: Flow<AlbumSortOption>
     val hiddenAlbums: Flow<Set<String>>
+    val privateSharing: Flow<Boolean>
 
     suspend fun setThemeMode(mode: Int)
     suspend fun setAutoplayVideos(enabled: Boolean)
@@ -46,6 +47,7 @@ interface SettingsRepository {
     suspend fun setClipNormalization(normalization: ClipNormalization)
     suspend fun setAlbumSortOption(option: AlbumSortOption)
     suspend fun setHiddenAlbums(albums: Set<String>)
+    suspend fun setPrivateSharing(enabled: Boolean)
 
     // For synchronous reads if absolutely necessary during init
     fun getThemeModeSync(): Int
@@ -55,6 +57,7 @@ interface SettingsRepository {
     fun getTimelineZoomSync(): TimelineZoom
     fun getClipNormalizationSync(): ClipNormalization
     fun getPlayAudioInBackgroundSync(): Boolean
+    fun getPrivateSharingSync(): Boolean
 }
 
 enum class SemanticSearchStrictness {

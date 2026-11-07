@@ -497,5 +497,10 @@
     <string name="player_unlock">Unlock</string>
     <string name="player_locked_hint">Controls locked. Tap Unlock to interact.</string>
     <string name="player_rotate">Rotate screen</string>
+
+    <string name="search_filter_photos">Photos</string>
+    <string name="search_filter_last_30_days">Last 30 days</string>
+    <string name="settings_private_sharing">Private sharing</string>
+    <string name="settings_private_sharing_summary">Remove location and camera metadata before sharing photos</string>
 </resources>
 
