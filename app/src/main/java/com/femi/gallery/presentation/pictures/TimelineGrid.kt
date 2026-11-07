@@ -33,6 +33,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.tooling.preview.Preview
+import com.femi.gallery.ui.theme.GalleryTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.derivedStateOf
@@ -340,6 +342,30 @@ private fun DayHeader(
         if (selectionActive && onClick != null) {
             SelectionIndicator(selected = allSelected)
         }
+    }
+}
+
+@Preview(name = "Day Header - Normal", showBackground = true)
+@Composable
+private fun DayHeaderPreview() {
+    GalleryTheme(dynamicColor = false) {
+        DayHeader(
+            text = "Today",
+            selectionActive = false,
+        )
+    }
+}
+
+@Preview(name = "Day Header - Selection Active", showBackground = true)
+@Composable
+private fun DayHeaderSelectionPreview() {
+    GalleryTheme(dynamicColor = false) {
+        DayHeader(
+            text = "October 2026",
+            selectionActive = true,
+            allSelected = true,
+            onClick = {},
+        )
     }
 }
 

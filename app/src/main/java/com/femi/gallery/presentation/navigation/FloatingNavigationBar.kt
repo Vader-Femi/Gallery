@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.navigation
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -49,8 +50,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.femi.gallery.R
+import com.femi.gallery.ui.theme.GalleryTheme
 
 /**
  * A floating navigation bar with Pictures and Albums in a pill (icon + text)
@@ -70,7 +73,8 @@ fun FloatingNavigationBar(
     isVertical: Boolean = false,
     alwaysShowLabel: Boolean = true,
 ) {
-    var isVisible by remember { mutableStateOf(false) }
+    val isInspectionMode = androidx.compose.ui.platform.LocalInspectionMode.current
+    var isVisible by remember { mutableStateOf(isInspectionMode) }
 
     LaunchedEffect(Unit) {
         isVisible = true
@@ -449,5 +453,43 @@ private fun FloatingNavigationItem(
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Phone Navigation Bar - Light", showBackground = true)
+@Preview(name = "Phone Navigation Bar - Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun FloatingNavigationBarPreview() {
+    GalleryTheme(dynamicColor = false) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            FloatingNavigationBar(
+                destinations = GalleryDestination.entries,
+                currentDestinationSelected = { it == GalleryDestination.Pictures },
+                onDestinationClick = {},
+                onSearchClick = {},
+                onMenuClick = {},
+                isVertical = false,
+            )
+        }
+    }
+}
+
+@Preview(name = "Tablet Navigation Rail", showBackground = true, widthDp = 120, heightDp = 600)
+@Composable
+private fun FloatingNavigationBarVerticalPreview() {
+    GalleryTheme(dynamicColor = false) {
+        FloatingNavigationBar(
+            destinations = GalleryDestination.entries,
+            currentDestinationSelected = { it == GalleryDestination.Pictures },
+            onDestinationClick = {},
+            onSearchClick = {},
+            onMenuClick = {},
+            isVertical = true,
+        )
     }
 }

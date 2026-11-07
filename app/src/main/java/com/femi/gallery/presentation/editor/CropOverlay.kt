@@ -1,7 +1,10 @@
 package com.femi.gallery.presentation.editor
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -13,7 +16,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.femi.gallery.ui.theme.GalleryTheme
 import com.femi.gallery.domain.edit.CropCorner
 import com.femi.gallery.domain.edit.CropRect
 import kotlin.math.min
@@ -121,4 +126,25 @@ private fun hitTest(touch: Offset, box: Rect, grabRadius: Float): DragTarget? {
         return DragTarget.Corner(nearest)
     }
     return if (box.contains(touch)) DragTarget.Move else null
+}
+
+@Preview(name = "Crop Overlay", showBackground = true, widthDp = 300, heightDp = 300)
+@Composable
+private fun CropOverlayPreview() {
+    GalleryTheme(dynamicColor = false) {
+        Box(
+            modifier = Modifier
+                .size(300.dp)
+                .background(Color.DarkGray)
+        ) {
+            CropOverlay(
+                imageWidth = 1000,
+                imageHeight = 1000,
+                crop = CropRect(left = 0.15f, top = 0.15f, right = 0.85f, bottom = 0.85f),
+                onDragCorner = { _, _, _ -> },
+                onMove = { _, _ -> },
+                modifier = Modifier.size(300.dp),
+            )
+        }
+    }
 }
