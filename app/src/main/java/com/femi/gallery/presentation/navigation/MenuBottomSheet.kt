@@ -48,7 +48,7 @@ import com.femi.gallery.domain.model.SpecialAlbums
 @Composable
 fun MenuBottomSheet(
     onDismiss: () -> Unit,
-    onItemClick: (route: String?) -> Unit,
+    onItemClick: (route: Any) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Fix 8: Remove explicit rememberBottomSheetState(Hidden) so ModalBottomSheet uses its
@@ -89,7 +89,7 @@ fun MenuBottomSheet(
                     )
                 }
                 Surface(
-                    onClick = { onItemClick(GalleryRoutes.SETTINGS) },
+                    onClick = { onItemClick(GalleryRoutes.Settings) },
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer,
                     modifier = Modifier.height(40.dp),
@@ -133,25 +133,25 @@ fun MenuBottomSheet(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.Image,
                         label = stringResource(R.string.menu_images),
-                        onClick = { onItemClick(GalleryRoutes.IMAGES) },
+                        onClick = { onItemClick(GalleryRoutes.Images) },
                     )
                     ExpressiveMenuCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.VideoLibrary,
                         label = stringResource(R.string.menu_videos),
-                        onClick = { onItemClick(GalleryRoutes.VIDEOS) },
+                        onClick = { onItemClick(GalleryRoutes.Videos) },
                     )
                     ExpressiveMenuCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.FavoriteBorder,
                         label = stringResource(R.string.menu_favorites),
-                        onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.FAVORITES)) },
+                        onClick = { onItemClick(GalleryRoutes.Album(SpecialAlbums.FAVORITES)) },
                     )
                     ExpressiveMenuCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.Map,
                         label = stringResource(R.string.menu_map),
-                        onClick = { onItemClick(GalleryRoutes.MAP) },
+                        onClick = { onItemClick(GalleryRoutes.Map) },
                     )
                 }
             }
@@ -177,13 +177,13 @@ fun MenuBottomSheet(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.AutoStories,
                             label = stringResource(R.string.menu_stories),
-                            onClick = { onItemClick(GalleryRoutes.STORIES) },
+                            onClick = { onItemClick(GalleryRoutes.Stories) },
                         )
                         ExpressivePillButton(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Face,
                             label = stringResource(R.string.menu_people),
-                            onClick = { onItemClick(GalleryRoutes.PEOPLE) },
+                            onClick = { onItemClick(GalleryRoutes.People) },
                         )
                     }
                     Row(
@@ -194,13 +194,13 @@ fun MenuBottomSheet(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.ContentCopy,
                             label = stringResource(R.string.menu_duplicates),
-                            onClick = { onItemClick(GalleryRoutes.DUPLICATES) },
+                            onClick = { onItemClick(GalleryRoutes.Duplicates) },
                         )
                         ExpressivePillButton(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Compare,
                             label = stringResource(R.string.menu_similar),
-                            onClick = { onItemClick(GalleryRoutes.SIMILAR) },
+                            onClick = { onItemClick(GalleryRoutes.Similar) },
                         )
                     }
                     Row(
@@ -211,13 +211,13 @@ fun MenuBottomSheet(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Lock,
                             label = stringResource(R.string.menu_locked),
-                            onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.LOCKED)) },
+                            onClick = { onItemClick(GalleryRoutes.Album(SpecialAlbums.LOCKED)) },
                         )
                         ExpressivePillButton(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Outlined.Delete,
                             label = stringResource(R.string.menu_recycle_bin),
-                            onClick = { onItemClick(GalleryRoutes.album(SpecialAlbums.TRASH)) },
+                            onClick = { onItemClick(GalleryRoutes.Album(SpecialAlbums.TRASH)) },
                         )
                     }
                 }

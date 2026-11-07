@@ -225,8 +225,7 @@ private fun GalleryScaffold() {
                         onDismiss = { menuSheetOpen = false },
                         onItemClick = { itemRoute ->
                             menuSheetOpen = false
-                            if (itemRoute != null) {
-                                when (itemRoute) {
+                            when (itemRoute) {
                                     GalleryDestination.Pictures.route -> {
                                         navController.navigate(GalleryRoutes.Pictures) {
                                             popUpTo<GalleryRoutes.Pictures> { saveState = true }
@@ -249,9 +248,20 @@ private fun GalleryScaffold() {
                                     GalleryRoutes.DUPLICATES -> navController.navigate(GalleryRoutes.Duplicates)
                                     GalleryRoutes.SIMILAR -> navController.navigate(GalleryRoutes.Similar)
                                     GalleryRoutes.SETTINGS -> navController.navigate(GalleryRoutes.Settings)
+                                    is String -> {
+                                        if (itemRoute.startsWith("album/")) {
+                                            val bucketId = itemRoute.removePrefix("album/").toLongOrNull()
+                                            if (bucketId != null) {
+                                                navController.navigate(GalleryRoutes.Album(bucketId))
+                                            } else {
+                                                navController.navigate(itemRoute)
+                                            }
+                                        } else {
+                                            navController.navigate(itemRoute)
+                                        }
+                                    }
                                     else -> navController.navigate(itemRoute)
                                 }
-                            }
                         },
                     )
                 }
