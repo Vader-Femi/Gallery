@@ -499,5 +499,6 @@
     <string name="search_filter_photos">Hotuna</string>
     <string name="search_filter_last_30_days">Kwanaki 30 da suka gabata</string>
     <string name="settings_private_sharing">Raba sirri</string>
-    <string name="settings_private_sharing_summary">Cire wurin da bayanan kyamara kafin raba hotuna</string>
+    <string name="settings_private_sharing_summary">Cire wuri, lokaci da bayanan kyamara daga hotuna kafin a raba (ana raba bidiyo yadda yake)</string>
+    <string name="private_share_failed">Ba a iya cire bayanai daga hoto ba, don haka ba a raba komai ba.</string>
 </resources>

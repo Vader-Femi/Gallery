@@ -5,6 +5,7 @@ package androidx.exifinterface.media
 class ExifInterface(fileDescriptor: java.io.FileDescriptor) {
     constructor(stream: java.io.InputStream) : this(java.io.FileDescriptor())
     fun getAttribute(tag: String): String? = null
+    fun getAttributeInt(tag: String, defaultValue: Int): Int = defaultValue
     fun setAttribute(tag: String, value: String?) {}
     fun saveAttributes() {}
     companion object {

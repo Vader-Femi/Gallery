@@ -1,12 +1,15 @@
 package com.femi.gallery.presentation.common
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.ParcelFileDescriptor
+import android.util.Log
+import android.widget.Toast
 import androidx.core.content.FileProvider
-import androidx.exifinterface.media.ExifInterface
+import com.femi.gallery.R
+import com.femi.gallery.di.ApplicationScope
 import com.femi.gallery.domain.repository.SettingsRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -22,84 +25,76 @@ import java.io.File
 @InstallIn(SingletonComponent::class)
 interface ShareEntryPoint {
     val settingsRepository: SettingsRepository
+
+    @get:ApplicationScope
+    val applicationScope: CoroutineScope
 }
 
-/** Shares one or more photos/videos through the system share sheet, respecting private sharing settings. */
+/**
+ * Shares one or more photos/videos through the system share sheet. With private sharing on, every photo is first
+ * copied without its metadata ([PhotoScrubber]); if any copy cannot be made, nothing is shared (it never falls back to
+ * the original, which would hand out the place the photo was taken). Videos are shared as they are.
+ */
 fun shareUris(context: Context, uris: List<Uri>, mimeType: String? = null) {
     if (uris.isEmpty()) return
+    val app = context.applicationContext
 
-    val entryPoint = runCatching {
-        EntryPointAccessors.fromApplication(context.applicationContext, ShareEntryPoint::class.java)
-    }.getOrNull()
+    val entryPoint = try {
+        EntryPointAccessors.fromApplication(app, ShareEntryPoint::class.java)
+    } catch (e: Exception) {
+        // The setting cannot be read: sharing something other than what the person chose is worse than not sharing.
+        Toast.makeText(app, R.string.private_share_failed, Toast.LENGTH_LONG).show()
+        return
+    }
 
-    val isPrivate = entryPoint?.settingsRepository?.getPrivateSharingSync() ?: false
-
-    if (!isPrivate) {
+    if (!entryPoint.settingsRepository.getPrivateSharingSync()) {
         launchShareIntent(context, uris, mimeType)
         return
     }
 
-    CoroutineScope(Dispatchers.IO).launch {
-        val preparedUris = scrubAndPrepareUris(context, uris)
+    // Not tied to the screen: the copies are made even if the person leaves it meanwhile.
+    entryPoint.applicationScope.launch(Dispatchers.IO) {
+        val shareDir = File(app.cacheDir, SHARE_DIR).apply { mkdirs() }
+        deleteOldCopies(shareDir)
+        val made = ArrayList<File>()
+        val prepared = try {
+            uris.map { uri ->
+                val mime = app.contentResolver.getType(uri).orEmpty()
+                if (mime.startsWith("video/")) {
+                    uri
+                } else {
+                    val copy = PhotoScrubber.scrub(app, uri, shareDir).also(made::add)
+                    FileProvider.getUriForFile(app, "${app.packageName}.fileprovider", copy)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("ShareMedia", "Private sharing: cannot remove the metadata, nothing is shared", e)
+            made.forEach { it.delete() }
+            withContext(Dispatchers.Main) { Toast.makeText(app, R.string.private_share_failed, Toast.LENGTH_LONG).show() }
+            return@launch
+        }
+        val types = prepared.map { app.contentResolver.getType(it).orEmpty() }.distinct()
+        val sendType = types.singleOrNull()?.ifEmpty { null } ?: if (types.all { it.startsWith("image/") }) "image/*" else "*/*"
         withContext(Dispatchers.Main) {
-            launchShareIntent(context, preparedUris, mimeType)
+            // The screen may be gone by now.
+            val host = (context as? Activity)?.takeUnless { it.isFinishing || it.isDestroyed } ?: app
+            launchShareIntent(host, prepared, sendType)
         }
     }
 }
 
-private fun scrubAndPrepareUris(context: Context, uris: List<Uri>): List<Uri> {
-    val shareDir = File(context.cacheDir, "share").apply { mkdirs() }
-    val cutoff = System.currentTimeMillis() - 30 * 60 * 1000L
-    shareDir.listFiles()?.forEach { file ->
-        if (file.lastModified() < cutoff) file.delete()
-    }
+private const val SHARE_DIR = "share"
+private const val COPY_LIFETIME_MS = 30 * 60 * 1000L
 
-    return uris.map { uri ->
-        val mime = context.contentResolver.getType(uri).orEmpty()
-        val isImage = mime.startsWith("image/") || (!mime.startsWith("video/") && !uri.toString().endsWith(".mp4", ignoreCase = true))
-        if (!isImage) {
-            return@map uri
-        }
+/** The copies made for sharing are removed after a while (and all of them when the app starts, see [clearShareCopies]). */
+private fun deleteOldCopies(shareDir: File) {
+    val cutoff = System.currentTimeMillis() - COPY_LIFETIME_MS
+    shareDir.listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
+}
 
-        runCatching {
-            val tempFile = File.createTempFile("share_", ".jpg", shareDir)
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tempFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            } ?: return@map uri
-
-            ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_WRITE)?.use { pfd ->
-                val exif = ExifInterface(pfd.fileDescriptor)
-                val tagsToStrip = listOf(
-                    ExifInterface.TAG_GPS_LATITUDE,
-                    ExifInterface.TAG_GPS_LATITUDE_REF,
-                    ExifInterface.TAG_GPS_LONGITUDE,
-                    ExifInterface.TAG_GPS_LONGITUDE_REF,
-                    ExifInterface.TAG_GPS_ALTITUDE,
-                    ExifInterface.TAG_GPS_ALTITUDE_REF,
-                    ExifInterface.TAG_GPS_SPEED,
-                    ExifInterface.TAG_GPS_SPEED_REF,
-                    ExifInterface.TAG_GPS_IMG_DIRECTION,
-                    ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
-                    ExifInterface.TAG_MAKE,
-                    ExifInterface.TAG_MODEL,
-                    ExifInterface.TAG_ARTIST,
-                    ExifInterface.TAG_USER_COMMENT,
-                )
-                for (tag in tagsToStrip) {
-                    exif.setAttribute(tag, null)
-                }
-                exif.saveAttributes()
-            }
-
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                tempFile
-            )
-        }.getOrDefault(uri)
-    }
+/** Deletes every copy that private sharing made earlier; they are only needed while the share sheet is in use. */
+fun clearShareCopies(context: Context) {
+    File(context.cacheDir, SHARE_DIR).deleteRecursively()
 }
 
 private fun launchShareIntent(context: Context, uris: List<Uri>, mimeType: String? = null) {
