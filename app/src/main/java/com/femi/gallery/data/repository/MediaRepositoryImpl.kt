@@ -29,6 +29,7 @@ import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.domain.repository.StoryEditStore
 import com.femi.gallery.domain.search.SearchCriteria
 import com.femi.gallery.domain.repository.SettingsRepository
+import com.femi.gallery.domain.model.HiddenAlbumsKey
 import com.femi.gallery.domain.model.TimelineGrouper
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.domain.model.WriteRequest
@@ -51,6 +52,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -194,12 +196,19 @@ class MediaRepositoryImpl @Inject constructor(
     @Volatile
     private var storiesGeneration = -1L
 
+    /** The hidden albums the stories were built for (see [HiddenAlbumsKey]); -1 until read from the database. */
+    @Volatile
+    private var storiesHiddenKey = -1L
+
     override suspend fun refreshStories(force: Boolean) {
         val currentGen = dataSource.generation()
+        // Hiding or showing an album changes what the stories are made of without changing the library.
+        val currentHidden = HiddenAlbumsKey.of(hiddenAlbumsChanges().first())
         if (storiesGeneration == -1L) {
             storiesGeneration = storyDao.meta(StoryDao.STORIES_GENERATION) ?: -1L
+            storiesHiddenKey = storyDao.meta(StoryDao.STORIES_HIDDEN_ALBUMS) ?: 0L
         }
-        if (!force && storiesGeneration != -1L && storiesGeneration == currentGen) {
+        if (!force && storiesGeneration != -1L && storiesGeneration == currentGen && storiesHiddenKey == currentHidden) {
             return
         }
         if (_isStoriesUpdating.value) return
@@ -208,7 +217,9 @@ class MediaRepositoryImpl @Inject constructor(
             withContext(Dispatchers.IO) {
                 computeAndCacheStories()
                 storiesGeneration = currentGen
+                storiesHiddenKey = currentHidden
                 storyDao.putMeta(MetaRow(StoryDao.STORIES_GENERATION, currentGen))
+                storyDao.putMeta(MetaRow(StoryDao.STORIES_HIDDEN_ALBUMS, currentHidden))
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error refreshing stories", e)

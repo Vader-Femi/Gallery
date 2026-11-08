@@ -431,5 +431,6 @@ abstract class StoryDao {
 
     companion object {
         const val STORIES_GENERATION = "stories_generation"
+        const val STORIES_HIDDEN_ALBUMS = "stories_hidden_albums"
     }
 }
