@@ -52,6 +52,7 @@ abstract class GalleryDatabase : RoomDatabase() {
     abstract fun photoHashDao(): PhotoHashDao
     abstract fun personDao(): PersonDao
     abstract fun faceDao(): FaceDao
+    abstract fun personChangeDao(): PersonChangeDao
     abstract fun faceScanDao(): FaceScanDao
     abstract fun storyDao(): StoryDao
 

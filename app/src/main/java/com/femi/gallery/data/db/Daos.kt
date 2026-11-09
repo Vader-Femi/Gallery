@@ -434,3 +434,43 @@ abstract class StoryDao {
         const val STORIES_HIDDEN_ALBUMS = "stories_hidden_albums"
     }
 }
+
+/**
+ * Changes to people that touch both the person and its faces, each done in one transaction: either all of it is
+ * written or none of it, so that a crash half way cannot leave faces pointing at a person that is gone, or two
+ * people where there should be one.
+ */
+@Dao
+abstract class PersonChangeDao {
+    @Query("UPDATE face SET personId = :to WHERE personId = :from")
+    abstract suspend fun reassignFaces(from: Long, to: Long)
+
+    @Query("SELECT COUNT(DISTINCT mediaId) FROM face WHERE personId = :personId")
+    abstract suspend fun photoCountOf(personId: Long): Int
+
+    @Query("UPDATE person SET name = :name, photoCount = :photoCount, centroid = :centroid WHERE id = :personId")
+    abstract suspend fun updatePerson(personId: Long, name: String, photoCount: Int, centroid: ByteArray)
+
+    @Query("DELETE FROM person WHERE id = :personId")
+    abstract suspend fun deletePerson(personId: Long)
+
+    @Query("DELETE FROM face WHERE personId = :personId")
+    abstract suspend fun deleteFaces(personId: Long)
+
+    /** The faces of [absorbedId] go to [survivorId], which gets [name] and [centroid]; [absorbedId] is deleted. */
+    @Transaction
+    open suspend fun merge(survivorId: Long, absorbedId: Long, name: String, centroid: ByteArray): Int {
+        reassignFaces(from = absorbedId, to = survivorId)
+        val photos = photoCountOf(survivorId)
+        updatePerson(survivorId, name, photos, centroid)
+        deletePerson(absorbedId)
+        return photos
+    }
+
+    /** Deletes the person and all of its faces. */
+    @Transaction
+    open suspend fun remove(personId: Long) {
+        deleteFaces(personId)
+        deletePerson(personId)
+    }
+}

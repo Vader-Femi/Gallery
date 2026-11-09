@@ -2,7 +2,6 @@ package com.femi.gallery.presentation.people
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.femi.gallery.data.db.FaceDao
 import com.femi.gallery.data.db.PersonDao
 import com.femi.gallery.data.db.PersonRow
 import com.femi.gallery.domain.face.FaceScanState
@@ -19,7 +18,6 @@ import javax.inject.Inject
 @HiltViewModel
 class PeopleViewModel @Inject constructor(
     private val personDao: PersonDao,
-    private val faceDao: FaceDao,
     private val faceRepo: FaceIndexRepository,
     private val settingsRepository: com.femi.gallery.domain.repository.SettingsRepository,
     private val visiblePeople: com.femi.gallery.data.face.VisiblePeople,
@@ -77,9 +75,6 @@ class PeopleViewModel @Inject constructor(
     }
 
     fun removePerson(personId: Long) {
-        viewModelScope.launch {
-            personDao.delete(personId)
-            faceDao.deleteForPerson(personId)
-        }
+        viewModelScope.launch { faceRepo.removePerson(personId) }
     }
 }

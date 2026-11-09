@@ -48,6 +48,7 @@ class FaceIndexRepositoryImpl @Inject constructor(
     private val scanDao: FaceScanDao,
     private val faceDao: FaceDao,
     private val personDao: com.femi.gallery.data.db.PersonDao,
+    private val personChangeDao: com.femi.gallery.data.db.PersonChangeDao,
     private val settings: com.femi.gallery.domain.repository.SettingsRepository,
     private val permissions: MediaPermissionChecker,
     @param:ApplicationScope private val scope: CoroutineScope,
@@ -97,31 +98,40 @@ class FaceIndexRepositoryImpl @Inject constructor(
 
     override suspend fun mergePeople(survivorId: Long, absorbedId: Long, newName: String?) {
         if (survivorId == absorbedId) return
-        withContext(Dispatchers.IO) {
-            val survivor = personDao.get(survivorId) ?: return@withContext
-            val absorbed = personDao.get(absorbedId) ?: return@withContext
+        whileScanPaused {
+            val survivor = personDao.get(survivorId) ?: return@whileScanPaused
+            val absorbed = personDao.get(absorbedId) ?: return@whileScanPaused
 
-            faceDao.reassignPerson(fromPersonId = absorbedId, toPersonId = survivorId)
-
-            val c1 = survivor.centroid.toFloatArray()
-            val c2 = absorbed.centroid.toFloatArray()
-            val mergedCentroid = clusterer.mergeCentroids(c1, survivor.photoCount, c2, absorbed.photoCount)
-
-            val totalPhotos = faceDao.countPhotosForPerson(survivorId)
+            val mergedCentroid = clusterer.mergeCentroids(
+                survivor.centroid.toFloatArray(), survivor.photoCount,
+                absorbed.centroid.toFloatArray(), absorbed.photoCount,
+            )
             val finalName = newName?.trim()?.takeIf { it.isNotEmpty() }
                 ?: if (survivor.isNamed) survivor.name
                 else if (absorbed.isNamed) absorbed.name
                 else survivor.name
 
-            personDao.update(
-                survivor.copy(
-                    name = finalName,
-                    photoCount = totalPhotos,
-                    centroid = mergedCentroid.toByteArray(),
-                ),
-            )
-            personDao.delete(absorbedId)
-            Log.i(TAG, "Merged person $absorbedId into $survivorId as '$finalName' ($totalPhotos photos)")
+            val photos = personChangeDao.merge(survivorId, absorbedId, finalName, mergedCentroid.toByteArray())
+            Log.i(TAG, "Merged person $absorbedId into $survivorId as '$finalName' ($photos photos)")
+        }
+    }
+
+    override suspend fun removePerson(personId: Long) {
+        whileScanPaused { personChangeDao.remove(personId) }
+    }
+
+    /**
+     * Runs [block] while no scan is running: a scan that keeps going could give a face to a person that is being
+     * merged away or removed, leaving the face with nobody and never grouped again. A scan that was running starts
+     * again afterwards and carries on where it was (the photos already done are remembered).
+     */
+    private suspend fun <T> whileScanPaused(block: suspend () -> T): T = withContext(Dispatchers.IO) {
+        val running = synchronized(lock) { job.also { job = null } }
+        running?.cancelAndJoin()
+        try {
+            block()
+        } finally {
+            if (running != null) startScan()
         }
     }
 

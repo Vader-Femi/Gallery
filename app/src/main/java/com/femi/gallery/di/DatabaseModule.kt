@@ -55,6 +55,9 @@ object DatabaseModule {
     fun providePersonDao(database: GalleryDatabase): com.femi.gallery.data.db.PersonDao = database.personDao()
 
     @Provides
+    fun providePersonChangeDao(database: GalleryDatabase): com.femi.gallery.data.db.PersonChangeDao = database.personChangeDao()
+
+    @Provides
     fun provideFaceDao(database: GalleryDatabase): com.femi.gallery.data.db.FaceDao = database.faceDao()
 
     @Provides

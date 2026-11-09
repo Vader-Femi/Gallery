@@ -12,6 +12,9 @@ interface FaceIndexRepository {
     /** Stops the scan and deletes everything learned about faces: the people, their faces and what was scanned. */
     suspend fun eraseAll()
 
+    /** Deletes the person and its faces (the photos are not looked at for faces again). */
+    suspend fun removePerson(personId: Long)
+
     /** Merges all faces from [absorbedId] into [survivorId], updates centroids and counts, and deletes [absorbedId]. */
     suspend fun mergePeople(survivorId: Long, absorbedId: Long, newName: String? = null)
 
