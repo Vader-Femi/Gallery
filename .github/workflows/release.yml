@@ -50,16 +50,16 @@ jobs:
           echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
 
-          # Create a copy with a distinct, human-friendly name
+          # Rename the APK to a versioned, human-friendly name
           APK_SRC="app/build/outputs/apk/release/app-release.apk"
           APK_DEST="app/build/outputs/apk/release/gallery-${TAG_NAME}.apk"
-          cp "$APK_SRC" "$APK_DEST"
+          mv "$APK_SRC" "$APK_DEST"
 
       - name: Upload APK as Workflow Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gallery-${{ steps.release_info.outputs.tag_name }}
-          path: app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/release/gallery-${{ steps.release_info.outputs.tag_name }}.apk
           retention-days: 30
 
       - name: Create GitHub Release
@@ -73,4 +73,4 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/gallery-${{ steps.release_info.outputs.tag_name }}.apk
