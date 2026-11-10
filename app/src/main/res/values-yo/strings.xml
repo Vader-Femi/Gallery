@@ -155,6 +155,10 @@
     <string name="viewer_seek">Wá</string>
     <string name="viewer_close_seek_bar">Pa àlà wíwá rẹ́</string>
     <string name="viewer_play">Gbé kà</string>
+    <string name="player_play">Ṣeré</string>
+    <string name="player_pause">Dúró</string>
+    <string name="player_channel_description">Àwọn ìdarí fídíò tó ń ṣeré ní ẹ̀yìn</string>
+    <string name="player_video_title">Fídíò</string>
     <string name="player_error">Kò ṣeé ṣe láti ṣe fídíò yìí.</string>
     <string name="viewer_pause">Dúró</string>
     <string name="viewer_mute">Pa ohùn rẹ́</string>

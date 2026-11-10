@@ -17,7 +17,9 @@ import android.graphics.Bitmap
 import android.graphics.drawable.Icon as AndroidIcon
 import android.media.AudioManager
 import android.util.Rational
+import android.provider.OpenableColumns
 import android.view.GestureDetector
+import android.view.ViewConfiguration
 import android.view.MotionEvent
 import android.view.View
 import androidx.activity.compose.BackHandler
@@ -142,6 +144,7 @@ fun FullVideoPlayer(
     trailing: @Composable () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val systemTouchSlop = remember(context) { ViewConfiguration.get(context).scaledTouchSlop.toFloat() }
     val activity = remember(context) { context.findActivity() }
     val appName = stringResource(R.string.app_name)
     val windowInfo = LocalWindowInfo.current
@@ -212,7 +215,7 @@ fun FullVideoPlayer(
     }
 
     // Interactive PiP action button (Play / Pause)
-    val updatePipParams: (Boolean) -> Unit = remember(context, player, activity, supportsPip) {
+    val updatePipParams: (Boolean) -> Unit = remember(context, player, activity, supportsPip, playAudioInBackground) {
         { isPlaying ->
             if (supportsPip && (activity != null)) {
                 val intent = Intent(PIP_ACTION_PLAY_PAUSE).setPackage(context.packageName)
@@ -223,7 +226,7 @@ fun FullVideoPlayer(
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
                 val iconRes = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-                val title = if (isPlaying) "Pause" else "Play"
+                val title = context.getString(if (isPlaying) R.string.player_pause else R.string.player_play)
                 val action = RemoteAction(
                     AndroidIcon.createWithResource(context, iconRes),
                     title,
@@ -239,6 +242,9 @@ fun FullVideoPlayer(
                         }
                     }
                     setActions(listOf(action))
+                    // Home while a video plays keeps it playing in a small window; a person who chose background
+                    // audio gets the audio only, as that setting says.
+                    setAutoEnterEnabled(isPlaying && !playAudioInBackground)
                 }.build()
                 activity.setPictureInPictureParams(params)
             }
@@ -272,7 +278,7 @@ fun FullVideoPlayer(
             appName,
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Video playback controls"
+            description = context.getString(R.string.player_channel_description)
         }
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
         nm?.createNotificationChannel(channel)
@@ -287,10 +293,13 @@ fun FullVideoPlayer(
             setMediaDescriptionAdapter(
                 object : PlayerNotificationManager.MediaDescriptionAdapter {
                     override fun getCurrentContentTitle(p: Player): CharSequence {
+                        // The name of the video as the library knows it (the last part of its address is only a number).
                         val name = runCatching {
-                            uri.toUri().lastPathSegment?.substringAfterLast('/')
+                            context.contentResolver.query(uri.toUri(), arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                                if (it.moveToFirst()) it.getString(0) else null
+                            }
                         }.getOrNull()
-                        return name?.ifEmpty { "Video" } ?: "Video"
+                        return name?.takeIf { it.isNotBlank() } ?: context.getString(R.string.player_video_title)
                     }
 
                     override fun createCurrentContentIntent(p: Player): PendingIntent? {
@@ -370,9 +379,19 @@ fun FullVideoPlayer(
             resumePositionMs = player.currentPosition.coerceAtLeast(0L)
             resumePlaying = player.playWhenReady
             player.pause()
+        } else if (playAudioInBackground && !inPip) {
+            // Nothing is shown any more: stop decoding the pictures and keep only the sound (saves battery).
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                .build()
         }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        if (player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO)) {
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
+                .build()
+        }
         val inPip = isInPip || activity?.isInPictureInPictureMode == true
         if (resumePlaying && !player.isPlaying && !inPip) {
             player.play()
@@ -474,7 +493,7 @@ fun FullVideoPlayer(
                     val totalDy = e2.y - e1Pos.y
 
                     if (dragMode == DragMode.None) {
-                        val touchSlop = 20f
+                        val touchSlop = systemTouchSlop
                         if (abs(totalDx) > touchSlop && abs(totalDx) > abs(totalDy) * 1.2f) {
                             dragMode = DragMode.Seek
                         } else if (abs(totalDy) > touchSlop && abs(totalDy) > abs(totalDx) * 1.2f) {

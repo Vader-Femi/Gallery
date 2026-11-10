@@ -155,6 +155,10 @@
     <string name="viewer_seek">Nemi</string>
     <string name="viewer_close_seek_bar">Rufe mashaya neman</string>
     <string name="viewer_play">Murna</string>
+    <string name="player_play">Kunna</string>
+    <string name="player_pause">Dakata</string>
+    <string name="player_channel_description">Maɓallan sarrafa bidiyo da ke kunna a bango</string>
+    <string name="player_video_title">Bidiyo</string>
     <string name="player_error">Ba za a iya kunna wannan bidiyon ba.</string>
     <string name="viewer_pause">Tsaya</string>
     <string name="viewer_mute">Kashe sauti</string>

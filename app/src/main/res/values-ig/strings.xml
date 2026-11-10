@@ -155,6 +155,10 @@
     <string name="viewer_seek">Chọọ</string>
     <string name="viewer_close_seek_bar">Mechie ogwe ọchịchọ</string>
     <string name="viewer_play">Kpọọ</string>
+    <string name="player_play">Kpọọ</string>
+    <string name="player_pause">Kwụsị</string>
+    <string name="player_channel_description">Njikwa vidiyo na-akpọ n\'azụ</string>
+    <string name="player_video_title">Vidiyo</string>
     <string name="player_error">Enweghị ike ịkọ vidiyo a.</string>
     <string name="viewer_pause">Kwụsị</string>
     <string name="viewer_mute">Mechie ụda</string>

@@ -155,6 +155,10 @@
     <string name="viewer_seek">Seek</string>
     <string name="viewer_close_seek_bar">Close seek bar</string>
     <string name="viewer_play">Play</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_channel_description">Controls for video wey dey play for background</string>
+    <string name="player_video_title">Video</string>
     <string name="player_error">Dis video no fit play.</string>
     <string name="viewer_pause">Pause</string>
     <string name="viewer_mute">Mute sound</string>
