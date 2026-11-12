@@ -74,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -144,6 +145,7 @@ fun FullVideoPlayer(
     trailing: @Composable () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val systemTouchSlop = remember(context) { ViewConfiguration.get(context).scaledTouchSlop.toFloat() }
     val activity = remember(context) { context.findActivity() }
     val appName = stringResource(R.string.app_name)
@@ -353,14 +355,24 @@ fun FullVideoPlayer(
         }
     }
 
+    var isPlaying by remember(player) { mutableStateOf(player.isPlaying) }
+
+    DisposableEffect(view, isPlaying) {
+        view.keepScreenOn = isPlaying
+        onDispose {
+            view.keepScreenOn = false
+        }
+    }
+
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 failed = true
             }
 
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                updatePipParams(isPlaying)
+            override fun onIsPlayingChanged(isPlayingChange: Boolean) {
+                isPlaying = isPlayingChange
+                updatePipParams(isPlayingChange)
             }
         }
         player.addListener(listener)
@@ -470,7 +482,7 @@ fun FullVideoPlayer(
                     if (!isInPip) {
                         val pv = playerViewRef
                         if (pv != null) {
-                            if (pv.isControllerFullyVisible) {
+                            if (pv.isControllerFullyVisible || controlsVisible) {
                                 pv.hideController()
                             } else {
                                 pv.showController()
@@ -551,8 +563,9 @@ fun FullVideoPlayer(
                             controlsVisible = visibility == View.VISIBLE && !isLocked
                         },
                     )
-                    setOnTouchListener { view, event ->
-                        val handled = gestureDetector.onTouchEvent(event)
+                    @android.annotation.SuppressLint("ClickableViewAccessibility")
+                    setOnTouchListener { _, event ->
+                        gestureDetector.onTouchEvent(event)
                         if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
                             if (dragMode == DragMode.Seek) {
                                 swipeSeekInfo?.let { (targetMs) -> player.seekTo(targetMs) }
@@ -560,9 +573,6 @@ fun FullVideoPlayer(
                             }
                             swipeVolumeInfo = null
                             dragMode = DragMode.None
-                            if (event.action == MotionEvent.ACTION_UP && !handled) {
-                                view.performClick()
-                            }
                         }
                         true
                     }
@@ -572,8 +582,10 @@ fun FullVideoPlayer(
                 playerViewRef = it
                 it.player = player
                 it.useController = !isLocked && !isInPip
+                it.keepScreenOn = isPlaying
             },
             onRelease = {
+                it.keepScreenOn = false
                 it.player = null
                 playerViewRef = null
             },
