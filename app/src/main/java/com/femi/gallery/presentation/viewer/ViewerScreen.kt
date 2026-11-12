@@ -55,11 +55,11 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -119,6 +119,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.ui.PlayerView
@@ -130,6 +131,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.femi.gallery.R
 import com.femi.gallery.MainActivity
+import com.femi.gallery.playback.PlayerFactory
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.toRef
@@ -177,6 +179,7 @@ fun ViewerScreen(
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 private fun ViewerContent(
     onBack: () -> Unit,
@@ -268,6 +271,7 @@ private fun ViewerContent(
             var isMuted by rememberSaveable(activeVideoUri) { mutableStateOf(muteDefault) }
             var currentPositionMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
             var durationMs by remember(activeVideoUri) { mutableLongStateOf(0L) }
+            var isVideoTrackUnsupported by remember(activeVideoUri) { mutableStateOf(false) }
 
             // The full-screen player (the Play action). It opens above the viewer and carries on from where the small one was.
             var fullPlayerUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -307,6 +311,27 @@ private fun ViewerContent(
                                 durationMs = newPlayer.duration.coerceAtLeast(0L)
                             }
                         }
+                        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                            val isDecoderOrFormatError = error.errorCode in listOf(
+                                androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+                                androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+                                androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FAILED,
+                            )
+                            val sampleMimeType = (error as? ExoPlaybackException)?.rendererFormat?.sampleMimeType
+                            val isVideoFailure = (sampleMimeType?.startsWith("video/") == true) ||
+                                (isDecoderOrFormatError && !newPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO))
+
+                            if (isVideoFailure && !isVideoTrackUnsupported) {
+                                isVideoTrackUnsupported = true
+                                newPlayer.trackSelectionParameters = newPlayer.trackSelectionParameters.buildUpon()
+                                    .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                                    .build()
+                                newPlayer.prepare()
+                                if (autoPlay) {
+                                    newPlayer.play()
+                                }
+                            }
+                        }
                     }
                     newPlayer.addListener(listener)
 
@@ -314,6 +339,11 @@ private fun ViewerContent(
                         newPlayer.removeListener(listener)
                         newPlayer.stop()
                         newPlayer.clearMediaItems()
+                        if (newPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO)) {
+                            newPlayer.trackSelectionParameters = newPlayer.trackSelectionParameters.buildUpon()
+                                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
+                                .build()
+                        }
                         activePlayer = null
                     }
                 }
@@ -364,7 +394,7 @@ private fun ViewerContent(
                 Modifier
                     .fillMaxSize()
                     .viewerDrag(
-                        enabled = { !drag.zoomed },
+                        enabled = { !drag.zoomed && fullPlayerUri == null },
                         onDrag = drag::dragBy,
                         onEnd = { velocityY ->
                             scope.launch {
@@ -404,6 +434,7 @@ private fun ViewerContent(
                                 isMapOrigin = isMapOrigin,
                                 motionVideoUri = if (isCurrent) motionPhoto?.videoUri else null,
                                 isMotionPlaying = isCurrent && isMotionPlaying,
+                                isVideoTrackUnsupported = isCurrent && pageItem?.uri == activeVideoUri && isVideoTrackUnsupported,
                             )
                         }
                     }
@@ -649,11 +680,9 @@ private fun ViewerContent(
             }
 
             fullPlayerUri?.let { uri ->
-                val playAudioInBackground by viewModel.playAudioInBackground.collectAsStateWithLifecycle()
                 FullVideoPlayer(
                     uri = uri,
                     startPositionMs = fullPlayerStartMs,
-                    playAudioInBackground = playAudioInBackground,
                     onClose = {
                         fullPlayerUri = null
                         chromeVisible = true // the player gives the system bars back, so the viewer shows its own bars too
@@ -711,6 +740,7 @@ private fun ViewerPage(
     isMapOrigin: Boolean = false,
     motionVideoUri: String? = null,
     isMotionPlaying: Boolean = false,
+    isVideoTrackUnsupported: Boolean = false,
 ) {
     val clipInOverlay = if (isMapOrigin) BubbleMorphOverlayClip else null
     when {
@@ -722,6 +752,7 @@ private fun ViewerPage(
             activePlayer = activePlayer,
             ownsPlayer = !playerProvided,
             clipInOverlay = clipInOverlay,
+            isVideoTrackUnsupported = isVideoTrackUnsupported,
         )
         else -> PhotoPage(
             item = item,
@@ -804,7 +835,7 @@ private fun MotionVideoPlayer(
 ) {
     val context = LocalContext.current
     val motionPlayer = remember(videoUri) {
-        ExoPlayer.Builder(context).build().apply {
+        PlayerFactory.create(context).apply {
             setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
             setMediaItem(PlayerMediaItem.fromUri(videoUri))
             repeatMode = androidx.media3.common.Player.REPEAT_MODE_ONE
@@ -862,6 +893,7 @@ internal fun VideoPage(
     /** Whether the page may make a player of its own when none is given (the external viewer relies on that). */
     ownsPlayer: Boolean = true,
     clipInOverlay: SharedTransitionScope.OverlayClip? = null,
+    isVideoTrackUnsupported: Boolean = false,
 ) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
@@ -892,6 +924,35 @@ internal fun VideoPage(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+            if (isCurrent && isVideoTrackUnsupported) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Black.copy(alpha = 0.75f),
+                    tonalElevation = 6.dp,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 32.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Headphones,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp),
+                        )
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Text(
+                            text = stringResource(R.string.player_audio_only_notice),
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -912,7 +973,7 @@ private fun VideoPlayer(
                 .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                 .setUsage(C.USAGE_MEDIA)
                 .build()
-            ExoPlayer.Builder(context).build().apply {
+            PlayerFactory.create(context).apply {
                 setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
                 setMediaItem(PlayerMediaItem.fromUri(uri))
                 playWhenReady = false
@@ -1180,7 +1241,7 @@ private const val PositionPollMs = 100L
 private class SharedPlayer(private val context: Context) {
     private var player: ExoPlayer? = null
 
-    fun acquire(handleFocus: Boolean): ExoPlayer = player ?: ExoPlayer.Builder(context).build()
+    fun acquire(handleFocus: Boolean): ExoPlayer = player ?: PlayerFactory.create(context)
         .apply { setAudioAttributes(AudioAttributes.DEFAULT, handleFocus) }
         .also { player = it }
 

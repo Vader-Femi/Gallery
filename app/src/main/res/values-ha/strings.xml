@@ -160,6 +160,8 @@
     <string name="player_channel_description">Maɓallan sarrafa bidiyo da ke kunna a bango</string>
     <string name="player_video_title">Bidiyo</string>
     <string name="player_error">Ba za a iya kunna wannan bidiyon ba.</string>
+    <string name="player_error_codec_unsupported">Wannan na\'urar ba ta goyi bayan wannan tsarin bidiyon ba.</string>
+    <string name="player_audio_only_notice">Ba a goyi bayan bidiyon a wannan na\'urar ba. Sauti kawai ke tashi.</string>
     <string name="viewer_pause">Tsaya</string>
     <string name="viewer_mute">Kashe sauti</string>
     <string name="viewer_unmute">Kunna sauti</string>
@@ -199,6 +201,26 @@
     <string name="story_title_label">Take</string>
     <string name="story_use_dates">Yi amfani da kwanuka</string>
     <string name="story_filter_all">Duka</string>
+    <string name="story_title_anniversary">A ranar nan a %1$d</string>
+    <string name="story_title_anniversary_place">%1$s, %2$d</string>
+    <string name="story_title_anniversary_person">Tare da %1$s, %2$d</string>
+    <string name="story_title_anniversary_scene">%1$s, %2$d</string>
+    <string name="story_title_day_in">Yini a %1$s</string>
+    <string name="story_title_trip_to">Tafiya zuwa %1$s</string>
+    <string name="story_title_with_person">Tare da %1$s</string>
+    <string name="story_title_with_two_people">Tare da %1$s da %2$s</string>
+    <string name="story_title_weekday_outing">Fitar %1$s</string>
+    <string name="story_title_month_memories">Tunanin %1$s</string>
+    <string name="story_scene_beach">Yini a bakin teku</string>
+    <string name="story_scene_nature">A cikin yanayi</string>
+    <string name="story_scene_food">Abinci da ciye-ciye</string>
+    <string name="story_scene_pet">Abubuwan dabbar gida</string>
+    <string name="story_scene_celebration">Biki</string>
+    <string name="story_scene_water">Kusa da ruwa</string>
+    <string name="story_scene_golden_hour">Hasken yammaci</string>
+    <string name="story_scene_other">Abubuwan %1$s</string>
+    <string name="story_subtitle_with_person">%1$s • Tare da %2$s</string>
+    <string name="story_subtitle_with_place">%1$s • %2$s</string>
     <string name="slideshow_close">Rufe nunin hotuna</string>
     <string name="slideshow_shuffle">Gauraya</string>
     <string name="slideshow_speed_slow">A hankali</string>
@@ -492,9 +514,8 @@
     <string name="people_merge_with_title">Hada da wani mutum</string>
     <string name="people_merge_with_message">Hada \"%1$s\" cikin \"%2$s\"? Za a hada dukkan hotuna wuri guda.</string>
 
-    <string name="settings_play_audio_in_background">Kunna sautin bidiyo a bayan fage</string>
-    <string name="settings_play_audio_in_background_summary">Ci gaba da kunna sautin bidiyo yayin sauya manhajoji ko kashe allon</string>
     <string name="player_pip">Hoto-cikin-hoto (PiP)</string>
+    <string name="player_switch_to_audio">Kunna sauti a bayan fage</string>
     <string name="player_lock">Kulle sarrafawa</string>
     <string name="player_unlock">Bude</string>
     <string name="player_locked_hint">An kulle sarrafawa. Danna Bude don amfani da na\'ura.</string>

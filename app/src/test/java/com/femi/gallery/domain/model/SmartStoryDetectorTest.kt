@@ -1,10 +1,12 @@
 package com.femi.gallery.domain.model
 
+import com.femi.gallery.presentation.stories.StoryTitles
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.util.Locale
 
 class SmartStoryDetectorTest {
 
@@ -57,12 +59,16 @@ class SmartStoryDetectorTest {
             prominentPeople = listOf("Alice"),
         )
 
-        val (title, theme) = SmartStoryDetector.determineTitleAndTheme(fromDay, toDay, signals, today)
-        val subtitle = SmartStoryDetector.buildSubtitle(fromDay, toDay, signals, theme, itemCount = 15)
+        val (titleSpec, theme) = SmartStoryDetector.determineTitleAndTheme(fromDay, toDay, signals, today)
+        val subtitleSpec = SmartStoryDetector.buildSubtitle(fromDay, toDay, signals, theme, itemCount = 15)
 
-        assertEquals("Trip to Paris", title)
+        assertEquals(StoryTitleSpec.Trip("Paris", isSingleDay = false), titleSpec)
         assertEquals(StoryTheme.Trip, theme)
-        assertTrue("Subtitle should contain date and person", subtitle.contains("Oct 1") && subtitle.contains("Alice"))
+        assertEquals(StorySubtitleSpec(fromDay = fromDay, toDay = toDay, withPerson = "Alice"), subtitleSpec)
+
+        assertEquals("Trip to Paris", StoryTitles.formatTitle(titleSpec))
+        val formattedSubtitle = StoryTitles.formatSubtitle(subtitleSpec, locale = Locale.US)
+        assertTrue("Subtitle should contain date and person", formattedSubtitle.contains("Oct 1") && formattedSubtitle.contains("Alice"))
     }
 
     @Test
@@ -73,9 +79,10 @@ class SmartStoryDetectorTest {
             prominentPeople = listOf("Sarah", "John"),
         )
 
-        val (title, theme) = SmartStoryDetector.determineTitleAndTheme(fromDay, toDay, signals, today)
-        assertEquals("With Sarah & John", title)
+        val (titleSpec, theme) = SmartStoryDetector.determineTitleAndTheme(fromDay, toDay, signals, today)
+        assertEquals(StoryTitleSpec.WithPerson(listOf("Sarah", "John")), titleSpec)
         assertEquals(StoryTheme.People, theme)
+        assertEquals("With Sarah & John", StoryTitles.formatTitle(titleSpec))
     }
 
     @Test
@@ -86,9 +93,11 @@ class SmartStoryDetectorTest {
             topScene = "beach",
         )
 
-        val (title, theme) = SmartStoryDetector.determineTitleAndTheme(fromDay, toDay, signals, today)
-        assertEquals("A Day at the Beach", title)
+        val (titleSpec, theme) = SmartStoryDetector.determineTitleAndTheme(fromDay, toDay, signals, today)
+        assertEquals(StoryTitleSpec.Scene(StoryScene.Beach), titleSpec)
         assertEquals(StoryTheme.Scene, theme)
+        assertEquals("A Day at the Beach", StoryTitles.formatScene(StoryScene.Beach, null))
+        assertEquals("A Day at the Beach", StoryTitles.formatTitle(titleSpec))
     }
 
     @Test
@@ -99,32 +108,35 @@ class SmartStoryDetectorTest {
             placeName = "Tokyo",
         )
 
-        val (title, theme) = SmartStoryDetector.determineTitleAndTheme(fromDay, toDay, signals, today)
-        assertEquals("Tokyo, 2024", title)
+        val (titleSpec, theme) = SmartStoryDetector.determineTitleAndTheme(fromDay, toDay, signals, today)
+        assertEquals(StoryTitleSpec.Anniversary(year = 2024, place = "Tokyo"), titleSpec)
         assertEquals(StoryTheme.Anniversary, theme)
+        assertEquals("Tokyo, 2024", StoryTitles.formatTitle(titleSpec))
     }
 
     @Test
     fun fallbackOutingsFormatCorrectlyWithoutDateTimePatternCrash() {
         val singleDay = LocalDate.of(2026, 11, 1).toEpochDay() // Sunday
-        val (singleTitle, singleTheme) = SmartStoryDetector.determineTitleAndTheme(
+        val (singleTitleSpec, singleTheme) = SmartStoryDetector.determineTitleAndTheme(
             singleDay,
             singleDay,
             SmartStoryDetector.ContextSignals(),
             today,
         )
-        assertEquals("Sunday Outing", singleTitle)
+        assertEquals(StoryTitleSpec.WeekdayOuting(7), singleTitleSpec)
         assertEquals(StoryTheme.Outing, singleTheme)
+        assertEquals("Sunday Outing", StoryTitles.formatTitle(singleTitleSpec, locale = Locale.US))
 
         val multiDayStart = LocalDate.of(2026, 11, 1).toEpochDay()
         val multiDayEnd = LocalDate.of(2026, 11, 3).toEpochDay()
-        val (multiTitle, multiTheme) = SmartStoryDetector.determineTitleAndTheme(
+        val (multiTitleSpec, multiTheme) = SmartStoryDetector.determineTitleAndTheme(
             multiDayStart,
             multiDayEnd,
             SmartStoryDetector.ContextSignals(),
             today,
         )
-        assertEquals("November Memories", multiTitle)
+        assertEquals(StoryTitleSpec.MonthMemories(month = 11, year = 2026), multiTitleSpec)
         assertEquals(StoryTheme.Outing, multiTheme)
+        assertEquals("November Memories", StoryTitles.formatTitle(multiTitleSpec, locale = Locale.US))
     }
 }

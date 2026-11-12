@@ -160,6 +160,8 @@
     <string name="player_channel_description">Njikwa vidiyo na-akpọ n\'azụ</string>
     <string name="player_video_title">Vidiyo</string>
     <string name="player_error">Enweghị ike ịkọ vidiyo a.</string>
+    <string name="player_error_codec_unsupported">Ngwaọrụ a anaghị akwado usoro vidiyo a.</string>
+    <string name="player_audio_only_notice">Akwadoghị vidiyo a na ngwaọrụ a. Naanị ụda na-akpọ.</string>
     <string name="viewer_pause">Kwụsị</string>
     <string name="viewer_mute">Mechie ụda</string>
     <string name="viewer_unmute">Mepee ụda</string>
@@ -199,6 +201,26 @@
     <string name="story_title_label">Aha isiokwu</string>
     <string name="story_use_dates">Jiri ụbọchị</string>
     <string name="story_filter_all">Niile</string>
+    <string name="story_title_anniversary">N\'ụbọchị a na %1$d</string>
+    <string name="story_title_anniversary_place">%1$s, %2$d</string>
+    <string name="story_title_anniversary_person">Mụ na %1$s, %2$d</string>
+    <string name="story_title_anniversary_scene">%1$s, %2$d</string>
+    <string name="story_title_day_in">Ụbọchị na %1$s</string>
+    <string name="story_title_trip_to">Njem gaa %1$s</string>
+    <string name="story_title_with_person">Mụ na %1$s</string>
+    <string name="story_title_with_two_people">Mụ na %1$s na %2$s</string>
+    <string name="story_title_weekday_outing">Ọpụpụ %1$s</string>
+    <string name="story_title_month_memories">Ihe ncheta %1$s</string>
+    <string name="story_scene_beach">Ụbọchị n\'akụkụ mmiri</string>
+    <string name="story_scene_nature">N\'ime okike</string>
+    <string name="story_scene_food">Nri na iri ihe</string>
+    <string name="story_scene_pet">Ihe kacha mma gbasara anụ ụlọ</string>
+    <string name="story_scene_celebration">Ememe</string>
+    <string name="story_scene_water">N\'akụkụ mmiri</string>
+    <string name="story_scene_golden_hour">Oge ọlaedo</string>
+    <string name="story_scene_other">Ihe kacha mma gbasara %1$s</string>
+    <string name="story_subtitle_with_person">%1$s • Mụ na %2$s</string>
+    <string name="story_subtitle_with_place">%1$s • %2$s</string>
     <string name="slideshow_close">Mechie slideshow</string>
     <string name="slideshow_shuffle">Gwakọta</string>
     <string name="slideshow_speed_slow">Nwayọ</string>
@@ -491,9 +513,8 @@
     <string name="people_merge_with_title">Jikọọ na onye ọzọ</string>
     <string name="people_merge_with_message">Jikọọ \"%1$s\" n\'ime \"%2$s\"? A ga-ejikọta foto niile n\'otu ebe.</string>
 
-    <string name="settings_play_audio_in_background">Kpọọ ụda vidiyo na azụ</string>
-    <string name="settings_play_audio_in_background_summary">Nọgide na-akpọ ụda vidiyo mgbe ị gbanwere ngwa ma ọ bụ mechie ihuenyo</string>
     <string name="player_pip">Foto nʼime foto (PiP)</string>
+    <string name="player_switch_to_audio">Kpọọ ụda na azụ</string>
     <string name="player_lock">Kpochie njikwa</string>
     <string name="player_unlock">Mepee</string>
     <string name="player_locked_hint">Akpọchiri njikwa. Kpatụ Mepee iji jiri ihe ọkpụkpọ.</string>

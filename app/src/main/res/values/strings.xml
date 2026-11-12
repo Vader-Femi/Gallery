@@ -160,6 +160,8 @@
     <string name="player_channel_description">Controls for a video playing in the background</string>
     <string name="player_video_title">Video</string>
     <string name="player_error">Can\'t play this video.</string>
+    <string name="player_error_codec_unsupported">This video format requires hardware decoding not supported on this device.</string>
+    <string name="player_audio_only_notice">Video track unsupported on this device. Playing audio only.</string>
     <string name="viewer_pause">Pause</string>
     <string name="viewer_mute">Mute</string>
     <string name="viewer_unmute">Unmute</string>
@@ -203,6 +205,26 @@
     <string name="story_title_label">Title</string>
     <string name="story_use_dates">Use dates</string>
     <string name="story_filter_all">All</string>
+    <string name="story_title_anniversary">On this day in %1$d</string>
+    <string name="story_title_anniversary_place">%1$s, %2$d</string>
+    <string name="story_title_anniversary_person">With %1$s, %2$d</string>
+    <string name="story_title_anniversary_scene">%1$s, %2$d</string>
+    <string name="story_title_day_in">Day in %1$s</string>
+    <string name="story_title_trip_to">Trip to %1$s</string>
+    <string name="story_title_with_person">With %1$s</string>
+    <string name="story_title_with_two_people">With %1$s &amp; %2$s</string>
+    <string name="story_title_weekday_outing">%1$s Outing</string>
+    <string name="story_title_month_memories">%1$s Memories</string>
+    <string name="story_scene_beach">A Day at the Beach</string>
+    <string name="story_scene_nature">Out in Nature</string>
+    <string name="story_scene_food">Food &amp; Dining</string>
+    <string name="story_scene_pet">Pet Highlights</string>
+    <string name="story_scene_celebration">Celebration</string>
+    <string name="story_scene_water">By the Water</string>
+    <string name="story_scene_golden_hour">Golden Hour</string>
+    <string name="story_scene_other">%1$s Highlights</string>
+    <string name="story_subtitle_with_person">%1$s • With %2$s</string>
+    <string name="story_subtitle_with_place">%1$s • %2$s</string>
     <string name="slideshow_close">Close slideshow</string>
     <string name="slideshow_shuffle">Shuffle</string>
     <string name="slideshow_speed_slow">Slow</string>
@@ -494,9 +516,8 @@
     <string name="people_merge_with_title">Merge with another person</string>
     <string name="people_merge_with_message">Merge \"%1$s\" into \"%2$s\"? All photos will be combined into one group.</string>
 
-    <string name="settings_play_audio_in_background">Play video audio in background</string>
-    <string name="settings_play_audio_in_background_summary">Keep video audio playing when switching apps or locking the screen</string>
     <string name="player_pip">Picture-in-picture</string>
+    <string name="player_switch_to_audio">Play audio in background</string>
     <string name="player_lock">Lock controls</string>
     <string name="player_unlock">Unlock</string>
     <string name="player_locked_hint">Controls locked. Tap Unlock to interact.</string>

@@ -322,7 +322,7 @@ private fun GroupCard(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(group.items, key = { it.id }) { item ->
+                items(group.items, key = { it.id }, contentType = { "duplicate_item" }) { item ->
                     Copy(
                         item = item,
                         kept = item.id == group.keepId,

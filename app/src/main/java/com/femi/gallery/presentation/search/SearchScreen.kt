@@ -315,7 +315,7 @@ private fun SearchFilterChips(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(filterChips, key = { it.id }) { item ->
+            items(filterChips, key = { it.id }, contentType = { "filter_chip" }) { item ->
                 val selected = item.isSelected(query)
                 FilterChip(
                     selected = selected,

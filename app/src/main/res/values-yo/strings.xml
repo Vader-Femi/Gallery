@@ -160,6 +160,8 @@
     <string name="player_channel_description">Àwọn ìdarí fídíò tó ń ṣeré ní ẹ̀yìn</string>
     <string name="player_video_title">Fídíò</string>
     <string name="player_error">Kò ṣeé ṣe láti ṣe fídíò yìí.</string>
+    <string name="player_error_codec_unsupported">Ẹrọ yìí kò ní ìmúlò láti ṣe irú fídíò yìí.</string>
+    <string name="player_audio_only_notice">Ẹrọ yìí kò gbà fídíò yìí láàyè. Orin/ohùn nìkan ló ń dún.</string>
     <string name="viewer_pause">Dúró</string>
     <string name="viewer_mute">Pa ohùn rẹ́</string>
     <string name="viewer_unmute">Ṣí ohùn</string>
@@ -199,6 +201,26 @@
     <string name="story_title_label">Àkọlé</string>
     <string name="story_use_dates">Lo ọjọ́</string>
     <string name="story_filter_all">Gbogbo</string>
+    <string name="story_title_anniversary">Lọ́jọ́ yìí ní %1$d</string>
+    <string name="story_title_anniversary_place">%1$s, %2$d</string>
+    <string name="story_title_anniversary_person">Pẹ̀lú %1$s, %2$d</string>
+    <string name="story_title_anniversary_scene">%1$s, %2$d</string>
+    <string name="story_title_day_in">Ọjọ́ ní %1$s</string>
+    <string name="story_title_trip_to">Ìrìn-àjò sí %1$s</string>
+    <string name="story_title_with_person">Pẹ̀lú %1$s</string>
+    <string name="story_title_with_two_people">Pẹ̀lú %1$s àti %2$s</string>
+    <string name="story_title_weekday_outing">Ìjáde %1$s</string>
+    <string name="story_title_month_memories">Àwọn ìrántí %1$s</string>
+    <string name="story_scene_beach">Ọjọ́ kan ní etí òkun</string>
+    <string name="story_scene_nature">Ní àárín àdánidá</string>
+    <string name="story_scene_food">Oúnjẹ àti ìjẹun</string>
+    <string name="story_scene_pet">Àwọn àkókò ẹran-ọ̀sìn</string>
+    <string name="story_scene_celebration">Ayẹyẹ</string>
+    <string name="story_scene_water">Lẹ́bàá omi</string>
+    <string name="story_scene_golden_hour">Àkókò wúrà</string>
+    <string name="story_scene_other">Àwọn àkókò %1$s</string>
+    <string name="story_subtitle_with_person">%1$s • Pẹ̀lú %2$s</string>
+    <string name="story_subtitle_with_place">%1$s • %2$s</string>
     <string name="slideshow_close">Pa ìfihàn fọ́tò rẹ́</string>
     <string name="slideshow_shuffle">Dàpọ̀</string>
     <string name="slideshow_speed_slow">Lọ́ra</string>
@@ -491,9 +513,8 @@
     <string name="people_merge_with_title">Da pọ̀ mọ́ ẹlòmíràn</string>
     <string name="people_merge_with_message">Da \"%1$s\" pọ̀ mọ́ \"%2$s\"? Gbogbo àwọn fọ́tò yóò wà papọ̀ ní àkójọ kan.</string>
 
-    <string name="settings_play_audio_in_background">Gba ohùn fídíò láyè lẹ́yìn ojú-iṣẹ́</string>
-    <string name="settings_play_audio_in_background_summary">Tẹ̀síwájú láti gbọ́ ohùn fídíò bí o bá yí sí àwọn ohun-èlo míràn tàbí tí ojú fóònù bá pa</string>
     <string name="player_pip">Fídíò lórí ojú-iṣẹ́ (PiP)</string>
+    <string name="player_switch_to_audio">Gbọ́ ohùn lẹ́yìn ojú-iṣẹ́</string>
     <string name="player_lock">Ti àwọn bọ́tìnì pa</string>
     <string name="player_unlock">Ṣí i</string>
     <string name="player_locked_hint">Àwọn bọ́tìnì ti di títì. Tẹ Ṣí i láti lo agbóhùn-fídíò.</string>

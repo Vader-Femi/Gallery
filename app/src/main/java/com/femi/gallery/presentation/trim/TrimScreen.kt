@@ -59,9 +59,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.femi.gallery.R
+import com.femi.gallery.playback.PlayerFactory
 import com.femi.gallery.domain.video.TrimFailure
 import com.femi.gallery.domain.video.TrimMath
 import kotlinx.coroutines.delay
@@ -81,7 +81,7 @@ fun TrimScreen(
     val exporting = state.export is TrimExport.Running
 
     val player = remember(viewModel.uri) {
-        ExoPlayer.Builder(context).build().apply {
+        PlayerFactory.create(context).apply {
             setMediaItem(MediaItem.fromUri(viewModel.uri))
             playWhenReady = false
             prepare()

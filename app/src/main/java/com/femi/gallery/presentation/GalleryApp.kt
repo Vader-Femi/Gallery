@@ -63,6 +63,12 @@ fun GalleryApp(
     var openedGallery by rememberSaveable { mutableStateOf(false) }
     val request = if (openedGallery) LaunchRequest.Normal else launch
 
+    LaunchedEffect(launch) {
+        if (launch is LaunchRequest.ViewExternal) {
+            openedGallery = false
+        }
+    }
+
     LifecycleResumeEffect(Unit) {
         permissionViewModel.refresh()
         onPauseOrDispose { }
@@ -73,7 +79,9 @@ fun GalleryApp(
         request is LaunchRequest.ViewExternal -> ExternalViewerScreen(
             uri = request.uri,
             isVideo = request.isVideo,
-            onClose = onFinish,
+            onClose = {
+                openedGallery = true
+            },
             onOpenGallery = { openedGallery = true },
         )
 
@@ -148,9 +156,8 @@ private fun GalleryScaffold() {
                 snapshotFlow { transitionScope.isTransitionActive }
                     .collect { Log.d("SharedPhoto", "photo transition running = $it") }
             }
-            val windowInfo = LocalWindowInfo.current
-            val density = LocalDensity.current
-            val isExpanded = with(density) { windowInfo.containerSize.width.toDp() } >= 600.dp
+            val windowWidthClass = com.femi.gallery.presentation.common.rememberWindowWidthClass()
+            val isExpanded = windowWidthClass.isMediumOrExpanded
 
             val isFullScreen = currentDestination?.hasRoute<GalleryRoutes.Slideshow>() == true ||
                 currentDestination?.hasRoute<GalleryRoutes.Editor>() == true ||

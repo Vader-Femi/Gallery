@@ -104,7 +104,7 @@ fun StoryScreen(
     val displayTitle = if (pickingCover) {
         stringResource(R.string.story_pick_cover)
     } else {
-        customTitle ?: story?.displayTitle ?: dateTitle
+        customTitle ?: story?.let { StoryTitles.formatTitle(context, it.displayTitleSpec) } ?: dateTitle
     }
 
     Box(modifier = modifier.fillMaxSize()) {

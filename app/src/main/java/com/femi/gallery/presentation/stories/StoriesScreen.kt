@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -76,10 +77,10 @@ fun StoriesScreen(
         onPauseOrDispose { }
     }
 
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val windowWidthClass = com.femi.gallery.presentation.common.rememberWindowWidthClass()
     val defaultColumns = when {
-        configuration.screenWidthDp >= 900 -> 4
-        configuration.screenWidthDp >= 600 -> 3
+        windowWidthClass.isExpanded -> 4
+        windowWidthClass.isMedium -> 3
         else -> 2
     }
     var columns by rememberSaveable(defaultColumns) { mutableIntStateOf(defaultColumns) }
@@ -164,7 +165,7 @@ fun StoriesScreen(
                             )
                         }
                     }
-                    items(currentStories, key = { "${it.fromDay}-${it.toDay}" }) { story ->
+                    items(currentStories, key = { "${it.fromDay}-${it.toDay}" }, contentType = { "story" }) { story ->
                         StoryCard(story = story, onClick = { onStoryClick(story.fromDay, story.toDay) })
                     }
                 }
@@ -218,8 +219,9 @@ private fun StoryCard(story: Story, onClick: () -> Unit) {
                 .align(Alignment.BottomStart)
                 .padding(12.dp),
         ) {
-            val title = story.displayTitle ?: StoryTitles.range(story.fromDay, story.toDay)
-            val subtitle = story.subtitle
+            val context = LocalContext.current
+            val title = StoryTitles.formatTitle(context, story.displayTitleSpec)
+            val subtitle = story.subtitle?.let { StoryTitles.formatSubtitle(context, it) }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,

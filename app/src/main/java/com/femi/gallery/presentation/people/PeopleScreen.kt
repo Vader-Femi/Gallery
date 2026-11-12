@@ -331,7 +331,7 @@ fun PeopleScreen(
                                 count = namedPeople.size,
                             )
                         }
-                        items(namedPeople, key = { it.id }) { person ->
+                        items(namedPeople, key = { it.id }, contentType = { "person" }) { person ->
                             PersonCard(
                                 person = person,
                                 onClick = { onPersonClick(person.id) },
@@ -347,7 +347,7 @@ fun PeopleScreen(
                                 modifier = Modifier.padding(top = 12.dp),
                             )
                         }
-                        items(unnamedPeople, key = { it.id }) { person ->
+                        items(unnamedPeople, key = { it.id }, contentType = { "person" }) { person ->
                             PersonCard(
                                 person = person,
                                 onClick = { onPersonClick(person.id) },
@@ -356,7 +356,7 @@ fun PeopleScreen(
                             )
                         }
                     } else {
-                        items(people, key = { it.id }) { person ->
+                        items(people, key = { it.id }, contentType = { "person" }) { person ->
                             PersonCard(
                                 person = person,
                                 onClick = { onPersonClick(person.id) },
