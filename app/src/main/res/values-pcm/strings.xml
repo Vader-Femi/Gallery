@@ -160,6 +160,8 @@
     <string name="player_channel_description">Controls for video wey dey play for background</string>
     <string name="player_video_title">Video</string>
     <string name="player_error">Dis video no fit play.</string>
+    <string name="player_error_codec_unsupported">Dis device no get hardware to play dis kind video format.</string>
+    <string name="player_audio_only_notice">Dis device no support di video. Na only audio dey play.</string>
     <string name="viewer_pause">Pause</string>
     <string name="viewer_mute">Mute sound</string>
     <string name="viewer_unmute">Turn on sound</string>

@@ -160,6 +160,8 @@
     <string name="player_channel_description">Controls for a video playing in the background</string>
     <string name="player_video_title">Video</string>
     <string name="player_error">Can\'t play this video.</string>
+    <string name="player_error_codec_unsupported">This video format requires hardware decoding not supported on this device.</string>
+    <string name="player_audio_only_notice">Video track unsupported on this device. Playing audio only.</string>
     <string name="viewer_pause">Pause</string>
     <string name="viewer_mute">Mute</string>
     <string name="viewer_unmute">Unmute</string>

@@ -160,6 +160,8 @@
     <string name="player_channel_description">Njikwa vidiyo na-akpọ n\'azụ</string>
     <string name="player_video_title">Vidiyo</string>
     <string name="player_error">Enweghị ike ịkọ vidiyo a.</string>
+    <string name="player_error_codec_unsupported">Ngwaọrụ a anaghị akwado usoro vidiyo a.</string>
+    <string name="player_audio_only_notice">Akwadoghị vidiyo a na ngwaọrụ a. Naanị ụda na-akpọ.</string>
     <string name="viewer_pause">Kwụsị</string>
     <string name="viewer_mute">Mechie ụda</string>
     <string name="viewer_unmute">Mepee ụda</string>

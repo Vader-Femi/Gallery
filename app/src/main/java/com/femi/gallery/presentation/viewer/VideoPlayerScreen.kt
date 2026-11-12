@@ -90,12 +90,13 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.femi.gallery.MainActivity
 import com.femi.gallery.R
+import com.femi.gallery.playback.PlayerFactory
 import com.femi.gallery.playback.VideoPlaybackService
 import com.femi.gallery.presentation.common.ImmersiveMode
 import kotlinx.coroutines.delay
@@ -163,6 +164,8 @@ fun FullVideoPlayer(
     var resumePlaying by rememberSaveable(uri) { mutableStateOf(value = true) }
     var controlsVisible by rememberSaveable { mutableStateOf(value = true) }
     var failed by remember(uri) { mutableStateOf(value = false) }
+    var isVideoTrackUnsupported by remember(uri) { mutableStateOf(value = false) }
+    var errorMessageResId by remember(uri) { mutableStateOf<Int?>(null) }
 
     var isLocked by rememberSaveable { mutableStateOf(value = false) }
     var unlockButtonVisible by remember { mutableStateOf(value = false) }
@@ -211,7 +214,7 @@ fun FullVideoPlayer(
     }
 
     val player = remember(uri) {
-        ExoPlayer.Builder(context).build().apply {
+        PlayerFactory.create(context).apply {
             setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
             setMediaItem(mediaItem)
             seekTo(resumePositionMs)
@@ -362,7 +365,31 @@ fun FullVideoPlayer(
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
+                val isDecoderOrFormatError = error.errorCode in listOf(
+                    PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+                    PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+                    PlaybackException.ERROR_CODE_DECODING_FAILED,
+                )
+                val sampleMimeType = (error as? ExoPlaybackException)?.rendererFormat?.sampleMimeType
+                val isVideoFailure = (sampleMimeType?.startsWith("video/") == true) ||
+                    (isDecoderOrFormatError && !player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO))
+
+                if (isVideoFailure && !isVideoTrackUnsupported) {
+                    isVideoTrackUnsupported = true
+                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                        .build()
+                    player.prepare()
+                    if (resumePlaying) {
+                        player.play()
+                    }
+                    return
+                }
+
                 failed = true
+                if (isDecoderOrFormatError || isVideoFailure) {
+                    errorMessageResId = R.string.player_error_codec_unsupported
+                }
             }
 
             override fun onIsPlayingChanged(isPlayingChange: Boolean) {
@@ -394,7 +421,7 @@ fun FullVideoPlayer(
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         if (!isSwitchedToAudio) {
             val inPip = isInPip || activity?.isInPictureInPictureMode == true
-            if (player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO)) {
+            if (!isVideoTrackUnsupported && player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO)) {
                 player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                     .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
                     .build()
@@ -795,10 +822,42 @@ fun FullVideoPlayer(
             }
         }
 
+        if (isVideoTrackUnsupported && !failed) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color.Black.copy(alpha = 0.75f),
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 32.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Headphones,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Text(
+                        text = stringResource(R.string.player_audio_only_notice),
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
+
         if (failed) {
             Text(
-                text = stringResource(R.string.player_error),
+                text = stringResource(errorMessageResId ?: R.string.player_error),
                 color = Color.White,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(32.dp),

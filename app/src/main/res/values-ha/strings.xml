@@ -160,6 +160,8 @@
     <string name="player_channel_description">Maɓallan sarrafa bidiyo da ke kunna a bango</string>
     <string name="player_video_title">Bidiyo</string>
     <string name="player_error">Ba za a iya kunna wannan bidiyon ba.</string>
+    <string name="player_error_codec_unsupported">Wannan na\'urar ba ta goyi bayan wannan tsarin bidiyon ba.</string>
+    <string name="player_audio_only_notice">Ba a goyi bayan bidiyon a wannan na\'urar ba. Sauti kawai ke tashi.</string>
     <string name="viewer_pause">Tsaya</string>
     <string name="viewer_mute">Kashe sauti</string>
     <string name="viewer_unmute">Kunna sauti</string>

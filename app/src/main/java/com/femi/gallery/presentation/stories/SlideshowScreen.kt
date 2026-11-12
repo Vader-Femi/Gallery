@@ -83,8 +83,8 @@ import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.femi.gallery.playback.PlayerFactory
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
@@ -149,7 +149,7 @@ fun SlideshowScreen(
 
     // Background music player
     val musicPlayer = remember(context) {
-        ExoPlayer.Builder(context).build().apply {
+        PlayerFactory.create(context).apply {
             setAudioAttributes(
                 AudioAttributes.Builder()
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
@@ -646,7 +646,7 @@ private fun SlideshowVideoPlayer(
 ) {
     val context = LocalContext.current
     val player = remember(uri) {
-        ExoPlayer.Builder(context).build().apply {
+        PlayerFactory.create(context).apply {
             setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ false)
             setMediaItem(PlayerMediaItem.fromUri(uri))
             prepare()

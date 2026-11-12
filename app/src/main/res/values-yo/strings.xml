@@ -160,6 +160,8 @@
     <string name="player_channel_description">Àwọn ìdarí fídíò tó ń ṣeré ní ẹ̀yìn</string>
     <string name="player_video_title">Fídíò</string>
     <string name="player_error">Kò ṣeé ṣe láti ṣe fídíò yìí.</string>
+    <string name="player_error_codec_unsupported">Ẹrọ yìí kò ní ìmúlò láti ṣe irú fídíò yìí.</string>
+    <string name="player_audio_only_notice">Ẹrọ yìí kò gbà fídíò yìí láàyè. Orin/ohùn nìkan ló ń dún.</string>
     <string name="viewer_pause">Dúró</string>
     <string name="viewer_mute">Pa ohùn rẹ́</string>
     <string name="viewer_unmute">Ṣí ohùn</string>
