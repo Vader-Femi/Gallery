@@ -1,6 +1,9 @@
 package com.femi.gallery.presentation.common
 
+import androidx.compose.material3.adaptive.allVerticalHingeBounds
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
@@ -52,4 +55,26 @@ fun rememberWindowWidthClass(): WindowWidthClass {
     val density = LocalDensity.current
     val widthDp = with(density) { windowInfo.containerSize.width.toDp() }
     return WindowWidthBreakpoints.fromWidth(widthDp)
+}
+
+/**
+ * Information about foldable postures and vertical hinges.
+ */
+data class FoldablePostureInfo(
+    val verticalHinge: Rect?,
+    val isTabletop: Boolean,
+)
+
+/**
+ * Reactively resolves foldable posture and hinge information.
+ */
+@Composable
+fun rememberFoldablePostureInfo(): FoldablePostureInfo {
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val verticalHinge = adaptiveInfo.windowPosture.allVerticalHingeBounds.firstOrNull()
+
+    return FoldablePostureInfo(
+        verticalHinge = verticalHinge,
+        isTabletop = adaptiveInfo.windowPosture.isTabletop,
+    )
 }

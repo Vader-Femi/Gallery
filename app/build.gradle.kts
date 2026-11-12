@@ -109,6 +109,8 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)
     implementation(libs.telephoto.zoomable.image.coil3)
+    implementation(libs.androidx.window)
+    implementation(libs.androidx.compose.material3.adaptive)
     ksp(libs.hilt.compiler)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
