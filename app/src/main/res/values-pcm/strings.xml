@@ -491,9 +491,8 @@
     <string name="people_merge_with_title">Join with another person</string>
     <string name="people_merge_with_message">Join \"%1$s\" enter \"%2$s\"? All photos go join together into one group.</string>
 
-    <string name="settings_play_audio_in_background">Play video sound for background</string>
-    <string name="settings_play_audio_in_background_summary">Keep video sound dey play when you change app or off screen</string>
     <string name="player_pip">Picture-in-picture</string>
+    <string name="player_switch_to_audio">Play sound for background</string>
     <string name="player_lock">Lock controls</string>
     <string name="player_unlock">Unlock</string>
     <string name="player_locked_hint">Controls don lock. Tap Unlock to use player.</string>

@@ -63,6 +63,12 @@ fun GalleryApp(
     var openedGallery by rememberSaveable { mutableStateOf(false) }
     val request = if (openedGallery) LaunchRequest.Normal else launch
 
+    LaunchedEffect(launch) {
+        if (launch is LaunchRequest.ViewExternal) {
+            openedGallery = false
+        }
+    }
+
     LifecycleResumeEffect(Unit) {
         permissionViewModel.refresh()
         onPauseOrDispose { }
@@ -73,7 +79,9 @@ fun GalleryApp(
         request is LaunchRequest.ViewExternal -> ExternalViewerScreen(
             uri = request.uri,
             isVideo = request.isVideo,
-            onClose = onFinish,
+            onClose = {
+                openedGallery = true
+            },
             onOpenGallery = { openedGallery = true },
         )
 

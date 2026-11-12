@@ -364,7 +364,7 @@ private fun ViewerContent(
                 Modifier
                     .fillMaxSize()
                     .viewerDrag(
-                        enabled = { !drag.zoomed },
+                        enabled = { !drag.zoomed && fullPlayerUri == null },
                         onDrag = drag::dragBy,
                         onEnd = { velocityY ->
                             scope.launch {
@@ -649,11 +649,9 @@ private fun ViewerContent(
             }
 
             fullPlayerUri?.let { uri ->
-                val playAudioInBackground by viewModel.playAudioInBackground.collectAsStateWithLifecycle()
                 FullVideoPlayer(
                     uri = uri,
                     startPositionMs = fullPlayerStartMs,
-                    playAudioInBackground = playAudioInBackground,
                     onClose = {
                         fullPlayerUri = null
                         chromeVisible = true // the player gives the system bars back, so the viewer shows its own bars too

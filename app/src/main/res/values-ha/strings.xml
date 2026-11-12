@@ -492,9 +492,8 @@
     <string name="people_merge_with_title">Hada da wani mutum</string>
     <string name="people_merge_with_message">Hada \"%1$s\" cikin \"%2$s\"? Za a hada dukkan hotuna wuri guda.</string>
 
-    <string name="settings_play_audio_in_background">Kunna sautin bidiyo a bayan fage</string>
-    <string name="settings_play_audio_in_background_summary">Ci gaba da kunna sautin bidiyo yayin sauya manhajoji ko kashe allon</string>
     <string name="player_pip">Hoto-cikin-hoto (PiP)</string>
+    <string name="player_switch_to_audio">Kunna sauti a bayan fage</string>
     <string name="player_lock">Kulle sarrafawa</string>
     <string name="player_unlock">Bude</string>
     <string name="player_locked_hint">An kulle sarrafawa. Danna Bude don amfani da na\'ura.</string>

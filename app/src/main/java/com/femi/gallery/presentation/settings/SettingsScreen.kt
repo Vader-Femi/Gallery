@@ -140,7 +140,6 @@ fun SettingsScreen(
 
     val autoplayEnabled by viewModel.autoplayVideos.collectAsStateWithLifecycle()
     val muteEnabled by viewModel.muteVideos.collectAsStateWithLifecycle()
-    val playAudioInBackground by viewModel.playAudioInBackground.collectAsStateWithLifecycle()
     val backgroundScan by viewModel.backgroundScan.collectAsStateWithLifecycle()
     val faceRecognition by viewModel.faceRecognition.collectAsStateWithLifecycle()
     val privateSharing by viewModel.privateSharing.collectAsStateWithLifecycle()
@@ -382,15 +381,6 @@ fun SettingsScreen(
                         summary = stringResource(R.string.settings_mute_videos_summary),
                         checked = muteEnabled,
                         onCheckedChange = { viewModel.setMuteVideos(it) },
-                    )
-
-                    // Play Video Audio in Background Setting Card
-                    SettingSwitchCard(
-                        icon = Icons.AutoMirrored.Outlined.VolumeUp,
-                        title = stringResource(R.string.settings_play_audio_in_background),
-                        summary = stringResource(R.string.settings_play_audio_in_background_summary),
-                        checked = playAudioInBackground,
-                        onCheckedChange = { viewModel.setPlayAudioInBackground(it) },
                     )
                 }
             }

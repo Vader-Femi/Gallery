@@ -491,9 +491,8 @@
     <string name="people_merge_with_title">Jikọọ na onye ọzọ</string>
     <string name="people_merge_with_message">Jikọọ \"%1$s\" n\'ime \"%2$s\"? A ga-ejikọta foto niile n\'otu ebe.</string>
 
-    <string name="settings_play_audio_in_background">Kpọọ ụda vidiyo na azụ</string>
-    <string name="settings_play_audio_in_background_summary">Nọgide na-akpọ ụda vidiyo mgbe ị gbanwere ngwa ma ọ bụ mechie ihuenyo</string>
     <string name="player_pip">Foto nʼime foto (PiP)</string>
+    <string name="player_switch_to_audio">Kpọọ ụda na azụ</string>
     <string name="player_lock">Kpochie njikwa</string>
     <string name="player_unlock">Mepee</string>
     <string name="player_locked_hint">Akpọchiri njikwa. Kpatụ Mepee iji jiri ihe ọkpụkpọ.</string>

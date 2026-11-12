@@ -8,6 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.femi.gallery.core.perf.FrameMonitor
 import com.femi.gallery.presentation.GalleryApp
 import com.femi.gallery.presentation.launch.LaunchRequest
@@ -28,6 +31,8 @@ class MainActivity : AppCompatActivity() {
     /** Intercepts volume up key when viewing a muted video to unmute automatically. */
     var viewerVolumeHandler: (() -> Unit)? = null
 
+    private var currentLaunchRequest by mutableStateOf<LaunchRequest>(LaunchRequest.Normal)
+
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         if (event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP && event.action == android.view.KeyEvent.ACTION_DOWN) {
             viewerVolumeHandler?.invoke()
@@ -44,16 +49,22 @@ class MainActivity : AppCompatActivity() {
             }
         }
         // Opened from the launcher, or by another app to view or pick photos.
-        val launch = LaunchRequest.from(intent, this)
+        currentLaunchRequest = LaunchRequest.from(intent, this)
         setContent {
             GalleryTheme {
                 GalleryApp(
-                    launch = launch,
+                    launch = currentLaunchRequest,
                     onPick = ::finishWithPicked,
                     onFinish = ::finish,
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        currentLaunchRequest = LaunchRequest.from(intent, this)
     }
 
     override fun onStart() {

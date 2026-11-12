@@ -1,8 +1,6 @@
 package com.femi.gallery.presentation.viewer
 
 import android.app.Activity
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
@@ -13,7 +11,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.drawable.Icon as AndroidIcon
 import android.media.AudioManager
 import android.util.Rational
@@ -49,6 +46,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PictureInPictureAlt
@@ -88,15 +86,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
 import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerNotificationManager
 import androidx.media3.ui.PlayerView
 import com.femi.gallery.MainActivity
 import com.femi.gallery.R
+import com.femi.gallery.playback.VideoPlaybackService
 import com.femi.gallery.presentation.common.ImmersiveMode
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -105,8 +105,6 @@ import kotlin.time.Duration.Companion.seconds
 import androidx.media3.common.MediaItem as PlayerMediaItem
 
 private const val PIP_ACTION_PLAY_PAUSE = "com.femi.gallery.action.PIP_PLAY_PAUSE"
-private const val PLAYBACK_CHANNEL_ID = "gallery_video_playback"
-private const val PLAYBACK_NOTIFICATION_ID = 2001
 private const val ControlsTimeoutMs = 3_000
 
 private data class SwipeSeekInfo(
@@ -140,7 +138,6 @@ fun FullVideoPlayer(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     startPositionMs: Long = 0L,
-    playAudioInBackground: Boolean = false,
     /** Something to show at the right end of the top bar, such as a button. */
     trailing: @Composable () -> Unit = {},
 ) {
@@ -148,7 +145,6 @@ fun FullVideoPlayer(
     val view = LocalView.current
     val systemTouchSlop = remember(context) { ViewConfiguration.get(context).scaledTouchSlop.toFloat() }
     val activity = remember(context) { context.findActivity() }
-    val appName = stringResource(R.string.app_name)
     val windowInfo = LocalWindowInfo.current
     val screenWidthPx = remember(windowInfo) { windowInfo.containerSize.width.toFloat().coerceAtLeast(1f) }
     val screenHeightPx = remember(windowInfo) { windowInfo.containerSize.height.toFloat().coerceAtLeast(1f) }
@@ -156,7 +152,14 @@ fun FullVideoPlayer(
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
-    var resumePositionMs by rememberSaveable(uri) { mutableLongStateOf(startPositionMs) }
+    val initialPositionMs = remember(uri) {
+        val activeUri = VideoPlaybackService.getActivePlaybackUri()
+        val activePos = if (activeUri == uri) VideoPlaybackService.getActivePlaybackPosition() else null
+        VideoPlaybackService.stopForegroundPlayback(context)
+        activePos ?: startPositionMs
+    }
+
+    var resumePositionMs by rememberSaveable(uri) { mutableLongStateOf(initialPositionMs) }
     var resumePlaying by rememberSaveable(uri) { mutableStateOf(value = true) }
     var controlsVisible by rememberSaveable { mutableStateOf(value = true) }
     var failed by remember(uri) { mutableStateOf(value = false) }
@@ -166,6 +169,7 @@ fun FullVideoPlayer(
 
     var isLandscape by remember { mutableStateOf(value = false) }
     var isInPip by remember { mutableStateOf(value = false) }
+    var isSwitchedToAudio by rememberSaveable(uri) { mutableStateOf(value = false) }
 
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
     var swipeSeekInfo by remember { mutableStateOf<SwipeSeekInfo?>(null) }
@@ -177,14 +181,79 @@ fun FullVideoPlayer(
     var gestureStartSeekMs by remember { mutableLongStateOf(0L) }
     var gestureStartVolume by remember { mutableIntStateOf(0) }
 
+    val audioAttributes = remember {
+        AudioAttributes.Builder()
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+            .setUsage(C.USAGE_MEDIA)
+            .build()
+    }
+
+    val defaultVideoTitle = stringResource(R.string.player_video_title)
+    val videoTitle = remember(context, uri, defaultVideoTitle) {
+        val name = runCatching {
+            context.contentResolver.query(uri.toUri(), arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                if (it.moveToFirst()) it.getString(0) else null
+            }
+        }.getOrNull()
+        name?.takeIf { it.isNotBlank() } ?: defaultVideoTitle
+    }
+
+    val mediaItem = remember(uri, videoTitle) {
+        val metadata = MediaMetadata.Builder()
+            .setTitle(videoTitle)
+            .setDisplayTitle(videoTitle)
+            .build()
+        PlayerMediaItem.Builder()
+            .setMediaId(uri)
+            .setUri(uri.toUri())
+            .setMediaMetadata(metadata)
+            .build()
+    }
+
+    val player = remember(uri) {
+        ExoPlayer.Builder(context).build().apply {
+            setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
+            setMediaItem(mediaItem)
+            seekTo(resumePositionMs)
+            playWhenReady = resumePlaying
+            prepare()
+        }
+    }
+
+    val mediaSession = remember(context, player, uri) {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            setDataAndType(uri.toUri(), "video/*")
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        MediaSession.Builder(context, player)
+            .setId("gallery_video_${System.identityHashCode(player)}_${System.currentTimeMillis()}")
+            .setSessionActivity(pendingIntent)
+            .build()
+    }
+
     val supportsPip = remember {
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
     if (supportsPip && (activity is androidx.activity.ComponentActivity)) {
-        DisposableEffect(activity) {
+        DisposableEffect(activity, mediaSession, player) {
             val listener = Consumer<PictureInPictureModeChangedInfo> { info ->
                 isInPip = info.isInPictureInPictureMode
+                if (info.isInPictureInPictureMode) {
+                    VideoPlaybackService.startForegroundPlayback(context, mediaSession)
+                } else {
+                    if (activity.isFinishing) {
+                        player.pause()
+                        VideoPlaybackService.stopForegroundPlayback(context)
+                    }
+                }
             }
             activity.addOnPictureInPictureModeChangedListener(listener)
             onDispose {
@@ -193,62 +262,70 @@ fun FullVideoPlayer(
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(activity, supportsPip) {
         onDispose {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            if (supportsPip && (activity != null)) {
+                try {
+                    activity.setPictureInPictureParams(
+                        PictureInPictureParams.Builder()
+                            .setAutoEnterEnabled(false)
+                            .build(),
+                    )
+                } catch (_: Exception) {}
+            }
+            if (!isSwitchedToAudio) {
+                VideoPlaybackService.stopForegroundPlayback(context)
+            }
         }
     }
 
-    val audioAttributes = remember {
-        AudioAttributes.Builder()
-            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-            .setUsage(C.USAGE_MEDIA)
-            .build()
-    }
-
-    val player = remember(uri) {
-        ExoPlayer.Builder(context).build().apply {
-            setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
-            setMediaItem(PlayerMediaItem.fromUri(uri))
-            seekTo(resumePositionMs)
-            playWhenReady = resumePlaying
-            prepare()
+    DisposableEffect(mediaSession) {
+        VideoPlaybackService.setSession(mediaSession)
+        onDispose {
+            if (!isSwitchedToAudio) {
+                VideoPlaybackService.setSession(null)
+                mediaSession.release()
+            }
         }
     }
 
     // Interactive PiP action button (Play / Pause)
-    val updatePipParams: (Boolean) -> Unit = remember(context, player, activity, supportsPip, playAudioInBackground) {
+    val pauseTitle = stringResource(R.string.player_pause)
+    val playTitle = stringResource(R.string.player_play)
+    val updatePipParams: (Boolean) -> Unit = remember(context, player, activity, supportsPip, pauseTitle, playTitle) {
         { isPlaying ->
             if (supportsPip && (activity != null)) {
-                val intent = Intent(PIP_ACTION_PLAY_PAUSE).setPackage(context.packageName)
-                val pendingIntent = PendingIntent.getBroadcast(
-                    context,
-                    101,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
-                val iconRes = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-                val title = context.getString(if (isPlaying) R.string.player_pause else R.string.player_play)
-                val action = RemoteAction(
-                    AndroidIcon.createWithResource(context, iconRes),
-                    title,
-                    title,
-                    pendingIntent,
-                )
-                val videoSize = player.videoSize
-                val params = PictureInPictureParams.Builder().apply {
-                    if ((videoSize.width > 0) && (videoSize.height > 0)) {
-                        val ratio = videoSize.width.toFloat() / videoSize.height.toFloat()
-                        if (ratio in 0.42f..2.38f) {
-                            setAspectRatio(Rational(videoSize.width, videoSize.height))
+                try {
+                    val intent = Intent(PIP_ACTION_PLAY_PAUSE).setPackage(context.packageName)
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        context,
+                        101,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    )
+                    val iconRes = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+                    val title = if (isPlaying) pauseTitle else playTitle
+                    val action = RemoteAction(
+                        AndroidIcon.createWithResource(context, iconRes),
+                        title,
+                        title,
+                        pendingIntent,
+                    )
+                    val videoSize = player.videoSize
+                    val params = PictureInPictureParams.Builder().apply {
+                        if ((videoSize.width > 0) && (videoSize.height > 0)) {
+                            val ratio = videoSize.width.toFloat() / videoSize.height.toFloat()
+                            if (ratio in 0.42f..2.38f) {
+                                setAspectRatio(Rational(videoSize.width, videoSize.height))
+                            }
                         }
-                    }
-                    setActions(listOf(action))
-                    // Home while a video plays keeps it playing in a small window; a person who chose background
-                    // audio gets the audio only, as that setting says.
-                    setAutoEnterEnabled(isPlaying && !playAudioInBackground)
-                }.build()
-                activity.setPictureInPictureParams(params)
+                        setActions(listOf(action))
+                        // Swiping home while video is playing smoothly enters PiP
+                        setAutoEnterEnabled(isPlaying)
+                    }.build()
+                    activity.setPictureInPictureParams(params)
+                } catch (_: Exception) {}
             }
         }
     }
@@ -270,88 +347,6 @@ fun FullVideoPlayer(
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         onDispose {
             context.unregisterReceiver(receiver)
-        }
-    }
-
-    // Media notification manager for background playback controls
-    val notificationManager = remember(context, player, uri, appName) {
-        val channel = NotificationChannel(
-            PLAYBACK_CHANNEL_ID,
-            appName,
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = context.getString(R.string.player_channel_description)
-        }
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        nm?.createNotificationChannel(channel)
-
-        PlayerNotificationManager.Builder(
-            context,
-            PLAYBACK_NOTIFICATION_ID,
-            PLAYBACK_CHANNEL_ID,
-        ).apply {
-            setChannelNameResourceId(R.string.app_name)
-            setSmallIconResourceId(R.mipmap.ic_launcher)
-            setMediaDescriptionAdapter(
-                object : PlayerNotificationManager.MediaDescriptionAdapter {
-                    override fun getCurrentContentTitle(p: Player): CharSequence {
-                        // The name of the video as the library knows it (the last part of its address is only a number).
-                        val name = runCatching {
-                            context.contentResolver.query(uri.toUri(), arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
-                                if (it.moveToFirst()) it.getString(0) else null
-                            }
-                        }.getOrNull()
-                        return name?.takeIf { it.isNotBlank() } ?: context.getString(R.string.player_video_title)
-                    }
-
-                    override fun createCurrentContentIntent(p: Player): PendingIntent? {
-                        val intent = Intent(context, MainActivity::class.java).apply {
-                            action = Intent.ACTION_VIEW
-                            data = uri.toUri()
-                            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        }
-                        return PendingIntent.getActivity(
-                            context,
-                            0,
-                            intent,
-                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                        )
-                    }
-
-                    override fun getCurrentContentText(p: Player): CharSequence? = null
-
-                    override fun getCurrentLargeIcon(
-                        p: Player,
-                        callback: PlayerNotificationManager.BitmapCallback,
-                    ): Bitmap? = null
-                },
-            )
-            setNotificationListener(
-                object : PlayerNotificationManager.NotificationListener {
-                    override fun onNotificationCancelled(notificationId: Int, dismissedByUser: Boolean) {
-                        if (dismissedByUser) {
-                            player.pause()
-                        }
-                    }
-                },
-            )
-        }.build().apply {
-            setUseFastForwardAction(true)
-            setUseRewindAction(true)
-            setUseNextAction(false)
-            setUsePreviousAction(false)
-            setUseStopAction(true)
-        }
-    }
-
-    DisposableEffect(player, playAudioInBackground) {
-        if (playAudioInBackground) {
-            notificationManager.setPlayer(player)
-        } else {
-            notificationManager.setPlayer(null)
-        }
-        onDispose {
-            notificationManager.setPlayer(null)
         }
     }
 
@@ -378,35 +373,35 @@ fun FullVideoPlayer(
         player.addListener(listener)
         onDispose {
             player.removeListener(listener)
-            player.release()
+            if (!isSwitchedToAudio) {
+                player.release()
+            }
         }
     }
 
-    // Pause only in ON_STOP when not in PiP and not playing background audio.
+    // Pause in ON_STOP when not in PiP and not switched to background audio.
     // Transitioning into PiP puts the activity into ON_PAUSE, so keeping playback during ON_PAUSE
     // prevents PiP from stuttering or stopping.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         val inPip = isInPip || activity?.isInPictureInPictureMode == true
-        if (!playAudioInBackground && !inPip) {
+        if (!isSwitchedToAudio && !inPip) {
             resumePositionMs = player.currentPosition.coerceAtLeast(0L)
             resumePlaying = player.playWhenReady
             player.pause()
-        } else if (playAudioInBackground && !inPip) {
-            // Nothing is shown any more: stop decoding the pictures and keep only the sound (saves battery).
-            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
-                .build()
+            VideoPlaybackService.stopForegroundPlayback(context)
         }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
-        if (player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO)) {
-            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
-                .build()
-        }
-        val inPip = isInPip || activity?.isInPictureInPictureMode == true
-        if (resumePlaying && !player.isPlaying && !inPip) {
-            player.play()
+        if (!isSwitchedToAudio) {
+            val inPip = isInPip || activity?.isInPictureInPictureMode == true
+            if (player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO)) {
+                player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
+                    .build()
+            }
+            if (resumePlaying && !player.isPlaying && !inPip) {
+                player.play()
+            }
         }
     }
 
@@ -439,6 +434,7 @@ fun FullVideoPlayer(
                     }
                 }
             }.build()
+            VideoPlaybackService.startForegroundPlayback(context, mediaSession)
             activity.enterPictureInPictureMode(params)
         }
     }
@@ -451,6 +447,19 @@ fun FullVideoPlayer(
         }
         isLandscape = !isLandscape
         activity?.requestedOrientation = newOrientation
+    }
+
+    val switchToBackgroundAudio = {
+        isSwitchedToAudio = true
+        // Turn off video decoding to save power and battery while audio plays in background
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+            .build()
+        if (!player.isPlaying) {
+            player.play()
+        }
+        VideoPlaybackService.startForegroundPlayback(context, mediaSession, player)
+        onClose()
     }
 
     val gestureDetector = remember(player, isLocked, audioManager) {
@@ -482,7 +491,7 @@ fun FullVideoPlayer(
                     if (!isInPip) {
                         val pv = playerViewRef
                         if (pv != null) {
-                            if (pv.isControllerFullyVisible || controlsVisible) {
+                            if (pv.isControllerFullyVisible) {
                                 pv.hideController()
                             } else {
                                 pv.showController()
@@ -555,6 +564,7 @@ fun FullVideoPlayer(
                     this.player = player
                     playerViewRef = this
                     useController = !isLocked && !isInPip
+                    controllerAutoShow = false
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     controllerShowTimeoutMs = ControlsTimeoutMs
                     setShutterBackgroundColor(android.graphics.Color.BLACK)
@@ -672,7 +682,7 @@ fun FullVideoPlayer(
             }
         }
 
-        // Top bar with controls: Back, Title/Trailing, Screen Rotate, PiP, and Lock
+        // Top bar with controls: Back, Title/Trailing, Audio Background, Screen Rotate, PiP, and Lock
         AnimatedVisibility(
             visible = controlsVisible && !isLocked && !isInPip,
             enter = fadeIn(),
@@ -697,6 +707,15 @@ fun FullVideoPlayer(
 
                 Box(modifier = Modifier.weight(1f))
                 trailing()
+
+                // Switch to audio in background button
+                IconButton(onClick = switchToBackgroundAudio) {
+                    Icon(
+                        imageVector = Icons.Outlined.Headphones,
+                        contentDescription = stringResource(R.string.player_switch_to_audio),
+                        tint = Color.White,
+                    )
+                }
 
                 // Rotate orientation button
                 IconButton(onClick = toggleOrientation) {
