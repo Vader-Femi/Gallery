@@ -494,7 +494,7 @@ fun SettingsScreen(
                                 .fillMaxWidth()
                                 .weight(1f, fill = false),
                         ) {
-                            items(albums, key = { it.bucketId }) { album ->
+                            items(albums, key = { it.bucketId }, contentType = { "hidden_album_row" }) { album ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()

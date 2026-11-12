@@ -83,9 +83,8 @@ fun AlbumsScreen(
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    val windowInfo = LocalWindowInfo.current
-    val density = LocalDensity.current
-    val isTwoPane = with(density) { windowInfo.containerSize.width.toDp() } >= 840.dp
+    val windowWidthClass = com.femi.gallery.presentation.common.rememberWindowWidthClass()
+    val isTwoPane = windowWidthClass.isExpanded
 
     var selectedBucketId by rememberSaveable { mutableStateOf<Long?>(null) }
     val activeBucketId = selectedBucketId ?: albums.firstOrNull()?.bucketId
@@ -111,11 +110,10 @@ fun AlbumsScreen(
     }
 
     val handleAlbumClick by rememberUpdatedState(onAlbumClick)
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val defaultColumns = when {
         isTwoPane -> 2
-        configuration.screenWidthDp >= 900 -> 4
-        configuration.screenWidthDp >= 600 -> 3
+        windowWidthClass.isExpanded -> 4
+        windowWidthClass.isMedium -> 3
         else -> 2
     }
     var columns by rememberSaveable(defaultColumns) { mutableIntStateOf(defaultColumns) }
@@ -156,7 +154,7 @@ fun AlbumsScreen(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            items(albums, key = { it.bucketId }) { album ->
+                            items(albums, key = { it.bucketId }, contentType = { "album" }) { album ->
                                 val handleClick: () -> Unit = {
                                     if (album.bucketId == SpecialAlbums.PEOPLE) {
                                         handleAlbumClick(album.bucketId)
@@ -246,7 +244,7 @@ fun AlbumsScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    items(albums, key = { it.bucketId }) { album ->
+                    items(albums, key = { it.bucketId }, contentType = { "album" }) { album ->
                         val handleClick: () -> Unit = remember(album.bucketId) { { handleAlbumClick(album.bucketId) } }
                         val handleRename: () -> Unit = remember(album.bucketId) { { renaming = album } }
                         AlbumCard(

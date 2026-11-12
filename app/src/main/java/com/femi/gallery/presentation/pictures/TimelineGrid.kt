@@ -504,7 +504,7 @@ private fun LazyPagingItems<MediaItem>.getOrNull(index: Int): MediaItem? =
  * while preserving the user's selected [TimelineZoom] granularity and relative thumbnail sizing.
  */
 internal fun responsiveTimelineColumns(zoom: TimelineZoom, screenWidthDp: Int): Int = when {
-    screenWidthDp >= 900 -> when (zoom) {
+    screenWidthDp >= com.femi.gallery.presentation.common.WindowWidthBreakpoints.EXPANDED_DP -> when (zoom) {
         TimelineZoom.Day2 -> 4
         TimelineZoom.Day3 -> 5
         TimelineZoom.Day4 -> 6
@@ -512,7 +512,7 @@ internal fun responsiveTimelineColumns(zoom: TimelineZoom, screenWidthDp: Int): 
         TimelineZoom.Month6 -> 10
         TimelineZoom.Year7 -> 14
     }
-    screenWidthDp >= 600 -> when (zoom) {
+    screenWidthDp >= com.femi.gallery.presentation.common.WindowWidthBreakpoints.MEDIUM_DP -> when (zoom) {
         TimelineZoom.Day2 -> 3
         TimelineZoom.Day3 -> 4
         TimelineZoom.Day4 -> 5

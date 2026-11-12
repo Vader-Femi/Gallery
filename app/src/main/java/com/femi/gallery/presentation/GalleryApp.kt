@@ -156,9 +156,8 @@ private fun GalleryScaffold() {
                 snapshotFlow { transitionScope.isTransitionActive }
                     .collect { Log.d("SharedPhoto", "photo transition running = $it") }
             }
-            val windowInfo = LocalWindowInfo.current
-            val density = LocalDensity.current
-            val isExpanded = with(density) { windowInfo.containerSize.width.toDp() } >= 600.dp
+            val windowWidthClass = com.femi.gallery.presentation.common.rememberWindowWidthClass()
+            val isExpanded = windowWidthClass.isMediumOrExpanded
 
             val isFullScreen = currentDestination?.hasRoute<GalleryRoutes.Slideshow>() == true ||
                 currentDestination?.hasRoute<GalleryRoutes.Editor>() == true ||

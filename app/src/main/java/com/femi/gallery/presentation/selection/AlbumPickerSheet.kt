@@ -76,7 +76,7 @@ fun AlbumPickerSheet(
                     subtitle = null,
                 )
             }
-            items(albums, key = { it.bucketId }) { album ->
+            items(albums, key = { it.bucketId }, contentType = { "album_picker_row" }) { album ->
                 val handleRowClick: () -> Unit = remember(album.bucketId) { { handleChoose(album.relativePath) } }
                 PickerRow(
                     onClick = handleRowClick,

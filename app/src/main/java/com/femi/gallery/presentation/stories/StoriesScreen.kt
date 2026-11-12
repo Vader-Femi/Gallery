@@ -77,10 +77,10 @@ fun StoriesScreen(
         onPauseOrDispose { }
     }
 
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val windowWidthClass = com.femi.gallery.presentation.common.rememberWindowWidthClass()
     val defaultColumns = when {
-        configuration.screenWidthDp >= 900 -> 4
-        configuration.screenWidthDp >= 600 -> 3
+        windowWidthClass.isExpanded -> 4
+        windowWidthClass.isMedium -> 3
         else -> 2
     }
     var columns by rememberSaveable(defaultColumns) { mutableIntStateOf(defaultColumns) }
@@ -165,7 +165,7 @@ fun StoriesScreen(
                             )
                         }
                     }
-                    items(currentStories, key = { "${it.fromDay}-${it.toDay}" }) { story ->
+                    items(currentStories, key = { "${it.fromDay}-${it.toDay}" }, contentType = { "story" }) { story ->
                         StoryCard(story = story, onClick = { onStoryClick(story.fromDay, story.toDay) })
                     }
                 }
