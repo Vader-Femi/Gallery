@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -218,8 +219,9 @@ private fun StoryCard(story: Story, onClick: () -> Unit) {
                 .align(Alignment.BottomStart)
                 .padding(12.dp),
         ) {
-            val title = story.displayTitle ?: StoryTitles.range(story.fromDay, story.toDay)
-            val subtitle = story.subtitle
+            val context = LocalContext.current
+            val title = StoryTitles.formatTitle(context, story.displayTitleSpec)
+            val subtitle = story.subtitle?.let { StoryTitles.formatSubtitle(context, it) }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,

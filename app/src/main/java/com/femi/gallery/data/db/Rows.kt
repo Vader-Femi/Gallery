@@ -186,8 +186,8 @@ data class StoryRow(
         coverUri = coverUri,
         title = title,
         videoCount = videoCount,
-        smartTitle = smartTitle,
-        subtitle = subtitle,
+        smartTitle = com.femi.gallery.data.story.StoryTitleCodec.decodeTitle(smartTitle),
+        subtitle = com.femi.gallery.data.story.StoryTitleCodec.decodeSubtitle(subtitle),
         theme = runCatching { com.femi.gallery.domain.model.StoryTheme.valueOf(theme) }
             .getOrDefault(com.femi.gallery.domain.model.StoryTheme.Outing),
     )
@@ -201,8 +201,8 @@ data class StoryRow(
             coverUri = story.coverUri,
             title = story.title,
             videoCount = story.videoCount,
-            smartTitle = story.smartTitle,
-            subtitle = story.subtitle,
+            smartTitle = com.femi.gallery.data.story.StoryTitleCodec.encodeTitle(story.smartTitle),
+            subtitle = com.femi.gallery.data.story.StoryTitleCodec.encodeSubtitle(story.subtitle),
             theme = story.theme.name,
         )
     }

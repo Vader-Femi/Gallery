@@ -1,8 +1,6 @@
 package com.femi.gallery.domain.model
 
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 object SmartStoryDetector {
 
@@ -17,51 +15,42 @@ object SmartStoryDetector {
         toDay: Long,
         signals: ContextSignals,
         today: LocalDate = LocalDate.now(),
-        locale: Locale = Locale.getDefault(),
-    ): Pair<String, StoryTheme> {
+    ): Pair<StoryTitleSpec, StoryTheme> {
         val from = LocalDate.ofEpochDay(minOf(fromDay, toDay))
         val isPastAnniversary = fromDay == toDay && StoryDetector.isAnniversary(from, today)
 
         if (isPastAnniversary) {
-            val title = when {
-                signals.placeName != null -> "${signals.placeName}, ${from.year}"
-                signals.prominentPeople.isNotEmpty() -> "With ${signals.prominentPeople.first()}, ${from.year}"
-                signals.topScene != null -> "${sceneDisplayName(signals.topScene)}, ${from.year}"
-                else -> "On this day in ${from.year}"
+            val titleSpec = when {
+                signals.placeName != null -> StoryTitleSpec.Anniversary(year = from.year, place = signals.placeName)
+                signals.prominentPeople.isNotEmpty() -> StoryTitleSpec.Anniversary(year = from.year, person = signals.prominentPeople.first())
+                signals.topScene != null -> StoryTitleSpec.Anniversary(year = from.year, scene = StoryScene.fromLabel(signals.topScene))
+                else -> StoryTitleSpec.Anniversary(year = from.year)
             }
-            return title to StoryTheme.Anniversary
+            return titleSpec to StoryTheme.Anniversary
         }
 
         if (signals.placeName != null) {
-            val place = signals.placeName
-            val title = if (fromDay == toDay) "Day in $place" else "Trip to $place"
-            return title to StoryTheme.Trip
+            val titleSpec = StoryTitleSpec.Trip(place = signals.placeName, isSingleDay = fromDay == toDay)
+            return titleSpec to StoryTheme.Trip
         }
 
         if (signals.prominentPeople.isNotEmpty()) {
-            val people = signals.prominentPeople
-            val title = if (people.size == 1) {
-                "With ${people[0]}"
-            } else {
-                "With ${people[0]} & ${people[1]}"
-            }
-            return title to StoryTheme.People
+            val titleSpec = StoryTitleSpec.WithPerson(names = signals.prominentPeople.take(2))
+            return titleSpec to StoryTheme.People
         }
 
         if (signals.topScene != null) {
-            val title = sceneDisplayName(signals.topScene)
-            return title to StoryTheme.Scene
+            val titleSpec = StoryTitleSpec.Scene(scene = StoryScene.fromLabel(signals.topScene))
+            return titleSpec to StoryTheme.Scene
         }
 
         // Fallback Outing
-        val title = if (fromDay == toDay) {
-            val weekday = from.format(DateTimeFormatter.ofPattern("EEEE", locale))
-            "$weekday Outing"
+        val titleSpec = if (fromDay == toDay) {
+            StoryTitleSpec.WeekdayOuting(dayOfWeek = from.dayOfWeek.value)
         } else {
-            val month = from.format(DateTimeFormatter.ofPattern("MMMM", locale))
-            "$month Memories"
+            StoryTitleSpec.MonthMemories(month = from.monthValue, year = from.year)
         }
-        return title to StoryTheme.Outing
+        return titleSpec to StoryTheme.Outing
     }
 
     fun buildSubtitle(
@@ -70,48 +59,20 @@ object SmartStoryDetector {
         signals: ContextSignals,
         theme: StoryTheme,
         itemCount: Int,
-        locale: Locale = Locale.getDefault(),
-    ): String {
-        val from = LocalDate.ofEpochDay(minOf(fromDay, toDay))
-        val to = LocalDate.ofEpochDay(maxOf(fromDay, toDay))
-        val monthAndDay = DateTimeFormatter.ofPattern("MMM d", locale)
-        val dayOnly = DateTimeFormatter.ofPattern("d", locale)
-        val withYear = DateTimeFormatter.ofPattern("MMM d, yyyy", locale)
+    ): StorySubtitleSpec {
+        val withPerson = if (theme == StoryTheme.Trip && signals.prominentPeople.isNotEmpty()) {
+            signals.prominentPeople.first()
+        } else null
 
-        val dateStr = when {
-            from == to -> from.format(withYear)
-            from.year != to.year -> "${from.format(withYear)} – ${to.format(withYear)}"
-            from.month == to.month -> "${from.format(monthAndDay)}–${to.format(dayOnly)}, ${from.year}"
-            else -> "${from.format(monthAndDay)} – ${to.format(monthAndDay)}, ${from.year}"
-        }
+        val placeName = if (theme == StoryTheme.People && signals.placeName != null) {
+            signals.placeName
+        } else null
 
-        return when (theme) {
-            StoryTheme.Trip -> {
-                if (signals.prominentPeople.isNotEmpty()) {
-                    "$dateStr • With ${signals.prominentPeople.first()}"
-                } else {
-                    dateStr
-                }
-            }
-            StoryTheme.People -> {
-                if (signals.placeName != null) {
-                    "$dateStr • ${signals.placeName}"
-                } else {
-                    dateStr
-                }
-            }
-            else -> dateStr
-        }
-    }
-
-    private fun sceneDisplayName(scene: String): String = when (scene.lowercase()) {
-        "beach", "ocean", "sea", "sand" -> "A Day at the Beach"
-        "nature", "mountain", "forest", "tree", "hiking" -> "Out in Nature"
-        "food", "dish", "meal", "restaurant", "dining" -> "Food & Dining"
-        "pet", "dog", "cat", "animal", "puppy", "kitten" -> "Pet Highlights"
-        "party", "birthday", "celebration" -> "Celebration"
-        "lake", "water", "river" -> "By the Water"
-        "sunset", "sunrise", "sky" -> "Golden Hour"
-        else -> "${scene.replaceFirstChar { it.uppercase() }} Highlights"
+        return StorySubtitleSpec(
+            fromDay = fromDay,
+            toDay = toDay,
+            withPerson = withPerson,
+            placeName = placeName,
+        )
     }
 }
