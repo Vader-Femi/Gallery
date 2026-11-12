@@ -21,16 +21,32 @@ android {
         applicationId = "com.femi.gallery"
         minSdk = 31
         targetSdk = 37
-        versionCode = 1
+        // The release workflow sets this to its run number, so that every published APK is newer than the last.
+        versionCode = System.getenv("RELEASE_VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // The key of the APKs the release workflow publishes: it comes from the workflow's secrets (see README).
+        val releaseKeystore = System.getenv("RELEASE_KEYSTORE_PATH")
+        if (!releaseKeystore.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Local testing only: lets you run the (much faster) release build on your phone.
-            signingConfig = signingConfigs.getByName("debug")
+            // With the secrets the APK is signed with the real release key, so that it can update an installed copy.
+            // Without them (a build on your own computer) it uses the debug key: for testing the (much faster)
+            // release build on your phone only.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")

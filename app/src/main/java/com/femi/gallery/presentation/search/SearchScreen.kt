@@ -58,6 +58,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.toRef
+import com.femi.gallery.domain.search.SearchQueryEditor
 import com.femi.gallery.presentation.common.HideBottomBarWhile
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.pictures.TimelineGrid
@@ -257,16 +258,6 @@ private data class FilterChipItem(
     val toggle: (currentQuery: String) -> String,
 )
 
-private fun toggleWord(query: String, word: String, removePattern: Regex): String {
-    val matches = removePattern.find(query)
-    return if (matches != null && matches.value.equals(word, ignoreCase = true)) {
-        query.replace(removePattern, "").replace(Regex("\\s+"), " ").trim()
-    } else {
-        val cleaned = query.replace(removePattern, "").replace(Regex("\\s+"), " ").trim()
-        if (cleaned.isEmpty()) word else "$cleaned $word"
-    }
-}
-
 @Composable
 private fun SearchFilterChips(
     query: String,
@@ -279,44 +270,36 @@ private fun SearchFilterChips(
                 id = "videos",
                 labelRes = R.string.search_suggestion_videos,
                 icon = Icons.Filled.VideoLibrary,
-                isSelected = { q -> q.contains(Regex("\\bvideos?\\b", RegexOption.IGNORE_CASE)) },
-                toggle = { q -> toggleWord(q, "videos", Regex("\\b(videos?|photos?|pictures?|images?)\\b", RegexOption.IGNORE_CASE)) },
+                isSelected = { q -> SearchQueryEditor.isSelected(q, SearchQueryEditor.Chip.Videos) },
+                toggle = { q -> SearchQueryEditor.toggle(q, SearchQueryEditor.Chip.Videos) },
             ),
             FilterChipItem(
                 id = "photos",
                 labelRes = R.string.search_filter_photos,
                 icon = Icons.Filled.Image,
-                isSelected = { q -> q.contains(Regex("\\b(photos?|pictures?|images?)\\b", RegexOption.IGNORE_CASE)) },
-                toggle = { q -> toggleWord(q, "photos", Regex("\\b(photos?|pictures?|images?|videos?)\\b", RegexOption.IGNORE_CASE)) },
+                isSelected = { q -> SearchQueryEditor.isSelected(q, SearchQueryEditor.Chip.Photos) },
+                toggle = { q -> SearchQueryEditor.toggle(q, SearchQueryEditor.Chip.Photos) },
             ),
             FilterChipItem(
                 id = "favorites",
                 labelRes = R.string.search_suggestion_favorites,
                 icon = Icons.Filled.Star,
-                isSelected = { q -> q.contains(Regex("\\bfavorites?\\b|\\bfavourites?\\b", RegexOption.IGNORE_CASE)) },
-                toggle = { q -> toggleWord(q, "favorites", Regex("\\b(favorites?|favourites?)\\b", RegexOption.IGNORE_CASE)) },
+                isSelected = { q -> SearchQueryEditor.isSelected(q, SearchQueryEditor.Chip.Favorites) },
+                toggle = { q -> SearchQueryEditor.toggle(q, SearchQueryEditor.Chip.Favorites) },
             ),
             FilterChipItem(
                 id = "screenshots",
                 labelRes = R.string.search_suggestion_screenshots,
                 icon = Icons.Filled.Screenshot,
-                isSelected = { q -> q.contains(Regex("\\bscreenshots?\\b", RegexOption.IGNORE_CASE)) },
-                toggle = { q -> toggleWord(q, "screenshots", Regex("\\bscreenshots?\\b", RegexOption.IGNORE_CASE)) },
+                isSelected = { q -> SearchQueryEditor.isSelected(q, SearchQueryEditor.Chip.Screenshots) },
+                toggle = { q -> SearchQueryEditor.toggle(q, SearchQueryEditor.Chip.Screenshots) },
             ),
             FilterChipItem(
                 id = "last30",
                 labelRes = R.string.search_filter_last_30_days,
                 icon = Icons.Filled.History,
-                isSelected = { q -> q.contains("from:") },
-                toggle = { q ->
-                    val regex = Regex("from:\\S+")
-                    if (q.contains(regex)) {
-                        q.replace(regex, "").replace(Regex("\\s+"), " ").trim()
-                    } else {
-                        val token = "from:${LocalDate.now().minusDays(30)}"
-                        if (q.isBlank()) token else "${q.trim()} $token"
-                    }
-                },
+                isSelected = { q -> SearchQueryEditor.isLast30(q, LocalDate.now()) },
+                toggle = { q -> SearchQueryEditor.toggleLast30(q, LocalDate.now()) },
             ),
         )
     }

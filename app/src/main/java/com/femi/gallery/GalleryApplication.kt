@@ -36,16 +36,4 @@ class GalleryApplication : Application(), SingletonImageLoader.Factory {
                     .build()
             }
             .build()
-
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_UI_HIDDEN) {
-            SingletonImageLoader.get(this).memoryCache?.clear()
-        }
-    }
-
-    override fun onLowMemory() {
-        super.onLowMemory()
-        SingletonImageLoader.get(this).memoryCache?.clear()
-    }
 }
