@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.semantics
@@ -131,10 +132,15 @@ fun TimelineGrid(
     }
 
     // When a newer photo arrives, jump to it if the user is already strictly at the top.
+    var initialTopItemSeen by remember { mutableStateOf(false) }
     val newestId = if (items.itemCount > 0) items.peek(0)?.id else null
     LaunchedEffect(newestId) {
-        if (newestId != null && isAtTop) {
-            gridState.animateScrollToItem(0)
+        if (newestId != null) {
+            if (!initialTopItemSeen) {
+                initialTopItemSeen = true
+            } else if (isAtTop) {
+                gridState.animateScrollToItem(0)
+            }
         }
     }
 
