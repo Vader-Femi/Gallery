@@ -27,8 +27,9 @@ for dir in domain presentation/stories presentation/viewer core/perf; do
 done
 
 OUT="$(mktemp -d)"
+python3 "$HERE/gen_r.py" "$APP/src/main/res" "$OUT/generated_r.kt" || exit 2
 CP="$CACHE/android-35.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar"
-ERRORS="$(cd "$APP" && "$CACHE/kotlinc/bin/kotlinc" -nowarn -cp "$CP" "$HERE/stubs/junit.kt" "$HERE/stubs/Runner.kt" "$HERE/stubs/TestSupport.kt" "$HERE/stubs/TestSupport2.kt" "$HERE/stubs/libs/room.kt" "$HERE/stubs/libs/mlkit_face.kt" "${SOURCES[@]}" "${TESTS[@]}" -d "$OUT" 2>&1 | grep -E "error:" || true)"
+ERRORS="$(cd "$APP" && "$CACHE/kotlinc/bin/kotlinc" -nowarn -cp "$CP" "$HERE/stubs/junit.kt" "$HERE/stubs/Runner.kt" "$HERE/stubs/TestSupport.kt" "$HERE/stubs/TestSupport2.kt" "$HERE/stubs/libs/room.kt" "$HERE/stubs/libs/mlkit_face.kt" "$HERE/stubs/libs/kotlinx_serialization.kt" "$HERE/stubs/StoryTitleCodecStub.kt" "$OUT/generated_r.kt" "${SOURCES[@]}" "${TESTS[@]}" -d "$OUT" 2>&1 | grep -E "error:" || true)"
 if [ -n "$ERRORS" ]; then echo "$ERRORS"; rm -rf "$OUT"; exit 1; fi
 
 CLASSES=()
