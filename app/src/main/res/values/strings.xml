@@ -441,6 +441,7 @@
 
     <string name="cd_photo">Photo</string>
     <string name="cd_video">Video, %1$s</string>
+    <string name="cd_view">View</string>
 
     <string name="albums_empty">No albums yet</string>
     <string name="album_empty">This album is empty</string>

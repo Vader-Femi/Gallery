@@ -398,6 +398,7 @@
 
     <string name="cd_photo">Hoto</string>
     <string name="cd_video">Bidiyo, %1$s</string>
+    <string name="cd_view">Duba</string>
 
     <string name="albums_empty">Babu kundin hotuna tukuna</string>
     <string name="album_empty">Wannan kundin hotunan babu komai a ciki</string>
