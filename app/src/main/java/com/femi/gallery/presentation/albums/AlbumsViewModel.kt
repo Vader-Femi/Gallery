@@ -2,6 +2,7 @@ package com.femi.gallery.presentation.albums
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.femi.gallery.core.security.LockSession
 import com.femi.gallery.domain.mirror.AlbumSorting
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.repository.SettingsRepository
@@ -22,6 +23,8 @@ class AlbumsViewModel @Inject constructor(
     selectionFactory: MediaSelectionControllerFactory,
     private val refreshMedia: RefreshMediaUseCase,
     private val settingsRepository: SettingsRepository,
+    /** Re-locks the Locked folder when the two-pane layout stops showing it. */
+    val lockSession: LockSession,
 ) : ViewModel() {
 
     /** Runs album actions (rename) with their system confirmations; there is no selection on this screen. */

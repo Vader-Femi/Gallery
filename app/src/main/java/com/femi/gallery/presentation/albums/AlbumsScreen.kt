@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import com.femi.gallery.presentation.common.rememberFoldablePostureInfo
 import com.femi.gallery.presentation.common.rememberWindowWidthClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -66,6 +67,7 @@ import coil3.compose.AsyncImage
 import com.femi.gallery.R
 import com.femi.gallery.domain.model.Album
 import com.femi.gallery.domain.model.AlbumPaths
+import com.femi.gallery.domain.model.AlbumPaneSelection
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.HugeTopAppBar
@@ -94,7 +96,16 @@ fun AlbumsScreen(
     val isTwoPane = windowWidthClass.isExpanded || (windowWidthClass.isMedium && hasVerticalHinge)
 
     var selectedBucketId by rememberSaveable { mutableStateOf<Long?>(null) }
-    val activeBucketId = selectedBucketId ?: albums.firstOrNull()?.bucketId
+    // Never opens Locked or People by itself, and drops a choice that left the list (hidden, deleted).
+    val activeBucketId = remember(selectedBucketId, albums) { AlbumPaneSelection.resolve(selectedBucketId, albums) }
+
+    // The navigation cannot see that the pane shows Locked, so tell the lock, which re-locks when it stops.
+    val lockedInPane = isTwoPane && activeBucketId == SpecialAlbums.LOCKED
+    val lockSession = viewModel.lockSession
+    DisposableEffect(lockSession, lockedInPane) {
+        lockSession.setShownInPane(lockedInPane)
+        onDispose { lockSession.setShownInPane(false) }
+    }
 
     LifecycleResumeEffect(viewModel) {
         viewModel.onResumed()

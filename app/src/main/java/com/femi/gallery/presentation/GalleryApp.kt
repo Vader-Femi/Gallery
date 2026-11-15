@@ -133,7 +133,10 @@ private fun GalleryScaffold() {
     val inLockedFolder = ((currentDestination?.hasRoute<GalleryRoutes.Album>() == true || route == GalleryRoutes.ALBUM || route == GalleryRoutes.VIEWER) &&
         arguments?.containsKey("bucketId") == true &&
         arguments.getLong("bucketId") == SpecialAlbums.LOCKED)
-    LaunchedEffect(inLockedFolder) { if (!inLockedFolder) lockSession.lock() }
+    // In the two-pane Albums screen Locked is shown in a pane, not as a destination of its own.
+    val lockedShownInPane by lockSession.shownInPane.collectAsStateWithLifecycle()
+    val lockedInView = inLockedFolder || lockedShownInPane
+    LaunchedEffect(lockedInView) { if (!lockedInView) lockSession.lock() }
 
     val isAlbumDetail = currentDestination?.hasRoute<GalleryRoutes.Album>() == true || currentDestination?.route == GalleryRoutes.ALBUM
     val isTopLevel = currentDestination?.hasRoute<GalleryRoutes.Pictures>() == true ||
