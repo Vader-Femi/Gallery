@@ -115,11 +115,11 @@ class MediaRepositoryImpl @Inject constructor(
     ): Flow<PagingData<MediaItem>> = hiddenAlbumsChanges().flatMapLatest {
         Pager(
             config = PagingConfig(
-                pageSize = 120,
-                initialLoadSize = 240,
-                prefetchDistance = 120,
+                pageSize = 60,
+                initialLoadSize = 60,
+                prefetchDistance = 60,
                 enablePlaceholders = true,
-                jumpThreshold = 240,
+                jumpThreshold = 180,
             ),
             initialKey = initialKey,
             pagingSourceFactory = {
