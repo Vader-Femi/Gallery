@@ -13,6 +13,9 @@ sealed interface LaunchRequest {
     /** Another app wants to show one photo or video ("Open with"). */
     data class ViewExternal(val uri: String, val isVideo: Boolean) : LaunchRequest
 
+    /** Video playback opened directly from system notification. */
+    data class ViewPlayback(val uri: String, val timestamp: Long = System.currentTimeMillis()) : LaunchRequest
+
     /** Another app wants the user to choose photos or videos and get them back. */
     data class Pick(val filter: PickerFilter, val allowMultiple: Boolean) : LaunchRequest
 
@@ -23,8 +26,19 @@ sealed interface LaunchRequest {
             "android.provider.action.REVIEW",
         )
 
+        @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
         fun from(intent: Intent?, context: Context): LaunchRequest {
-            val action = intent?.action ?: return Normal
+            if (intent == null) return Normal
+            if (intent.action == com.femi.gallery.playback.VideoPlaybackService.ACTION_PLAYBACK ||
+                intent.getBooleanExtra(com.femi.gallery.playback.VideoPlaybackService.EXTRA_PLAYBACK_NOTIFICATION, false)
+            ) {
+                val playbackUri = intent.data?.toString()
+                    ?: com.femi.gallery.playback.VideoPlaybackService.getActivePlaybackUri()
+                if (playbackUri != null) {
+                    return ViewPlayback(uri = playbackUri, timestamp = System.currentTimeMillis())
+                }
+            }
+            val action = intent.action ?: return Normal
             return when (action) {
                 in VIEW_ACTIONS -> viewRequest(intent, context)
                 Intent.ACTION_GET_CONTENT, Intent.ACTION_PICK -> pickRequest(intent)

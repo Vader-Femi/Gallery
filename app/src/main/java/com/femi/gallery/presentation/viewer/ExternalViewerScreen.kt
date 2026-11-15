@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.viewer
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -63,6 +64,10 @@ fun ExternalViewerScreen(
 
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     ImmersiveMode(enabled = !chromeVisible)
+
+    BackHandler {
+        onClose()
+    }
 
     // Only the URI is known, so the rest of the item is filled with neutral values.
     val item = remember(uri, isVideo) {
