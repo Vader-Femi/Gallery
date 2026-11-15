@@ -139,6 +139,12 @@ fun FullVideoPlayer(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     startPositionMs: Long = 0L,
+    /**
+     * Whether the video may go on outside the screen: Picture-in-Picture and sound-only playback with a media
+     * notification. False for the Locked folder, whose items must never play on once the folder has re-locked
+     * and whose names must not show on the lock screen.
+     */
+    allowBackground: Boolean = true,
     /** Something to show at the right end of the top bar, such as a button. */
     trailing: @Composable () -> Unit = {},
 ) {
@@ -241,8 +247,8 @@ fun FullVideoPlayer(
             .build()
     }
 
-    val supportsPip = remember {
-        context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    val supportsPip = remember(allowBackground) {
+        allowBackground && context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
     if (supportsPip && (activity is androidx.activity.ComponentActivity)) {
@@ -736,12 +742,14 @@ fun FullVideoPlayer(
                 trailing()
 
                 // Switch to audio in background button
-                IconButton(onClick = switchToBackgroundAudio) {
-                    Icon(
-                        imageVector = Icons.Outlined.Headphones,
-                        contentDescription = stringResource(R.string.player_switch_to_audio),
-                        tint = Color.White,
-                    )
+                if (allowBackground) {
+                    IconButton(onClick = switchToBackgroundAudio) {
+                        Icon(
+                            imageVector = Icons.Outlined.Headphones,
+                            contentDescription = stringResource(R.string.player_switch_to_audio),
+                            tint = Color.White,
+                        )
+                    }
                 }
 
                 // Rotate orientation button

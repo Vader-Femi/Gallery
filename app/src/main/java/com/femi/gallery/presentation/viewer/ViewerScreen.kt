@@ -683,6 +683,8 @@ private fun ViewerContent(
                 FullVideoPlayer(
                     uri = uri,
                     startPositionMs = fullPlayerStartMs,
+                    // Nothing from the Locked folder plays on after the folder re-locks, or shows on the lock screen.
+                    allowBackground = !viewModel.isLocked,
                     onClose = {
                         fullPlayerUri = null
                         chromeVisible = true // the player gives the system bars back, so the viewer shows its own bars too
