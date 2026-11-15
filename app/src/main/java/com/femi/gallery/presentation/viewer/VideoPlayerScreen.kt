@@ -24,7 +24,9 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +42,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeDown
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
@@ -51,6 +53,11 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PictureInPictureAlt
 import androidx.compose.material.icons.outlined.ScreenRotation
+import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -89,6 +96,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.RepeatModeUtil
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.session.MediaSession
@@ -231,13 +239,14 @@ fun FullVideoPlayer(
 
     val mediaSession = remember(context, player, uri) {
         val intent = Intent(context, MainActivity::class.java).apply {
-            action = Intent.ACTION_VIEW
+            action = VideoPlaybackService.ACTION_PLAYBACK
             setDataAndType(uri.toUri(), "video/*")
+            putExtra(VideoPlaybackService.EXTRA_PLAYBACK_NOTIFICATION, true)
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
-            0,
+            VideoPlaybackService.NOTIFICATION_ID,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -247,8 +256,8 @@ fun FullVideoPlayer(
             .build()
     }
 
-    val supportsPip = remember(allowBackground) {
-        allowBackground && context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    val supportsPip = remember {
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
     if (supportsPip && (activity is androidx.activity.ComponentActivity)) {
@@ -601,6 +610,14 @@ fun FullVideoPlayer(
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     controllerShowTimeoutMs = ControlsTimeoutMs
                     setShutterBackgroundColor(android.graphics.Color.BLACK)
+                    setShowPreviousButton(false)
+                    setShowNextButton(false)
+                    setShowFastForwardButton(true)
+                    setShowRewindButton(true)
+                    setShowSubtitleButton(true)
+                    setRepeatToggleModes(
+                        RepeatModeUtil.REPEAT_TOGGLE_MODE_ALL or RepeatModeUtil.REPEAT_TOGGLE_MODE_ONE
+                    )
                     setControllerVisibilityListener(
                         PlayerView.ControllerVisibilityListener { visibility ->
                             controlsVisible = visibility == View.VISIBLE && !isLocked
@@ -626,6 +643,14 @@ fun FullVideoPlayer(
                 it.player = player
                 it.useController = !isLocked && !isInPip
                 it.keepScreenOn = isPlaying
+                it.setShowPreviousButton(false)
+                it.setShowNextButton(false)
+                it.setShowFastForwardButton(true)
+                it.setShowRewindButton(true)
+                it.setShowSubtitleButton(true)
+                it.setRepeatToggleModes(
+                    RepeatModeUtil.REPEAT_TOGGLE_MODE_ALL or RepeatModeUtil.REPEAT_TOGGLE_MODE_ONE
+                )
             },
             onRelease = {
                 it.keepScreenOn = false
@@ -725,66 +750,55 @@ fun FullVideoPlayer(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent)))
+                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent)))
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                IconButton(onClick = onClose) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.viewer_back),
-                        tint = Color.White,
-                    )
-                }
+                PlayerTopButton(
+                    onClick = onClose,
+                    contentDescription = stringResource(R.string.viewer_back),
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                )
 
                 Box(modifier = Modifier.weight(1f))
                 trailing()
 
                 // Switch to audio in background button
                 if (allowBackground) {
-                    IconButton(onClick = switchToBackgroundAudio) {
-                        Icon(
-                            imageVector = Icons.Outlined.Headphones,
-                            contentDescription = stringResource(R.string.player_switch_to_audio),
-                            tint = Color.White,
-                        )
-                    }
-                }
-
-                // Rotate orientation button
-                IconButton(onClick = toggleOrientation) {
-                    Icon(
-                        imageVector = Icons.Outlined.ScreenRotation,
-                        contentDescription = stringResource(R.string.player_rotate),
-                        tint = Color.White,
+                    PlayerTopButton(
+                        onClick = switchToBackgroundAudio,
+                        contentDescription = stringResource(R.string.player_switch_to_audio),
+                        imageVector = Icons.Rounded.Headphones,
                     )
                 }
 
+                // Rotate orientation button
+                PlayerTopButton(
+                    onClick = toggleOrientation,
+                    contentDescription = stringResource(R.string.player_rotate),
+                    imageVector = Icons.Rounded.ScreenRotation,
+                )
+
                 // Picture-in-Picture button (API 26+)
                 if (supportsPip) {
-                    IconButton(onClick = enterPip) {
-                        Icon(
-                            imageVector = Icons.Outlined.PictureInPictureAlt,
-                            contentDescription = stringResource(R.string.player_pip),
-                            tint = Color.White,
-                        )
-                    }
+                    PlayerTopButton(
+                        onClick = enterPip,
+                        contentDescription = stringResource(R.string.player_pip),
+                        imageVector = Icons.Rounded.PictureInPictureAlt,
+                    )
                 }
 
                 // Lock controls button
-                IconButton(
+                PlayerTopButton(
                     onClick = {
                         isLocked = true
                         controlsVisible = false
                     },
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Lock,
-                        contentDescription = stringResource(R.string.player_lock),
-                        tint = Color.White,
-                    )
-                }
+                    contentDescription = stringResource(R.string.player_lock),
+                    imageVector = Icons.Rounded.Lock,
+                )
             }
         }
 
@@ -805,16 +819,17 @@ fun FullVideoPlayer(
                     controlsVisible = true
                 },
                 shape = CircleShape,
-                color = Color.Black.copy(alpha = 0.8f),
+                color = Color.Black.copy(alpha = 0.7f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp,
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.LockOpen,
+                        imageVector = Icons.Rounded.LockOpen,
                         contentDescription = stringResource(R.string.player_unlock),
                         tint = Color.White,
                         modifier = Modifier.size(20.dp),
@@ -824,7 +839,7 @@ fun FullVideoPlayer(
                         text = stringResource(R.string.player_unlock),
                         color = Color.White,
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
@@ -892,4 +907,29 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+@Composable
+private fun PlayerTopButton(
+    onClick: () -> Unit,
+    contentDescription: String,
+    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = Color.Black.copy(alpha = 0.45f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+        modifier = modifier.size(40.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = contentDescription,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
 }

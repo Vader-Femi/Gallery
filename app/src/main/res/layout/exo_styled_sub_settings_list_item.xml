@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minWidth="180dp"
+    android:minHeight="44dp"
+    android:background="?android:attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:paddingStart="14dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:layoutDirection="locale"
+    android:orientation="horizontal"
+    tools:ignore="PrivateResource">
+
+    <ImageView
+        android:id="@id/exo_check"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="12dp"
+        android:src="@drawable/exo_styled_controls_check"
+        android:tint="#FFFFFF"
+        android:visibility="invisible"
+        tools:ignore="ContentDescription,UseAppTint" />
+
+    <TextView
+        android:id="@id/exo_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FFFFFF"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="14sp" />
+
+</LinearLayout>
