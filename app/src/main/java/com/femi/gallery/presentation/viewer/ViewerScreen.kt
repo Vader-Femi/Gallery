@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.femi.gallery.presentation.common.WindowWidthBreakpoints
 import com.femi.gallery.presentation.common.shareUris
 import android.util.Log
 import android.view.LayoutInflater
@@ -194,7 +195,7 @@ private fun ViewerContent(
     val scope = rememberCoroutineScope()
     val windowInfo = LocalWindowInfo.current
     val density = LocalDensity.current
-    val isExpanded = with(density) { windowInfo.containerSize.width.toDp() } >= 840.dp
+    val isExpanded = with(density) { windowInfo.containerSize.width.toDp() } >= WindowWidthBreakpoints.Expanded
 
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     val backgroundColor = if (chromeVisible) MaterialTheme.colorScheme.background else Color.Black

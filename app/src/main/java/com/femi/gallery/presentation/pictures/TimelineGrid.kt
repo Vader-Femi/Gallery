@@ -458,9 +458,8 @@ private fun MediaCell(
             if (selectionActive && onView != null) {
                 ViewMediaButton(
                     onClick = onView,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
+                    // 48dp area; the visible circle sits about where the old 22dp button with 8dp padding did.
+                    modifier = Modifier.align(Alignment.TopEnd),
                 )
             }
         }
@@ -472,20 +471,28 @@ private fun ViewMediaButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // The circle stays small, but the area that takes the tap is the recommended 48dp.
     Box(
         modifier = modifier
-            .size(22.dp)
+            .size(48.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.55f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = Icons.Outlined.OpenInFull,
-            contentDescription = stringResource(R.string.cd_view),
-            tint = Color.White,
-            modifier = Modifier.size(12.dp),
-        )
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.55f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.OpenInFull,
+                contentDescription = stringResource(R.string.cd_view),
+                tint = Color.White,
+                modifier = Modifier.size(12.dp),
+            )
+        }
     }
 }
 

@@ -27,6 +27,7 @@ import com.femi.gallery.domain.model.MediaStamps
 import com.femi.gallery.domain.model.MediaOrdering
 import com.femi.gallery.domain.model.MediaRef
 import com.femi.gallery.domain.model.HiddenAlbums
+import com.femi.gallery.domain.model.HiddenAlbumsKey
 import com.femi.gallery.domain.model.SpecialAlbums
 import com.femi.gallery.domain.repository.SettingsRepository
 import com.femi.gallery.domain.model.WriteLimits
@@ -183,6 +184,9 @@ class MediaStoreDataSource @Inject constructor(
         val hidden = hiddenAlbums()
         if (hidden.isEmpty()) items else items.filter { it.bucketId !in hidden }
     }
+
+    /** [HiddenAlbumsKey] of the albums hidden now, for results built from the photos that show. */
+    suspend fun hiddenAlbumsKey(): Long = HiddenAlbumsKey.of(hiddenAlbums())
 
     /** The albums the person hid in Settings; their photos are left out of everything but the album list. */
     private suspend fun hiddenAlbums(): Set<Long> = try {

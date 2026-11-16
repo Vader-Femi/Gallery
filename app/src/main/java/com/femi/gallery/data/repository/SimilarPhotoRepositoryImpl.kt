@@ -38,9 +38,15 @@ class SimilarPhotoRepositoryImpl @Inject constructor(
     @Volatile
     private var cachedGeneration: Long = -1L
 
+    /** The hidden albums the cached groups were built for; hiding an album does not change the MediaStore generation. */
+    @Volatile
+    private var cachedHiddenKey: Long = 0L
+
     override fun scan(): Flow<SimilarScanState> = channelFlow {
         val currentGeneration = dataSource.generation()
-        val cached = cachedGroups
+        val hiddenKey = dataSource.hiddenAlbumsKey()
+        // Groups made while other albums were hidden may hold photos that must not show now.
+        val cached = cachedGroups?.takeIf { cachedHiddenKey == hiddenKey }
         if (cached != null && currentGeneration == cachedGeneration) {
             send(SimilarScanState.Done(cached))
             return@channelFlow
@@ -90,6 +96,7 @@ class SimilarPhotoRepositoryImpl @Inject constructor(
         val groups = withContext(io) { SimilarFinder().find(items, hashes) }
         cachedGroups = groups
         cachedGeneration = currentGeneration
+        cachedHiddenKey = hiddenKey
         Log.i(TAG, "${items.size} photos, ${hashes.size} with a hash (${unhashed.size} newly hashed), ${groups.size} groups in ${SystemClock.elapsedRealtime() - startedAt} ms")
         send(SimilarScanState.Done(groups))
     }.conflate() // a slow screen skips old progress, never the final result
