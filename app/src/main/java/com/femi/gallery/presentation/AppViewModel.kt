@@ -34,22 +34,28 @@ class AppViewModel @Inject constructor(
 ) : ViewModel() {
 
     private var scanJob: Job? = null
-    private var lastScanTriggerTime = 0L
+
+    /** True from the moment a run is queued until its delay is over and the scans start. */
+    @Volatile
+    private var scanQueued = false
+    private var lastScanStartTime = -MIN_SCAN_INTERVAL_MS
 
     /**
      * Starts the background scans of new photos after an initial grace period off the main thread.
      * Deferring off the immediate foreground transition allows the UI to compose,
      * load initial thumbnails, and handle initial interactions smoothly without CPU contention.
+     *
+     * Runs are at least [MIN_SCAN_INTERVAL_MS] apart, but a request that comes too soon is not dropped: it is
+     * queued for when the interval is over, so photos taken just after a run are still picked up.
      */
     fun scanLocations() {
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastScanTriggerTime < MIN_SCAN_INTERVAL_MS) {
-            return
-        }
-        lastScanTriggerTime = now
-        scanJob?.cancel()
+        if (scanQueued) return // a run is already waiting and will see everything that is new by then
+        scanQueued = true
+        val wait = (lastScanStartTime + MIN_SCAN_INTERVAL_MS - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
         scanJob = viewModelScope.launch(Dispatchers.Default) {
-            delay(STARTUP_DELAY_MS)
+            delay(maxOf(STARTUP_DELAY_MS, wait))
+            lastScanStartTime = SystemClock.elapsedRealtime()
+            scanQueued = false
             startLocationScan()
             startTextScan()
             startColorScan()
