@@ -22,5 +22,8 @@ object PlayerFactory {
         }
 
     fun create(context: Context): ExoPlayer =
-        ExoPlayer.Builder(context, createRenderersFactory(context)).build()
+        ExoPlayer.Builder(context, createRenderersFactory(context))
+            .setSeekBackIncrementMs(5_000)
+            .setSeekForwardIncrementMs(5_000)
+            .build()
 }

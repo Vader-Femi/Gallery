@@ -214,6 +214,7 @@ fun StoryScreen(
                             .weight(1f),
                         selectionActive = selectionState.active,
                         selectedIds = selectionState.ids,
+                        onMediaView = { mediaIndex, item -> onMediaClick(mediaIndex, item.id, viewModel.query) },
                         onHeaderClick = { section ->
                             toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
                         },

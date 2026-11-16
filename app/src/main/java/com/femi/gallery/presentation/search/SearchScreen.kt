@@ -225,6 +225,7 @@ fun SearchScreen(
                             onZoomOut = viewModel.timeline::zoomOut,
                             selectionActive = selectionState.active,
                             selectedIds = selectionState.ids,
+                            onMediaView = { mediaIndex, item -> onMediaClick(mediaIndex, item.id, trimmedQuery) },
                             onHeaderClick = { section ->
                                 toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
                             },

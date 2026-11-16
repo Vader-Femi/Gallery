@@ -53,22 +53,20 @@ class MediaMirror @Inject constructor(
     suspend fun fresh(): Boolean = try {
         val last = dao.meta(MediaDao.GENERATION)
         val generation = source.get().generation()
-        val count = dao.count()
-        val storeCount = source.get().countItems()
-        if (count != storeCount) {
-            if (count == 0 && storeCount > 0) {
+        when (MirrorSync.decide(last, generation)) {
+            MirrorSync.Action.Nothing -> true
+            MirrorSync.Action.Import -> {
                 startImport()
                 false
-            } else {
-                lock.withLock { update() }
             }
-        } else {
-            when (MirrorSync.decide(last, generation)) {
-                MirrorSync.Action.Nothing -> true
-                MirrorSync.Action.Update -> lock.withLock { update() }
-                MirrorSync.Action.Import -> {
+            MirrorSync.Action.Update -> {
+                val count = dao.count()
+                val storeCount = source.get().countItems()
+                if (count == 0 && storeCount > 0) {
                     startImport()
                     false
+                } else {
+                    lock.withLock { update() }
                 }
             }
         }

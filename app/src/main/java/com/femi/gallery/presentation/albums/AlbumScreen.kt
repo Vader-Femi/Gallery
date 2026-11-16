@@ -212,6 +212,7 @@ private fun AlbumContent(
                         .weight(1f),
                     selectionActive = selectionState.active,
                     selectedIds = selectionState.ids,
+                    onMediaView = { mediaIndex, item -> onMediaClick(viewModel.bucketId, mediaIndex, item.id) },
                     onHeaderClick = { section ->
                         toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
                     },

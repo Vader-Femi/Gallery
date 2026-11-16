@@ -110,6 +110,7 @@ fun VideosScreen(
                     .padding(top = innerPadding.calculateTopPadding()),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                onMediaView = { mediaIndex, item -> onMediaClick(mediaIndex, item.id, "videos") },
                 onHeaderClick = { section ->
                     toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
                 },
