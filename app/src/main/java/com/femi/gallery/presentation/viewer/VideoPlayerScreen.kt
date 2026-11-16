@@ -267,7 +267,10 @@ fun FullVideoPlayer(
                 if (info.isInPictureInPictureMode) {
                     VideoPlaybackService.startForegroundPlayback(context, mediaSession)
                 } else {
-                    if (activity.isFinishing) {
+                    // Closing the PiP window (not expanding it) leaves the activity stopped and not finishing.
+                    val closed = activity.isFinishing ||
+                        !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                    if (closed && !isSwitchedToAudio) {
                         player.pause()
                         VideoPlaybackService.stopForegroundPlayback(context)
                     }
