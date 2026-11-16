@@ -32,9 +32,13 @@ sealed interface LaunchRequest {
             if (intent.action == com.femi.gallery.playback.VideoPlaybackService.ACTION_PLAYBACK ||
                 intent.getBooleanExtra(com.femi.gallery.playback.VideoPlaybackService.EXTRA_PLAYBACK_NOTIFICATION, false)
             ) {
-                val playbackUri = intent.data?.toString()
-                    ?: com.femi.gallery.playback.VideoPlaybackService.getActivePlaybackUri()
-                if (playbackUri != null) {
+                // MainActivity is exported, so any app can send this intent: it is only trusted for the video that
+                // the playback service is holding right now (what the notification is for), never for another URI.
+                val activeUri = com.femi.gallery.playback.VideoPlaybackService.getActivePlaybackUri()
+                val playbackUri = intent.data?.toString() ?: activeUri
+                if (playbackUri != null && activeUri != null &&
+                    android.net.Uri.parse(playbackUri) == android.net.Uri.parse(activeUri)
+                ) {
                     return ViewPlayback(uri = playbackUri, timestamp = System.currentTimeMillis())
                 }
             }
