@@ -321,7 +321,7 @@ fun FullVideoPlayer(
                     val intent = Intent(PIP_ACTION_PLAY_PAUSE).setPackage(context.packageName)
                     val pendingIntent = PendingIntent.getBroadcast(
                         context,
-                        101,
+                        PIP_REQUEST_CODE,
                         intent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
@@ -333,14 +333,8 @@ fun FullVideoPlayer(
                         title,
                         pendingIntent,
                     )
-                    val videoSize = player.videoSize
                     val params = PictureInPictureParams.Builder().apply {
-                        if ((videoSize.width > 0) && (videoSize.height > 0)) {
-                            val ratio = videoSize.width.toFloat() / videoSize.height.toFloat()
-                            if (ratio in 0.42f..2.38f) {
-                                setAspectRatio(Rational(videoSize.width, videoSize.height))
-                            }
-                        }
+                        pipAspectRatio(player.videoSize.width, player.videoSize.height)?.let { setAspectRatio(it) }
                         setActions(listOf(action))
                         // Swiping home while video is playing smoothly enters PiP
                         setAutoEnterEnabled(isPlaying)
@@ -470,14 +464,8 @@ fun FullVideoPlayer(
     val enterPip = {
         if (supportsPip && (activity != null)) {
             updatePipParams(player.isPlaying)
-            val videoSize = player.videoSize
             val params = PictureInPictureParams.Builder().apply {
-                if ((videoSize.width > 0) && (videoSize.height > 0)) {
-                    val ratio = videoSize.width.toFloat() / videoSize.height.toFloat()
-                    if (ratio in 0.42f..2.38f) {
-                        setAspectRatio(Rational(videoSize.width, videoSize.height))
-                    }
-                }
+                pipAspectRatio(player.videoSize.width, player.videoSize.height)?.let { setAspectRatio(it) }
             }.build()
             VideoPlaybackService.startForegroundPlayback(context, mediaSession)
             activity.enterPictureInPictureMode(params)
@@ -911,6 +899,15 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
+
+/** Android refuses PiP aspect ratios outside 0.42 to 2.39; a video outside that range gets none. */
+private fun pipAspectRatio(width: Int, height: Int): Rational? {
+    if (width <= 0 || height <= 0) return null
+    val ratio = width.toFloat() / height.toFloat()
+    return if (ratio in 0.42f..2.38f) Rational(width, height) else null
+}
+
+private const val PIP_REQUEST_CODE = 101
 
 @Composable
 private fun PlayerTopButton(
