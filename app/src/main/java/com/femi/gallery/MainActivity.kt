@@ -43,13 +43,17 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        // Opened from the launcher, or by another app to view or pick photos.
+        currentLaunchRequest = LaunchRequest.from(intent, this)
+        // Only ask for notifications when the person opened the app themselves: another app that is waiting for a
+        // photo (a website's file chooser, say) must not get a permission dialog on top of the picker.
+        if (currentLaunchRequest is LaunchRequest.Normal &&
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+        ) {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        // Opened from the launcher, or by another app to view or pick photos.
-        currentLaunchRequest = LaunchRequest.from(intent, this)
         setContent {
             GalleryTheme {
                 GalleryApp(
