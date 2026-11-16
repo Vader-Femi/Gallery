@@ -256,8 +256,8 @@ fun FullVideoPlayer(
             .build()
     }
 
-    val supportsPip = remember {
-        context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    val supportsPip = remember(allowBackground) {
+        allowBackground && context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
     if (supportsPip && (activity is androidx.activity.ComponentActivity)) {
@@ -773,11 +773,6 @@ fun FullVideoPlayer(
                         imageVector = Icons.Rounded.Headphones,
                     )
                 }
-                PlayerTopButton(
-                    onClick = switchToBackgroundAudio,
-                    contentDescription = stringResource(R.string.player_switch_to_audio),
-                    imageVector = Icons.Rounded.Headphones,
-                )
 
                 // Rotate orientation button
                 PlayerTopButton(
