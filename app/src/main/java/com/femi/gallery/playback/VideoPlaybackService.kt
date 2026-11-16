@@ -27,7 +27,13 @@ class VideoPlaybackService : MediaSessionService() {
     companion object {
         @Volatile
         private var activeSession: MediaSession? = null
+
+        @Volatile
         private var retainedPlayer: Player? = null
+
+        /** True between the service's onCreate and onDestroy, so that nothing starts it just to stop it. */
+        @Volatile
+        private var serviceRunning = false
 
         const val CHANNEL_ID = "gallery_video_playback"
         const val NOTIFICATION_ID = 2001
@@ -37,6 +43,8 @@ class VideoPlaybackService : MediaSessionService() {
         const val ACTION_PLAY = "com.femi.gallery.playback.action.PLAY"
         const val ACTION_PAUSE = "com.femi.gallery.playback.action.PAUSE"
         const val ACTION_PLAYBACK = "com.femi.gallery.playback.action.PLAYBACK"
+        /** Which session a stop request is for; a request for a session that is no longer the served one is ignored. */
+        const val EXTRA_SESSION_ID = "com.femi.gallery.playback.extra.SESSION_ID"
         const val EXTRA_PLAYBACK_NOTIFICATION = "com.femi.gallery.playback.extra.NOTIFICATION"
 
         fun createPlaybackPendingIntent(context: Context, uri: String): PendingIntent {
@@ -87,21 +95,57 @@ class VideoPlaybackService : MediaSessionService() {
         }
 
         fun stopForegroundPlayback(context: Context) {
-            val intent = Intent(context, VideoPlaybackService::class.java).apply {
-                action = ACTION_STOP
-            }
-            try {
-                context.startService(intent)
-            } catch (_: Exception) {}
-            retainedPlayer?.stop()
-            retainedPlayer?.release()
-            retainedPlayer = null
-            activeSession?.release()
+            val stoppedSession = activeSession
+            val stoppedPlayer = retainedPlayer
             activeSession = null
+            retainedPlayer = null
+            if (serviceRunning) {
+                // The session's id tells the service which session this is for: if another video has taken over by the
+                // time the service handles it, the request must not stop the new one.
+                val intent = Intent(context, VideoPlaybackService::class.java).apply {
+                    action = ACTION_STOP
+                    putExtra(EXTRA_SESSION_ID, stoppedSession?.id)
+                }
+                try {
+                    context.startService(intent)
+                } catch (_: Exception) {}
+            }
+            stoppedPlayer?.release()
+            stoppedSession?.release()
         }
     }
 
     private var isForeground = false
+
+    /** The session this service is showing the notification for; only this one is ever cleaned up here. */
+    private var served: MediaSession? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        serviceRunning = true
+    }
+
+    /** Detaches the served session, and releases it and the player kept for it. */
+    private fun releaseServed() {
+        val session = served ?: return
+        served = null
+        isForeground = false
+        runCatching { session.player.removeListener(playerListener) }
+        if (isSessionAdded(session)) removeSession(session)
+        if (activeSession === session) activeSession = null
+        if (retainedPlayer === session.player) {
+            retainedPlayer = null
+            runCatching { session.player.release() }
+        }
+        session.release()
+    }
+
+    /** The one way playback ends here: ended, stopped from the notification, task removed. */
+    private fun cleanup() {
+        releaseServed()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -112,18 +156,7 @@ class VideoPlaybackService : MediaSessionService() {
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_ENDED) {
-                activeSession?.let { session ->
-                    session.player.removeListener(this)
-                    if (isSessionAdded(session)) {
-                        removeSession(session)
-                    }
-                }
-                retainedPlayer?.release()
-                retainedPlayer = null
-                activeSession = null
-                isForeground = false
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                cleanup()
             } else if (isForeground) {
                 updateNotification()
             }
@@ -139,6 +172,8 @@ class VideoPlaybackService : MediaSessionService() {
             ACTION_START_FOREGROUND -> {
                 val session = activeSession
                 if (session != null) {
+                    if (served != null && served !== session) releaseServed()
+                    served = session
                     session.player.removeListener(playerListener)
                     session.player.addListener(playerListener)
                     if (!isSessionAdded(session)) {
@@ -162,18 +197,9 @@ class VideoPlaybackService : MediaSessionService() {
                 }
             }
             ACTION_STOP -> {
-                activeSession?.let { session ->
-                    session.player.removeListener(playerListener)
-                    if (isSessionAdded(session)) {
-                        removeSession(session)
-                    }
-                }
-                retainedPlayer?.release()
-                retainedPlayer = null
-                activeSession = null
-                isForeground = false
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                val target = intent?.getStringExtra(EXTRA_SESSION_ID)
+                // From the notification there is no id and it stops what is shown; from the app, only its own session.
+                if (target == null || served == null || served?.id == target) cleanup()
             }
             ACTION_PLAY -> {
                 activeSession?.player?.play()
@@ -281,24 +307,15 @@ class VideoPlaybackService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = activeSession?.player
+        val player = served?.player
         if ((player == null) || !player.playWhenReady || (player.mediaItemCount == 0)) {
-            activeSession?.player?.removeListener(playerListener)
-            retainedPlayer?.release()
-            retainedPlayer = null
-            activeSession = null
-            isForeground = false
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            cleanup()
         }
     }
 
     override fun onDestroy() {
-        activeSession?.player?.removeListener(playerListener)
-        retainedPlayer?.release()
-        retainedPlayer = null
-        activeSession = null
-        isForeground = false
+        releaseServed()
+        serviceRunning = false
         super.onDestroy()
     }
 }
