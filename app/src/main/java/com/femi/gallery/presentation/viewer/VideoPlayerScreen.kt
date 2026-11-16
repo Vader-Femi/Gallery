@@ -773,6 +773,11 @@ fun FullVideoPlayer(
                         imageVector = Icons.Rounded.Headphones,
                     )
                 }
+                PlayerTopButton(
+                    onClick = switchToBackgroundAudio,
+                    contentDescription = stringResource(R.string.player_switch_to_audio),
+                    imageVector = Icons.Rounded.Headphones,
+                )
 
                 // Rotate orientation button
                 PlayerTopButton(
