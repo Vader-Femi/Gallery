@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.semantics
@@ -98,6 +100,10 @@ fun TimelineGrid(
     selectionActive: Boolean = false,
     selectedIds: Set<Long> = emptySet(),
     /**
+     * Called when the view affordance on a media cell is clicked while selection is active.
+     */
+    onMediaView: ((mediaIndex: Int, item: MediaItem) -> Unit)? = null,
+    /**
      * Called when a day/month/year header is tapped while selection is active.
      * Receives the section's [TimelineSection] so the caller can select or deselect
      * every item in that group.
@@ -131,10 +137,15 @@ fun TimelineGrid(
     }
 
     // When a newer photo arrives, jump to it if the user is already strictly at the top.
+    var initialTopItemSeen by remember { mutableStateOf(false) }
     val newestId = if (items.itemCount > 0) items.peek(0)?.id else null
     LaunchedEffect(newestId) {
-        if (newestId != null && isAtTop) {
-            gridState.animateScrollToItem(0)
+        if (newestId != null) {
+            if (!initialTopItemSeen) {
+                initialTopItemSeen = true
+            } else if (isAtTop) {
+                gridState.animateScrollToItem(0)
+            }
         }
     }
 
@@ -292,6 +303,12 @@ fun TimelineGrid(
                                 onMediaClick(index, clicked)
                             },
                             onLongClick = onMediaLongClick,
+                            onView = if (onMediaView != null && item != null && selectionActive) {
+                                {
+                                    openedId = item.id
+                                    onMediaView(mediaIndex, item)
+                                }
+                            } else null,
                         )
                     }
                 }
@@ -378,6 +395,7 @@ private fun MediaCell(
     shared: Boolean,
     onClick: (Int, MediaItem) -> Unit,
     onLongClick: (MediaItem) -> Unit,
+    onView: (() -> Unit)? = null,
 ) {
     val cdPhoto = stringResource(R.string.cd_photo)
     val cdVideo = if (item?.isVideo == true) stringResource(R.string.cd_video, formatDuration(item.durationMillis)) else ""
@@ -437,7 +455,37 @@ private fun MediaCell(
                         .padding(8.dp),
                 )
             }
+            if (selectionActive && onView != null) {
+                ViewMediaButton(
+                    onClick = onView,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun ViewMediaButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(22.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.55f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.OpenInFull,
+            contentDescription = stringResource(R.string.cd_view),
+            tint = Color.White,
+            modifier = Modifier.size(12.dp),
+        )
     }
 }
 

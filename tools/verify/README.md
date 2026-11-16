@@ -19,6 +19,12 @@ Needs `bash`, `curl`, `unzip` and a JDK (17 or newer). Set `VERIFY_CACHE` to kee
   `LongArray.mapNotNull`) or a type mismatch. Pass more files (relative to the repository root) to include them.
 * `test.sh` compiles the pure sources and their tests with a stand-in for JUnit (`stubs/junit.kt`) and runs them by reflection.
 
+## Generated and left-out pieces
+
+* `gen_r.py` writes the stand-in `R` class from `res/` on every run (strings, plurals, drawables, ...), so a new string needs no stub edit.
+* `StoryTitleCodec.kt` is left out and replaced by `stubs/StoryTitleCodecStub.kt`: its `Json` and `serializer()` need
+  kotlinx.serialization's compiler plugin. Its behaviour (and `StoryTitleCodecTest`) is only checked by Gradle.
+
 ## What they do not do
 
 * Compose screens are not checked (Compose's compiler plugin and libraries are not available).

@@ -46,7 +46,11 @@ import com.femi.gallery.presentation.permission.MediaPermissionViewModel
 import com.femi.gallery.presentation.launch.LaunchRequest
 import com.femi.gallery.presentation.permission.PermissionScreen
 import com.femi.gallery.presentation.picker.PickerScreen
+import com.femi.gallery.R
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
 import com.femi.gallery.presentation.viewer.ExternalViewerScreen
+import com.femi.gallery.presentation.viewer.FullVideoPlayer
 import com.femi.gallery.presentation.viewer.ViewerHost
 import com.femi.gallery.presentation.viewer.ViewerSession
 
@@ -59,14 +63,16 @@ fun GalleryApp(
 ) {
     val state by permissionViewModel.uiState.collectAsStateWithLifecycle()
 
-    // "Open Gallery" in the external viewer switches to the normal app and stays there.
-    var openedGallery by rememberSaveable { mutableStateOf(false) }
-    val request = if (openedGallery) LaunchRequest.Normal else launch
+    var playbackDismissedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var openedGalleryForExternalUri by rememberSaveable { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(launch) {
-        if (launch is LaunchRequest.ViewExternal) {
-            openedGallery = false
-        }
+    val isPlaybackActive = launch is LaunchRequest.ViewPlayback && playbackDismissedKey != "${launch.uri}_${launch.timestamp}"
+    val isExternalActive = launch is LaunchRequest.ViewExternal && openedGalleryForExternalUri != launch.uri
+
+    val request = when {
+        isPlaybackActive -> launch
+        isExternalActive -> launch
+        else -> LaunchRequest.Normal
     }
 
     LifecycleResumeEffect(Unit) {
@@ -75,14 +81,21 @@ fun GalleryApp(
     }
 
     when {
+        request is LaunchRequest.ViewPlayback -> FullVideoPlayer(
+            uri = request.uri,
+            onClose = {
+                playbackDismissedKey = "${request.uri}_${request.timestamp}"
+            },
+        )
+
         // A single photo opened by another app needs no library access, only the URI it was given.
         request is LaunchRequest.ViewExternal -> ExternalViewerScreen(
             uri = request.uri,
             isVideo = request.isVideo,
-            onClose = {
-                openedGallery = true
+            onClose = onFinish,
+            onOpenGallery = {
+                openedGalleryForExternalUri = request.uri
             },
-            onOpenGallery = { openedGallery = true },
         )
 
         state.hasAccess -> CompositionLocalProvider(LocalChromeState provides remember { ChromeState() }) {
@@ -133,7 +146,10 @@ private fun GalleryScaffold() {
     val inLockedFolder = ((currentDestination?.hasRoute<GalleryRoutes.Album>() == true || route == GalleryRoutes.ALBUM || route == GalleryRoutes.VIEWER) &&
         arguments?.containsKey("bucketId") == true &&
         arguments.getLong("bucketId") == SpecialAlbums.LOCKED)
-    LaunchedEffect(inLockedFolder) { if (!inLockedFolder) lockSession.lock() }
+    // In the two-pane Albums screen Locked is shown in a pane, not as a destination of its own.
+    val lockedShownInPane by lockSession.shownInPane.collectAsStateWithLifecycle()
+    val lockedInView = inLockedFolder || lockedShownInPane
+    LaunchedEffect(lockedInView) { if (!lockedInView) lockSession.lock() }
 
     val isAlbumDetail = currentDestination?.hasRoute<GalleryRoutes.Album>() == true || currentDestination?.route == GalleryRoutes.ALBUM
     val isTopLevel = currentDestination?.hasRoute<GalleryRoutes.Pictures>() == true ||

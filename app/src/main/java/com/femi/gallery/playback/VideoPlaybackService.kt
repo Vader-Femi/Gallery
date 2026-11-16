@@ -36,6 +36,23 @@ class VideoPlaybackService : MediaSessionService() {
         const val ACTION_STOP = "com.femi.gallery.playback.action.STOP"
         const val ACTION_PLAY = "com.femi.gallery.playback.action.PLAY"
         const val ACTION_PAUSE = "com.femi.gallery.playback.action.PAUSE"
+        const val ACTION_PLAYBACK = "com.femi.gallery.playback.action.PLAYBACK"
+        const val EXTRA_PLAYBACK_NOTIFICATION = "com.femi.gallery.playback.extra.NOTIFICATION"
+
+        fun createPlaybackPendingIntent(context: Context, uri: String): PendingIntent {
+            val intent = Intent(context, com.femi.gallery.MainActivity::class.java).apply {
+                action = ACTION_PLAYBACK
+                setDataAndType(android.net.Uri.parse(uri), "video/*")
+                putExtra(EXTRA_PLAYBACK_NOTIFICATION, true)
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            return PendingIntent.getActivity(
+                context,
+                NOTIFICATION_ID,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
 
         fun setSession(session: MediaSession?) {
             activeSession = session
@@ -224,10 +241,19 @@ class VideoPlaybackService : MediaSessionService() {
         val mediaStyle = MediaStyleNotificationHelper.MediaStyle(session)
             .setShowActionsInCompactView(0)
 
+        val contentIntent = session.sessionActivity ?: run {
+            val playbackUri = getActivePlaybackUri()
+            if (playbackUri != null) {
+                createPlaybackPendingIntent(this, playbackUri)
+            } else {
+                null
+            }
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentIntent(session.sessionActivity)
+            .setContentIntent(contentIntent)
             .setDeleteIntent(stopPendingIntent)
             .setStyle(mediaStyle)
             .addAction(playPauseAction)

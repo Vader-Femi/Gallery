@@ -73,6 +73,29 @@ class ThumbnailPerceptualHasher @Inject constructor(
         hash
     }
 
+    data class KnownHashResult(
+        val hashes: MutableMap<Long, Long>,
+        val evaluatedIds: Set<Long>,
+    )
+
+    /** Returns the hashes and evaluated IDs already known and up to date for [items] without decoding thumbnails. */
+    suspend fun knownHashes(items: List<MediaItem>): KnownHashResult = withContext(io) {
+        val known = rows()
+        val hashes = HashMap<Long, Long>(items.size)
+        val evaluated = HashSet<Long>(items.size)
+        synchronized(known) {
+            for (item in items) {
+                if (item.isVideo) continue
+                val row = known[item.id] ?: continue
+                if (row.size == item.sizeBytes && row.dateAdded == item.dateAddedMillis) {
+                    evaluated.add(item.id)
+                    row.hash?.let { hashes[item.id] = it }
+                }
+            }
+        }
+        KnownHashResult(hashes, evaluated)
+    }
+
     /** Writes the rows still waiting; called when a search ends or is cancelled. */
     suspend fun flush() = withContext(io) {
         val rest = synchronized(pendingLock) { ArrayList(pending).also { pending.clear() } }

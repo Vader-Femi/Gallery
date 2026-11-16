@@ -22,18 +22,20 @@ add() { for f in "$@"; do [ -f "$f" ] && FILES+=("$f"); done; }
 while IFS= read -r f; do FILES+=("$f"); done < <(find "$J/domain" -name '*.kt')
 add "$J"/di/ScopeModule.kt "$J"/di/DispatcherModule.kt "$J"/di/DatabaseModule.kt
 for dir in data/db data/duplicates data/story data/clip; do
-    [ -d "$J/$dir" ] && while IFS= read -r f; do FILES+=("$f"); done < <(find "$J/$dir" -name '*.kt')
+    [ -d "$J/$dir" ] && while IFS= read -r f; do FILES+=("$f"); done < <(find "$J/$dir" -name '*.kt' -not -name StoryTitleCodec.kt)
 done
 add "$J"/data/mediastore/MediaStoreDataSource.kt "$J"/data/repository/ClipIndexRepositoryImpl.kt "$J"/data/edit/BitmapEditor.kt "$J"/core/lifecycle/*.kt "$J"/data/video/*.kt "$J"/presentation/trim/TrimViewModel.kt "$J"/data/similar/*.kt "$J"/data/repository/SimilarPhotoRepositoryImpl.kt "$J"/data/locked/Locked{Store,Keys,Backup,Provider}.kt "$J"/data/locked/KeyEncryptor.kt "$J"/data/locked/TinkContentCipher.kt "$J"/core/security/*.kt "$J"/presentation/settings/LockedProtectionViewModel.kt "$J"/core/graphics/*.kt "$J"/presentation/editor/EditorViewModel.kt "$J"/presentation/common/ShareMedia.kt "$J"/presentation/common/PhotoScrubber.kt "$J"/domain/privacy/*.kt
 add "$J"/core/permission/MediaPermissions.kt "$J"/core/lifecycle/AppForeground.kt "$J"/presentation/settings/SettingsDataStore.kt "$J"/presentation/pictures/TimelineZoom.kt
+FILES+=("$HERE/stubs/StoryTitleCodecStub.kt") # the real codec needs kotlinx.serialization's compiler plugin
 add "$J"/data/color/*IndexHolder.kt "$J"/data/label/*IndexHolder.kt "$J"/data/map/*IndexHolder.kt
 add "$J"/data/text/*IndexHolder.kt "$J"/data/location/*Holder.kt "$J"/data/location/LocationIndex*.kt
 for extra in "$@"; do add "$ROOT/$extra"; done
 
 OUT="$(mktemp -d)"
+python3 "$HERE/gen_r.py" "$ROOT/app/src/main/res" "$OUT/generated_r.kt" || exit 2
 RESULT="$("$CACHE/kotlinc/bin/kotlinc" -nowarn \
     -cp "$CACHE/android-35.jar:$CACHE/kotlinc/lib/kotlinx-coroutines-core-jvm.jar" \
-    "$HERE"/stubs/libs/*.kt $(find "$HERE/stubs/java" -name '*.java') "${FILES[@]}" -d "$OUT" 2>&1 | grep -E "error:" || true)"
+    "$HERE"/stubs/libs/*.kt "$OUT/generated_r.kt" $(find "$HERE/stubs/java" -name '*.java') "${FILES[@]}" -d "$OUT" 2>&1 | grep -E "error:" || true)"
 rm -rf "$OUT"
 if [ -z "$RESULT" ]; then echo "typecheck: clean (${#FILES[@]} files)"; exit 0; fi
 echo "$RESULT"

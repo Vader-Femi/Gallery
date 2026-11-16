@@ -398,6 +398,7 @@
 
     <string name="cd_photo">Foto</string>
     <string name="cd_video">Vidiyo, %1$s</string>
+    <string name="cd_view">Lee</string>
 
     <string name="albums_empty">Enweghị album ọ bụla ka</string>
     <string name="album_empty">Album a tọgbọ chakoo</string>

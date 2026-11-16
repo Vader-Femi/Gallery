@@ -114,6 +114,7 @@ fun PicturesScreen(
                     .padding(top = innerPadding.calculateTopPadding()),
                 selectionActive = selectionState.active,
                 selectedIds = selectionState.ids,
+                onMediaView = { mediaIndex, item -> onMediaClick(mediaIndex, item.id) },
                 onHeaderClick = { section ->
                     toggleSectionSelection(section, items, selectionState.ids, viewModel.selection)
                 },

@@ -27,6 +27,19 @@ class LockSession @Inject constructor() {
         _keyLost.value = lost
     }
 
+    private val _shownInPane = MutableStateFlow(false)
+
+    /**
+     * True while the Locked folder is the album in the detail pane of the two-pane Albums screen (tablets, unfolded
+     * foldables). There the folder is not a navigation destination of its own, so the navigation alone cannot tell
+     * that the user is still looking at it.
+     */
+    val shownInPane: StateFlow<Boolean> = _shownInPane.asStateFlow()
+
+    fun setShownInPane(shown: Boolean) {
+        _shownInPane.value = shown
+    }
+
     fun unlock() {
         _unlocked.value = true
     }

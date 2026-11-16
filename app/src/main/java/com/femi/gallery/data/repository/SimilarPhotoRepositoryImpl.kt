@@ -6,6 +6,7 @@ import android.util.Log
 import com.femi.gallery.data.mediastore.MediaStoreDataSource
 import com.femi.gallery.data.similar.ThumbnailPerceptualHasher
 import com.femi.gallery.di.IoDispatcher
+import com.femi.gallery.domain.duplicates.DuplicateGroup
 import com.femi.gallery.domain.repository.SimilarPhotoRepository
 import com.femi.gallery.domain.repository.SimilarScanState
 import com.femi.gallery.domain.similar.SimilarFinder
@@ -31,37 +32,65 @@ class SimilarPhotoRepositoryImpl @Inject constructor(
 
     private val workers = Dispatchers.Default.limitedParallelism(3)
 
+    @Volatile
+    private var cachedGroups: List<DuplicateGroup>? = null
+
+    @Volatile
+    private var cachedGeneration: Long = -1L
+
     override fun scan(): Flow<SimilarScanState> = channelFlow {
-        send(SimilarScanState.Listing)
+        val currentGeneration = dataSource.generation()
+        val cached = cachedGroups
+        if (cached != null && currentGeneration == cachedGeneration) {
+            send(SimilarScanState.Done(cached))
+            return@channelFlow
+        }
+
+        // If we have cached results, emit them first so the UI can display them immediately
+        // while the background check for any new/modified photos completes.
+        if (cached != null) {
+            send(SimilarScanState.Done(cached))
+        } else {
+            send(SimilarScanState.Listing)
+        }
+
         val startedAt = SystemClock.elapsedRealtime()
         // Videos are not compared; hidden albums are already left out by the data source.
         val items = dataSource.loadAllItems().filter { !it.isVideo }
         hasher.forgetExcept(items.mapTo(HashSet()) { it.id })
 
-        val hashes = HashMap<Long, Long>(items.size)
-        try {
-            var next = 0
-            while (next < items.size) {
-                val end = minOf(items.size, next + BATCH_SIZE)
-                val batch = coroutineScope {
-                    (next until end).map { i ->
-                        async(workers) {
-                            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
-                            hasher.hash(items[i])
-                        }
-                    }.awaitAll()
+        val known = hasher.knownHashes(items)
+        val hashes = known.hashes
+        val unhashed = items.filter { it.id !in known.evaluatedIds }
+
+        if (unhashed.isNotEmpty()) {
+            val totalToHash = unhashed.size
+            try {
+                var next = 0
+                while (next < totalToHash) {
+                    val end = minOf(totalToHash, next + BATCH_SIZE)
+                    val batch = coroutineScope {
+                        (next until end).map { i ->
+                            async(workers) {
+                                Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+                                hasher.hash(unhashed[i])
+                            }
+                        }.awaitAll()
+                    }
+                    for (i in next until end) batch[i - next]?.let { hashes[unhashed[i].id] = it }
+                    next = end
+                    trySend(SimilarScanState.Hashing(next, totalToHash))
                 }
-                for (i in next until end) batch[i - next]?.let { hashes[items[i].id] = it }
-                next = end
-                trySend(SimilarScanState.Hashing(next, items.size))
+            } finally {
+                // What was learned is kept even when the search is cancelled half way.
+                withContext(NonCancellable) { hasher.flush() }
             }
-        } finally {
-            // What was learned is kept even when the search is cancelled half way.
-            withContext(NonCancellable) { hasher.flush() }
         }
 
         val groups = withContext(io) { SimilarFinder().find(items, hashes) }
-        Log.i(TAG, "${items.size} photos, ${hashes.size} with a hash, ${groups.size} groups in ${SystemClock.elapsedRealtime() - startedAt} ms")
+        cachedGroups = groups
+        cachedGeneration = currentGeneration
+        Log.i(TAG, "${items.size} photos, ${hashes.size} with a hash (${unhashed.size} newly hashed), ${groups.size} groups in ${SystemClock.elapsedRealtime() - startedAt} ms")
         send(SimilarScanState.Done(groups))
     }.conflate() // a slow screen skips old progress, never the final result
 
