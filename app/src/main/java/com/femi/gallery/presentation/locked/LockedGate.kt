@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -73,64 +74,78 @@ fun LockedGate(
 /** The key of the folder is gone: its items cannot be opened, only restored from a backup. */
 @Composable
 private fun KeyLostNotice(onClose: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .systemBarsPadding()
-            .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Icon(
-            imageVector = Icons.Outlined.Lock,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.error,
-        )
-        Text(
-            text = stringResource(R.string.locked_key_lost_title),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = stringResource(R.string.locked_key_lost_body),
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
-        TextButton(onClick = onClose) { Text(stringResource(R.string.viewer_back)) }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                text = stringResource(R.string.locked_key_lost_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.locked_key_lost_body),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            TextButton(onClick = onClose) { Text(stringResource(R.string.viewer_back)) }
+        }
     }
 }
 
 @Composable
 private fun LockedPlaceholder(available: Boolean, onUnlock: () -> Unit, onClose: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .systemBarsPadding()
-            .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Icon(
-            imageVector = Icons.Outlined.Lock,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = stringResource(if (available) R.string.locked_title else R.string.locked_no_screen_lock_title),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = stringResource(if (available) R.string.locked_body else R.string.locked_no_screen_lock_body),
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
-        if (available) {
-            Button(onClick = onUnlock) { Text(stringResource(R.string.locked_unlock)) }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringResource(if (available) R.string.locked_title else R.string.locked_no_screen_lock_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(if (available) R.string.locked_body else R.string.locked_no_screen_lock_body),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            if (available) {
+                Button(onClick = onUnlock) { Text(stringResource(R.string.locked_unlock)) }
+            }
+            TextButton(onClick = onClose) { Text(stringResource(R.string.viewer_back)) }
         }
-        TextButton(onClick = onClose) { Text(stringResource(R.string.viewer_back)) }
     }
 }
 

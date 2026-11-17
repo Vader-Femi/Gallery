@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -74,78 +75,94 @@ fun PickerScreen(
             LocalSharedTransitionScope provides this,
             LocalViewerShowing provides viewerShowing,
         ) {
-            Box(modifier = modifier.fillMaxSize()) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.statusBars)
-                            .padding(horizontal = 4.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = onCancel) {
-                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.picker_cancel_selection))
+            Surface(
+                modifier = modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .windowInsetsPadding(WindowInsets.statusBars)
+                                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                IconButton(onClick = onCancel) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = stringResource(R.string.picker_cancel_selection),
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                                Text(
+                                    text = when {
+                                        allowMultiple && selectionState.count > 0 -> stringResource(R.string.selection_count, selectionState.count)
+                                        filter == PickerFilter.ImagesOnly -> stringResource(R.string.picker_title_photo)
+                                        filter == PickerFilter.VideosOnly -> stringResource(R.string.picker_title_video)
+                                        else -> stringResource(R.string.picker_title_any)
+                                    },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (allowMultiple) {
+                                    Button(
+                                        onClick = { onPick(selectionState.selected.values.map { it.uri }) },
+                                        enabled = selectionState.count > 0,
+                                        modifier = Modifier.padding(end = 8.dp),
+                                    ) { Text(stringResource(R.string.picker_done)) }
+                                }
+                            }
                         }
-                        Text(
-                            text = when {
-                                allowMultiple && selectionState.count > 0 -> stringResource(R.string.selection_count, selectionState.count)
-                                filter == PickerFilter.ImagesOnly -> stringResource(R.string.picker_title_photo)
-                                filter == PickerFilter.VideosOnly -> stringResource(R.string.picker_title_video)
-                                else -> stringResource(R.string.picker_title_any)
+
+                        TimelineGrid(
+                            items = items,
+                            sections = sections,
+                            zoom = zoom,
+                            onMediaClick = { _, item ->
+                                if (allowMultiple) viewModel.selection.toggle(item.toRef()) else onPick(listOf(item.uri))
                             },
-                            style = MaterialTheme.typography.titleLarge,
+                            onMediaLongClick = { item -> if (allowMultiple) viewModel.selection.toggle(item.toRef()) },
+                            onZoomIn = viewModel.timeline::zoomIn,
+                            onZoomOut = viewModel.timeline::zoomOut,
                             modifier = Modifier.weight(1f),
+                            selectionActive = allowMultiple,
+                            selectedIds = selectionState.ids,
+                            onMediaView = { mediaIndex, item ->
+                                val query = when (filter) {
+                                    PickerFilter.ImagesOnly -> "images"
+                                    PickerFilter.VideosOnly -> "videos"
+                                    PickerFilter.All -> null
+                                }
+                                viewerSession.open(
+                                    GalleryRoutes.viewer(mediaIndex, item.id, query = query),
+                                    origin = "picker",
+                                )
+                            },
+                            onHeaderClick = if (allowMultiple) {
+                                { section -> toggleSectionSelection(section, items, selectionState.ids, viewModel.selection) }
+                            } else null,
+                            onDragSelectRange = if (allowMultiple) {
+                                { start, end -> selectMediaRange(start, end, items, viewModel.selection) }
+                            } else null,
+                            viewed = viewerSession.viewedFor("picker"),
+                            onViewedConsumed = viewerSession::consumeViewed,
+                            emptyContent = { EmptyState(stringResource(R.string.picker_empty)) },
                         )
-                        if (allowMultiple) {
-                            Button(
-                                onClick = { onPick(selectionState.selected.values.map { it.uri }) },
-                                enabled = selectionState.count > 0,
-                                modifier = Modifier.padding(end = 8.dp),
-                            ) { Text(stringResource(R.string.picker_done)) }
-                        }
                     }
 
-                    TimelineGrid(
-                        items = items,
-                        sections = sections,
-                        zoom = zoom,
-                        onMediaClick = { _, item ->
-                            if (allowMultiple) viewModel.selection.toggle(item.toRef()) else onPick(listOf(item.uri))
-                        },
-                        onMediaLongClick = { item -> if (allowMultiple) viewModel.selection.toggle(item.toRef()) },
-                        onZoomIn = viewModel.timeline::zoomIn,
-                        onZoomOut = viewModel.timeline::zoomOut,
-                        modifier = Modifier.weight(1f),
-                        selectionActive = allowMultiple,
-                        selectedIds = selectionState.ids,
-                        onMediaView = { mediaIndex, item ->
-                            val query = when (filter) {
-                                PickerFilter.ImagesOnly -> "images"
-                                PickerFilter.VideosOnly -> "videos"
-                                PickerFilter.All -> null
-                            }
-                            viewerSession.open(
-                                GalleryRoutes.viewer(mediaIndex, item.id, query = query),
-                                origin = "picker",
-                            )
-                        },
-                        onHeaderClick = if (allowMultiple) {
-                            { section -> toggleSectionSelection(section, items, selectionState.ids, viewModel.selection) }
-                        } else null,
-                        onDragSelectRange = if (allowMultiple) {
-                            { start, end -> selectMediaRange(start, end, items, viewModel.selection) }
-                        } else null,
-                        viewed = viewerSession.viewedFor("picker"),
-                        onViewedConsumed = viewerSession::consumeViewed,
-                        emptyContent = { EmptyState(stringResource(R.string.picker_empty)) },
+                    ViewerHost(
+                        session = viewerSession,
+                        onEdit = {},
+                        onTrim = {},
                     )
                 }
-
-                ViewerHost(
-                    session = viewerSession,
-                    onEdit = {},
-                    onTrim = {},
-                )
             }
         }
     }

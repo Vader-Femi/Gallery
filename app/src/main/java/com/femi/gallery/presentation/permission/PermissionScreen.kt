@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -52,50 +53,57 @@ fun PermissionScreen(
         onPermissionResult(permanent)
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .systemBarsPadding()
-            .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Icon(
-            imageVector = Icons.Outlined.PhotoLibrary,
-            contentDescription = null,
-            modifier = Modifier.size(72.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = stringResource(R.string.permission_title),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = stringResource(
-                if (permanentlyDenied) R.string.permission_body_denied else R.string.permission_body
-            ),
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
-        Button(
-            onClick = {
-                if (permanentlyDenied) {
-                    context.startActivity(
-                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
-                        }
-                    )
-                } else {
-                    launcher.launch(MediaPermissions.toRequest())
-                }
-            },
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                stringResource(
-                    if (permanentlyDenied) R.string.permission_open_settings else R.string.permission_grant
-                )
+            Icon(
+                imageVector = Icons.Outlined.PhotoLibrary,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = MaterialTheme.colorScheme.primary,
             )
+            Text(
+                text = stringResource(R.string.permission_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(
+                    if (permanentlyDenied) R.string.permission_body_denied else R.string.permission_body
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Button(
+                onClick = {
+                    if (permanentlyDenied) {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                        )
+                    } else {
+                        launcher.launch(MediaPermissions.toRequest())
+                    }
+                },
+            ) {
+                Text(
+                    stringResource(
+                        if (permanentlyDenied) R.string.permission_open_settings else R.string.permission_grant
+                    )
+                )
+            }
         }
     }
 }

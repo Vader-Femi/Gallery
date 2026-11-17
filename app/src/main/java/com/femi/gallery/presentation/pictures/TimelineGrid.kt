@@ -453,6 +453,7 @@ private fun MediaCell(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(8.dp),
+                    onPhoto = true,
                 )
             }
             if (selectionActive && onView != null) {
@@ -497,7 +498,11 @@ private fun ViewMediaButton(
 }
 
 @Composable
-private fun SelectionIndicator(selected: Boolean, modifier: Modifier = Modifier) {
+private fun SelectionIndicator(
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onPhoto: Boolean = false,
+) {
     val base = modifier
         .size(22.dp)
         .clip(CircleShape)
@@ -513,8 +518,10 @@ private fun SelectionIndicator(selected: Boolean, modifier: Modifier = Modifier)
                 modifier = Modifier.size(16.dp),
             )
         }
-    } else {
+    } else if (onPhoto) {
         Box(modifier = base.background(Color.Black.copy(alpha = 0.25f)).border(2.dp, Color.White, CircleShape))
+    } else {
+        Box(modifier = base.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape))
     }
 }
 
