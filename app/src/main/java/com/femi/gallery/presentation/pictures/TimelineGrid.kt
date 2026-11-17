@@ -48,6 +48,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
@@ -445,6 +446,8 @@ private fun MediaCell(
             .semantics {
                 if (item != null) {
                     contentDescription = if (item.isVideo) cdVideo else cdPhoto
+                    // So that a screen reader says which items are selected.
+                    if (selectionActive) this.selected = selected
                 }
             }
             .combinedClickable(
