@@ -1,5 +1,10 @@
 package com.femi.gallery.presentation.pictures
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,6 +53,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -400,11 +406,42 @@ private fun MediaCell(
     val cdPhoto = stringResource(R.string.cd_photo)
     val cdVideo = if (item?.isVideo == true) stringResource(R.string.cd_video, formatDuration(item.durationMillis)) else ""
     val sharedModifier = if (shared && item != null) Modifier.gridSharedBounds(item.id) else Modifier
+
+    val animatedPadding by animateDpAsState(
+        targetValue = if (selected) 6.dp else 0.dp,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "mediaCellPadding",
+    )
+    val animatedCornerRadius by animateDpAsState(
+        targetValue = if (selected) 16.dp else 0.dp,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "mediaCellCorner",
+    )
+    val animatedContainerColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceVariant,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "mediaCellContainerColor",
+    )
+    val tintAlpha by animateFloatAsState(
+        targetValue = if (selected) 0.12f else 0f,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "mediaCellTintAlpha",
+    )
+    val borderAlpha by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "mediaCellBorderAlpha",
+    )
+
+    val safePadding = animatedPadding.coerceAtLeast(0.dp)
+    val safeCornerRadius = animatedCornerRadius.coerceAtLeast(0.dp)
+    val shape = RoundedCornerShape(safeCornerRadius)
+
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .then(sharedModifier)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(animatedContainerColor)
             .semantics {
                 if (item != null) {
                     contentDescription = if (item.isVideo) cdVideo else cdPhoto
@@ -417,42 +454,62 @@ private fun MediaCell(
             ),
     ) {
         if (item != null) {
-            AsyncImage(
-                model = item.uri,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                // The viewer reuses this exact image as its first frame when the photo is opened.
-                onSuccess = { GridThumbnails.remember(item.id, it.result.memoryCacheKey, it.painter.intrinsicSize) },
-                // Selected photos shrink slightly, like Samsung Gallery.
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(if (selected) 6.dp else 0.dp),
-            )
-            if (item.isVideo) {
-                VideoBadge(
-                    durationMillis = item.durationMillis,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(4.dp),
-                )
-            }
-            if (item.isFavorite && !selectionActive) {
-                Icon(
-                    imageVector = Icons.Filled.Favorite,
+                    .padding(safePadding)
+                    .clip(shape),
+            ) {
+                AsyncImage(
+                    model = item.uri,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .size(14.dp),
+                    contentScale = ContentScale.Crop,
+                    // The viewer reuses this exact image as its first frame when the photo is opened.
+                    onSuccess = { GridThumbnails.remember(item.id, it.result.memoryCacheKey, it.painter.intrinsicSize) },
+                    modifier = Modifier.fillMaxSize(),
                 )
+                val currentTint = tintAlpha.coerceIn(0f, 1f)
+                if (currentTint > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = currentTint)),
+                    )
+                }
+                val currentBorder = borderAlpha.coerceIn(0f, 1f)
+                if (currentBorder > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = currentBorder), shape),
+                    )
+                }
+                if (item.isVideo) {
+                    VideoBadge(
+                        durationMillis = item.durationMillis,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(4.dp),
+                    )
+                }
+                if (item.isFavorite && !selectionActive) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(6.dp)
+                            .size(14.dp),
+                    )
+                }
             }
             if (selectionActive) {
                 SelectionIndicator(
                     selected = selected,
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(8.dp),
+                        .padding(start = 8.dp + safePadding, top = 8.dp + safePadding),
                     onPhoto = true,
                 )
             }
@@ -460,7 +517,9 @@ private fun MediaCell(
                 ViewMediaButton(
                     onClick = onView,
                     // 48dp area; the visible circle sits about where the old 22dp button with 8dp padding did.
-                    modifier = Modifier.align(Alignment.TopEnd),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = safePadding, top = safePadding),
                 )
             }
         }
@@ -503,8 +562,17 @@ private fun SelectionIndicator(
     modifier: Modifier = Modifier,
     onPhoto: Boolean = false,
 ) {
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1f else 0.88f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "selectionIndicatorScale",
+    )
     val base = modifier
         .size(22.dp)
+        .scale(scale.coerceAtLeast(0f))
         .clip(CircleShape)
     if (selected) {
         Box(
