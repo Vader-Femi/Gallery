@@ -107,6 +107,7 @@ import com.femi.gallery.R
 import com.femi.gallery.playback.PlayerFactory
 import com.femi.gallery.playback.VideoPlaybackService
 import com.femi.gallery.presentation.common.ImmersiveMode
+import com.femi.gallery.presentation.common.LightSystemBarIconsOnBlack
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.abs
@@ -156,6 +157,8 @@ fun FullVideoPlayer(
     /** Something to show at the right end of the top bar, such as a button. */
     trailing: @Composable () -> Unit = {},
 ) {
+    // The video has its own black background: light status and navigation bar icons in every theme.
+    LightSystemBarIconsOnBlack()
     val context = LocalContext.current
     val view = LocalView.current
     val systemTouchSlop = remember(context) { ViewConfiguration.get(context).scaledTouchSlop.toFloat() }

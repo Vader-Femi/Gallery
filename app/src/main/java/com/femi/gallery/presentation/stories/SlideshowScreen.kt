@@ -94,6 +94,7 @@ import com.femi.gallery.R
 import com.femi.gallery.domain.model.SlideshowMusicTrack
 import com.femi.gallery.domain.model.SlideshowOrder
 import com.femi.gallery.domain.model.SlideshowSpeed
+import com.femi.gallery.presentation.common.LightSystemBarIconsOnBlack
 import com.femi.gallery.presentation.common.EmptyState
 import com.femi.gallery.presentation.common.ImmersiveMode
 import kotlinx.coroutines.delay
@@ -223,6 +224,8 @@ fun SlideshowScreen(
     LaunchedEffect(shuffle, seed) {
         if (shuffle) viewModel.shuffle(seed) else viewModel.stopShuffle()
     }
+
+    LightSystemBarIconsOnBlack()
 
     Box(
         modifier = Modifier
