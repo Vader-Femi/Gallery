@@ -72,6 +72,8 @@ fun GalleryApp(
     val request = when {
         isPlaybackActive -> launch
         isExternalActive -> launch
+        // Another app is waiting for a photo (a website's file chooser, "Choose from Gallery"): show the picker.
+        launch is LaunchRequest.Pick -> launch
         else -> LaunchRequest.Normal
     }
 
