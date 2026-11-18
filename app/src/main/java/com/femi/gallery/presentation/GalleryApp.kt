@@ -33,6 +33,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.femi.gallery.domain.model.SpecialAlbums
+import com.femi.gallery.domain.model.LaunchKind
+import com.femi.gallery.domain.model.LaunchRouting
 import com.femi.gallery.presentation.common.ChromeState
 import com.femi.gallery.presentation.common.LocalChromeState
 import com.femi.gallery.presentation.common.LocalSharedTransitionScope
@@ -66,16 +68,20 @@ fun GalleryApp(
     var playbackDismissedKey by rememberSaveable { mutableStateOf<String?>(null) }
     var openedGalleryForExternalUri by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val isPlaybackActive = launch is LaunchRequest.ViewPlayback && playbackDismissedKey != "${launch.uri}_${launch.timestamp}"
-    val isExternalActive = launch is LaunchRequest.ViewExternal && openedGalleryForExternalUri != launch.uri
-
-    val request = when {
-        isPlaybackActive -> launch
-        isExternalActive -> launch
-        // Another app is waiting for a photo (a website's file chooser, "Choose from Gallery"): show the picker.
-        launch is LaunchRequest.Pick -> launch
-        else -> LaunchRequest.Normal
+    val launchKind = when (launch) {
+        is LaunchRequest.Normal -> LaunchKind.NORMAL
+        is LaunchRequest.ViewExternal -> LaunchKind.VIEW_EXTERNAL
+        is LaunchRequest.ViewPlayback -> LaunchKind.VIEW_PLAYBACK
+        is LaunchRequest.Pick -> LaunchKind.PICK
     }
+    val shownKind = LaunchRouting.effective(
+        requested = launchKind,
+        playbackDismissed = launch is LaunchRequest.ViewPlayback &&
+            playbackDismissedKey == "${launch.uri}_${launch.timestamp}",
+        galleryOpenedFromExternal = launch is LaunchRequest.ViewExternal && openedGalleryForExternalUri == launch.uri,
+    )
+    // What is shown: the request itself, or the normal gallery once it has been dismissed.
+    val request = if (shownKind == launchKind) launch else LaunchRequest.Normal
 
     LifecycleResumeEffect(Unit) {
         permissionViewModel.refresh()

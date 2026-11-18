@@ -159,6 +159,12 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 ### Still to do
 
 - [x] **Baseline Profiles evaluation & startup benchmark**: measured with `tools/startup_bench.sh` on a release build on a physical Pixel 7 (`verify`: 215 ms median, `speed`: 202 ms median; ~13 ms difference on a ~200 ms cold start), confirming ahead-of-time compilation provides no meaningful speedup and cold start is already near-instantaneous. `Frames` log (`adb logcat -s Frames`) confirmed 0 dropped frames on launch. 
+- [ ] **Hardening: a safety net after the background-playback and tablet work** (regressions in that work were not caught by `tools/verify`)
+  - [x] Which launch request is shown is a pure, tested function (`LaunchRouting`), after `Pick` was once dropped and other apps' file choosers opened the whole gallery (patch 123)
+  - [ ] A guard test that Locked videos never get Picture-in-Picture or sound-only playback
+  - [ ] Media3 session stubs in `tools/verify`, so `VideoPlaybackService` is type-checked
+  - [ ] A manual release checklist for the flows no check covers (pick from Chrome, Locked video, PiP, notification, tablet pane)
+- [ ] **Features**: remember the zoom level between launches; swipe between neighbouring photos opened from other apps
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.
@@ -452,6 +458,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 120 | Picking from another app shows the picker again | Regression from the notification-playback change: `GalleryApp` chose which launch request to show with a `when` that let only `ViewPlayback` and `ViewExternal` through and turned everything else, including `Pick`, into `Normal`. So a website's file chooser or "Choose from Gallery" opened the whole gallery instead of the picker (no crash: the Logcat shows Chrome's system picker handing over to `MainActivity`, which was displayed normally). `Pick` is passed through again. Found by reading the code against that Logcat; not compiled here (Compose, outside the checks) |
 | 121 | Black full-screen screens keep light system bar icons in the light theme | From the review of the surfaces and dark-mode work. `GalleryTheme` sets the status and navigation bar icons from the theme only (dark icons in the light theme). The slideshow and the full-screen video player draw their own black background and never changed that, so in the light theme the clock and battery were dark on black. New `LightSystemBarIconsOnBlack()` sets light icons while such a screen is shown and puts the theme's choice back afterwards; used by the slideshow and `FullVideoPlayer`. Type-checked as part of the set; Compose behaviour needs the phone |
 | 122 | Selection mode: screen readers hear which items are selected | The new selection styling (shrunk, tinted, bordered cell and the tick) is only visual; the cell's accessibility description did not say whether it is selected. While selecting, the cell now exposes its selected state (`semantics { selected }`), so TalkBack says "selected" / "not selected". No new string needed. Not compiled here (Compose) |
+| 123 | Launch routing is a pure, tested function | Hardening. The choice of which launch request the app shows (playback, single photo, picker, normal gallery) was an inline `when` in `GalleryApp`; a change to it once dropped `Pick`, so a website's file chooser opened the whole gallery (patch 120). It is now `LaunchRouting.effective` in `domain/model`, with 6 tests, including that a pick request always shows the picker and that a new kind must get a rule. `GalleryApp` maps its `LaunchRequest` onto `LaunchKind`. Tests and type-check pass (543 tests); the `GalleryApp` change itself is Compose, not compiled here |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
