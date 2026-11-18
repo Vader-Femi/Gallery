@@ -96,7 +96,6 @@ jobs:
           name: "Release ${{ steps.release_info.outputs.tag_name }}"
           generate_release_notes: true
           draft: false
-          # A build signed with a throw-away debug key is marked as a pre-release.
-          prerelease: ${{ steps.signing.outputs.signed != 'true' }}
+          prerelease: false
           files: |
             app/build/outputs/apk/release/gallery-${{ steps.release_info.outputs.tag_name }}.apk
