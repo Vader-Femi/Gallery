@@ -159,17 +159,46 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 ### Still to do
 
 - [x] **Baseline Profiles evaluation & startup benchmark**: measured with `tools/startup_bench.sh` on a release build on a physical Pixel 7 (`verify`: 215 ms median, `speed`: 202 ms median; ~13 ms difference on a ~200 ms cold start), confirming ahead-of-time compilation provides no meaningful speedup and cold start is already near-instantaneous. `Frames` log (`adb logcat -s Frames`) confirmed 0 dropped frames on launch. 
-- [ ] **Hardening: a safety net after the background-playback and tablet work** (regressions in that work were not caught by `tools/verify`)
+- [x] **Hardening: a safety net after the background-playback and tablet work** (regressions in that work were not caught by `tools/verify`); done in patches 123 to 127, and the type-check found one more bug (patch 126)
   - [x] Which launch request is shown is a pure, tested function (`LaunchRouting`), after `Pick` was once dropped and other apps' file choosers opened the whole gallery (patch 123)
   - [x] A guard test that Locked videos never get Picture-in-Picture or sound-only playback (`LockedPlaybackGuardTest`, patch 124)
   - [x] Media3 session stubs in `tools/verify`, so `VideoPlaybackService` is type-checked (patch 125)
-  - [ ] A manual release checklist for the flows no check covers (pick from Chrome, Locked video, PiP, notification, tablet pane)
+  - [x] A manual release checklist for the flows no check covers (see "Release checklist" below; patch 127)
 - [ ] **Features**: remember the zoom level between launches; swipe between neighbouring photos opened from other apps
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.
 - Cloud sync / backup of the gallery. The app is deliberately offline; backing up can be added later through a service you choose.
 - iOS. The whole point is to use Android's MediaStore, trash and scoped-storage APIs directly, which have no iOS equivalent.
+
+
+### Release checklist
+
+`tools/verify` cannot run Compose screens, services or intents; these are the flows that were broken by a change nobody
+expected. Run them on a **release build** before a release, and add a line here whenever a bug is found by hand.
+
+Before building: `tools/verify/typecheck.sh` and `tools/verify/test.sh` are clean; the five `strings.xml` files have the
+same keys; the merged manifest does **not** list `INTERNET`.
+
+- [ ] **Pick from another app.** In Chrome, a site's "choose file" (photo, then several, then a video-only field): the
+  Gallery picker opens, no permission dialog on top of it, and the picked files reach the page.
+- [ ] **Locked folder.** A Locked video has no headphones or Picture-in-Picture button; Home pauses it and no media
+  notification appears. On a tablet or unfolded foldable, Locked in the Albums pane asks for authentication, locks again
+  when you pick another album, and does not ask again after coming back from a photo.
+- [ ] **Background playback.** A normal video: switch to sound only, lock the phone, use the notification (play, pause,
+  tap to come back at the same position, dismiss). Open video A, switch to sound only, open video B at once: B keeps its
+  controls.
+- [ ] **Picture-in-Picture.** Home enters it; the play/pause button works; the expand button returns to full screen; the X
+  stops the sound and the notification.
+- [ ] **Hidden albums.** Hide an album that has photos in a Similar photos group: they are gone at once. Nothing from it
+  in the timeline, Search, the Map, Stories or People.
+- [ ] **Tablet / foldable.** Albums opens on a normal folder (never Locked or People); selection, rotation and folding
+  keep the selected album.
+- [ ] **Light and dark theme.** Slideshow and full-screen video keep light status and navigation bar icons in the light
+  theme; every other screen follows the theme.
+- [ ] **Selection.** Select, deselect and select all; with TalkBack on, items are announced as selected.
+- [ ] **Open from another app.** A photo and a video from a file manager or a chat: the single-photo viewer opens, "Open
+  Gallery" goes to the normal gallery.
 
 ---
 
@@ -462,6 +491,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 124 | Guard test: Locked videos never get Picture-in-Picture or sound-only playback | Hardening. The rule from patch 108 lives in Compose wiring that the unit tests cannot run, and an unrelated restyle undid it once (patch 110). `LockedPlaybackGuardTest` reads the source text and fails if: `supportsPip` stops depending on `allowBackground`; there is more than one button starting sound-only playback, or it leaves the `if (allowBackground)` block; the viewer stops passing `allowBackground = !viewModel.isLocked`; or a new screen starts calling `FullVideoPlayer` without being listed. It is a text guard, not a behaviour test, and says so. Checked by putting both old mistakes back: each made a test fail. 547 tests pass |
 | 125 | Verify scripts type-check the playback service (Media3 session stubs) | Hardening. `VideoPlaybackService` was outside the checked set because `Player`, `MediaSession`, `MediaSessionService` and `MediaStyleNotificationHelper` had no stubs, so the service rewritten in patch 112 could only be read, not checked. The stubs are written from the androidx/media 1.11.1 source (cloned at that tag) and cover only what the service uses; the notification and `ContextCompat` stubs got the few members it needs (`setContentIntent` now takes a null, as the real one does). The service is added to `typecheck.sh`: clean, 228 files, so patch 112 now compiles against the real signatures. Still stubs: a changed Media3 version needs the stubs rechecked |
 | 126 | Active playback URI falls back to the media item's URI when the id is empty | Found when the service came into the type-checked set (patch 125). `getActivePlaybackUri()` used `mediaId ?: uri`, but a Media3 `mediaId` is never null: it is "" when none was set, so the fallback could never run and the function would return an empty string. The player does set the id today (`setMediaId(uri)`), so nothing was visibly wrong, but the notification's tap check (patch 111) and the resume position both depend on it. An empty id now falls back to the URI. Type-checked (228 files) |
+| 127 | README: a release checklist for the flows no check covers | Hardening. The bugs of the last weeks (Pick dropped, Locked videos in PiP, the Locked pane staying unlocked, the similar-photos cache) were all found by hand, in flows that `tools/verify` cannot run. A checklist in the README lists them, with the checks to run first (type-check, tests, string keys, no `INTERNET` in the merged manifest). It is meant to grow: a bug found by hand adds a line. Docs only |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
