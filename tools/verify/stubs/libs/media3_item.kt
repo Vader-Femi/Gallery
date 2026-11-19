@@ -5,6 +5,10 @@ package androidx.media3.common
 interface Effect
 
 class MediaItem private constructor() {
+    /** Never null in Media3; "" when none was set (MediaItem.DEFAULT_MEDIA_ID). */
+    val mediaId: String = ""
+    val localConfiguration: LocalConfiguration? = null
+    class LocalConfiguration { val uri: android.net.Uri get() = throw NotImplementedError() }
     class ClippingConfiguration private constructor() {
         class Builder {
             fun setStartPositionMs(startPositionMs: Long): Builder = this
