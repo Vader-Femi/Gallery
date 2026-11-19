@@ -164,7 +164,8 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
   - [x] A guard test that Locked videos never get Picture-in-Picture or sound-only playback (`LockedPlaybackGuardTest`, patch 124)
   - [x] Media3 session stubs in `tools/verify`, so `VideoPlaybackService` is type-checked (patch 125)
   - [x] A manual release checklist for the flows no check covers (see "Release checklist" below; patch 127)
-- [ ] **Features**: remember the zoom level between launches; swipe between neighbouring photos opened from other apps
+- [ ] **Features**: swipe between neighbouring photos opened from other apps
+- [x] ~~Remember the zoom level between launches~~: already done (the timeline zoom is stored in DataStore and restored at start); the "Known limitations" line saying otherwise was out of date (patch 128)
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.
@@ -361,7 +362,6 @@ The pure logic is covered by JVM unit tests (`app/src/test`): day/month/year gro
 - **Unlocking** restores a photo to its original folder when that is Pictures, DCIM or Movies; anything else (for example WhatsApp's private folder) goes to `Pictures/Restored` or `Movies/Restored`, and the date it appears under is its date taken.
 - **The Locked folder needs a phone screen lock** (PIN, pattern, password, fingerprint or face).
 - **Photos opened from other apps are shown one at a time:** there is no swiping to neighbouring photos, editing or sharing from that viewer — press **Open Gallery** for the full app. The picker only offers the whole library, not albums or search.
-- **Zoom level is not remembered** between launches.
 - Tested on one device (Pixel 7, Android 17). Other devices and manufacturers' MediaStore quirks are untested.
 
 ---
@@ -492,6 +492,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 125 | Verify scripts type-check the playback service (Media3 session stubs) | Hardening. `VideoPlaybackService` was outside the checked set because `Player`, `MediaSession`, `MediaSessionService` and `MediaStyleNotificationHelper` had no stubs, so the service rewritten in patch 112 could only be read, not checked. The stubs are written from the androidx/media 1.11.1 source (cloned at that tag) and cover only what the service uses; the notification and `ContextCompat` stubs got the few members it needs (`setContentIntent` now takes a null, as the real one does). The service is added to `typecheck.sh`: clean, 228 files, so patch 112 now compiles against the real signatures. Still stubs: a changed Media3 version needs the stubs rechecked |
 | 126 | Active playback URI falls back to the media item's URI when the id is empty | Found when the service came into the type-checked set (patch 125). `getActivePlaybackUri()` used `mediaId ?: uri`, but a Media3 `mediaId` is never null: it is "" when none was set, so the fallback could never run and the function would return an empty string. The player does set the id today (`setMediaId(uri)`), so nothing was visibly wrong, but the notification's tap check (patch 111) and the resume position both depend on it. An empty id now falls back to the URI. Type-checked (228 files) |
 | 127 | README: a release checklist for the flows no check covers | Hardening. The bugs of the last weeks (Pick dropped, Locked videos in PiP, the Locked pane staying unlocked, the similar-photos cache) were all found by hand, in flows that `tools/verify` cannot run. A checklist in the README lists them, with the checks to run first (type-check, tests, string keys, no `INTERNET` in the merged manifest). It is meant to grow: a bug found by hand adds a line. Docs only |
+| 128 | README: the zoom level is remembered (stale limitation removed) | Docs only. "Known limitations" still said the zoom level is not remembered between launches, and the to-do list offered it as a feature, but the timeline zoom has been stored in DataStore for a while (`setTimelineZoom`, restored through `getTimelineZoomSync`; the feature list already says "zoom level remembered"). The limitation is removed and the to-do item is closed. Found when starting the feature: the code was read first |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 
