@@ -132,7 +132,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Encrypted backup** (Settings): export to a file you choose, protected by a passphrase of at least 12 characters (PBKDF2-HMAC-SHA-256, 600,000 rounds); restore on this or another phone. There is no recovery if the passphrase is forgotten
 
 **Works with other apps**
-- [x] **Open with**: photos and videos opened from Files, Chrome, a camera app or a chat show in a simple viewer (zoom, video playback) with an **Open Gallery** button — they don't need to be in your library
+- [x] **Open with**: photos and videos opened from Files, Chrome, a camera app or a chat show in a simple viewer (zoom, video playback) with an **Open Gallery** button — they don't need to be in your library. When the sender provides several photos (a chat's gallery, a file manager's selection) you can **swipe between exactly those**; a video among them shows a play button first
 - [x] **Choose from Gallery**: apps that ask you to pick a photo or video (profile pictures, attachments, forms) can use this app as the picker, for one item or several, photos only or videos only
 - [x] Registered as a gallery app, so Android offers it in "Open with" and gallery chooser dialogs (choose **Always** to make it your default)
 
@@ -164,7 +164,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
   - [x] A guard test that Locked videos never get Picture-in-Picture or sound-only playback (`LockedPlaybackGuardTest`, patch 124)
   - [x] Media3 session stubs in `tools/verify`, so `VideoPlaybackService` is type-checked (patch 125)
   - [x] A manual release checklist for the flows no check covers (see "Release checklist" below; patch 127)
-- [ ] **Features**: swipe between neighbouring photos opened from other apps
+- [x] **Features**: swipe between the photos the sender provided when another app opens one (patches 129 and 130); more ideas welcome
 - [x] ~~Remember the zoom level between launches~~: already done (the timeline zoom is stored in DataStore and restored at start); the "Known limitations" line saying otherwise was out of date (patch 128)
 
 **Out of scope**
@@ -200,6 +200,9 @@ same keys; the merged manifest does **not** list `INTERNET`.
 - [ ] **Selection.** Select, deselect and select all; with TalkBack on, items are announced as selected.
 - [ ] **Open from another app.** A photo and a video from a file manager or a chat: the single-photo viewer opens, "Open
   Gallery" goes to the normal gallery.
+- [ ] **Open several from another app.** From a chat or a file manager with several photos selected: you can swipe through
+  exactly those (the counter shows 2 / 5); a video among them has a play button; after watching one, you are back on the
+  page you were on. A single photo still opens alone. No photo of your library appears that the sender did not send.
 
 ---
 
@@ -361,7 +364,7 @@ The pure logic is covered by JVM unit tests (`app/src/test`): day/month/year gro
 - **The Locked folder lives inside the app.** Uninstalling the app or clearing its data deletes everything in it, and it is excluded from backups (so it is also not copied to a new phone by cloud restore). Files are protected by Android's per-app storage and your screen lock, but not separately encrypted. Moving items in permanently deletes the originals from your gallery (after Android asks you to confirm).
 - **Unlocking** restores a photo to its original folder when that is Pictures, DCIM or Movies; anything else (for example WhatsApp's private folder) goes to `Pictures/Restored` or `Movies/Restored`, and the date it appears under is its date taken.
 - **The Locked folder needs a phone screen lock** (PIN, pattern, password, fingerprint or face).
-- **Photos opened from other apps are shown one at a time:** there is no swiping to neighbouring photos, editing or sharing from that viewer — press **Open Gallery** for the full app. The picker only offers the whole library, not albums or search.
+- **Photos opened from other apps can only be swiped through if the sender provided several** (up to 50, around the one opened; the app never adds other photos of your library, so a hidden album's photo does not bring its neighbours). There is no editing or sharing from that viewer — press **Open Gallery** for the full app. The picker only offers the whole library, not albums or search.
 - Tested on one device (Pixel 7, Android 17). Other devices and manufacturers' MediaStore quirks are untested.
 
 ---
@@ -494,6 +497,7 @@ The app was built incrementally as a series of reviewable patches, applied one a
 | 127 | README: a release checklist for the flows no check covers | Hardening. The bugs of the last weeks (Pick dropped, Locked videos in PiP, the Locked pane staying unlocked, the similar-photos cache) were all found by hand, in flows that `tools/verify` cannot run. A checklist in the README lists them, with the checks to run first (type-check, tests, string keys, no `INTERNET` in the merged manifest). It is meant to grow: a bug found by hand adds a line. Docs only |
 | 128 | README: the zoom level is remembered (stale limitation removed) | Docs only. "Known limitations" still said the zoom level is not remembered between launches, and the to-do list offered it as a feature, but the timeline zoom has been stored in DataStore for a while (`setTimelineZoom`, restored through `getTimelineZoomSync`; the feature list already says "zoom level remembered"). The limitation is removed and the to-do item is closed. Found when starting the feature: the code was read first |
 | 129 | Opening from another app never reads this app's own providers | Security hardening, first half of the sender-provided swiping. `MainActivity` is exported and its "Open with" filter takes any `content:` or `file:` address, so another app could name an address of this app's own providers (the Locked folder's `.locked`, the `.fileprovider`) and have the app read it with its own rights. The ids of Locked items are random, so this was not guessable, but it was not refused either. `ExternalViewSets.isAllowedPrimary` (pure, in `domain/model`, 10 tests) now refuses them, reading the address the way the content resolver does (escapes decoded, user part and case ignored), and `LaunchRequest` falls back to the normal gallery. The same file holds the rules for the swiping of patch 130. Tests and type-check pass (557 tests); the `LaunchRequest` change is not compiled here |
+| 130 | Open with: swipe between the photos the sender provided | Feature. A photo opened from another app was shown alone. When the sender's intent carries a clip of several photos or videos (a chat's gallery, a file manager's selection) the viewer is now a pager over exactly those, in the sender's order, starting at the one opened, with a counter in the top bar; a video shows a play button and opens in the full player (the opened one plays at once, as before), and closing it returns to the same page. The set comes from `ExternalViewSets` (patch 129): content addresses only, none of this app's own providers, no duplicates, at most 50 around the opened one, types read with one lookup each. **Never other photos of the library**: a photo of a hidden album brings no neighbours, and Locked is not reachable. With one item nothing changes. No new strings (`viewer_play` is reused). Compose parts not compiled here; the rules are tested (557 tests) |
 
 Between patches, pull requests #1–#6 tuned the timeline, albums, search, viewer, Locked folder and batch actions (smoother scrolling and thumbnails, album names by bucket id, search parsing and interaction fixes, viewer chrome and video layout, hardened Locked-folder restore, parallel batch operations).
 

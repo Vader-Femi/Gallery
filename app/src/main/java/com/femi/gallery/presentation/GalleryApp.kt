@@ -100,6 +100,8 @@ fun GalleryApp(
         request is LaunchRequest.ViewExternal -> ExternalViewerScreen(
             uri = request.uri,
             isVideo = request.isVideo,
+            items = request.items,
+            startIndex = request.startIndex,
             onClose = onFinish,
             onOpenGallery = {
                 openedGalleryForExternalUri = request.uri

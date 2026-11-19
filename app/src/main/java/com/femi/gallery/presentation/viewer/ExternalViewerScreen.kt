@@ -11,10 +11,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,14 +36,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.femi.gallery.R
+import com.femi.gallery.domain.model.ExternalMediaRef
 import com.femi.gallery.domain.model.MediaItem
 import com.femi.gallery.domain.model.MediaType
 import com.femi.gallery.presentation.common.ImmersiveMode
 
 /**
  * Shows one photo (zoomable) or video (the full player) that another app opened with "Open with" / "Review". The file may
- * not be in the library at all (a chat attachment, a download), so there is no swiping, only
- * zoom or playback, plus a button to open the whole gallery.
+ * not be in the library at all (a chat attachment, a download), so only what the sender provided can be swiped
+ * through ([items], its clip); with one item there is only zoom or playback. A button opens the whole gallery.
  */
 @Composable
 fun ExternalViewerScreen(
@@ -47,7 +52,14 @@ fun ExternalViewerScreen(
     isVideo: Boolean,
     onClose: () -> Unit,
     onOpenGallery: () -> Unit,
+    items: List<ExternalMediaRef> = emptyList(),
+    startIndex: Int = 0,
 ) {
+    if (items.size > 1) {
+        ExternalViewerPager(items = items, startIndex = startIndex, onClose = onClose, onOpenGallery = onOpenGallery)
+        return
+    }
+
     // A video gets the full player (controls, sound, seeking); it needs nothing but the address.
     if (isVideo) {
         FullVideoPlayer(
@@ -118,6 +130,126 @@ fun ExternalViewerScreen(
                     )
                 }
                 Box(modifier = Modifier.weight(1f))
+                TextButton(onClick = onOpenGallery) {
+                    Text(stringResource(R.string.external_open_gallery), color = contentColor)
+                }
+            }
+        }
+    }
+}
+
+/** The sender's photos and videos side by side; a video is a play button first and then the full player. */
+@Composable
+private fun ExternalViewerPager(
+    items: List<ExternalMediaRef>,
+    startIndex: Int,
+    onClose: () -> Unit,
+    onOpenGallery: () -> Unit,
+) {
+    val first = startIndex.coerceIn(items.indices)
+    // The video that was opened plays at once, as it does when it is the only one; the others wait for a tap.
+    var playingUri by rememberSaveable { mutableStateOf(items[first].takeIf { it.isVideo }?.uri) }
+    // Created before the player can take over the screen, so the page the person was on is kept after a video.
+    val pagerState = rememberPagerState(initialPage = first) { items.size }
+    var chromeVisible by rememberSaveable { mutableStateOf(true) }
+    val playing = playingUri
+    if (playing != null) {
+        FullVideoPlayer(
+            uri = playing,
+            onClose = { playingUri = null },
+            trailing = {
+                TextButton(onClick = onOpenGallery) {
+                    Text(stringResource(R.string.external_open_gallery), color = Color.White)
+                }
+            },
+        )
+        return
+    }
+
+    ImmersiveMode(enabled = !chromeVisible)
+    BackHandler { onClose() }
+
+    val surface = MaterialTheme.colorScheme.surface
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
+    Box(modifier = Modifier.fillMaxSize().background(if (chromeVisible) MaterialTheme.colorScheme.background else Color.Black)) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 1,
+            key = { page -> page },
+        ) { page ->
+            val ref = items[page]
+            if (ref.isVideo) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    IconButton(onClick = { playingUri = ref.uri }) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(R.string.viewer_play),
+                            tint = Color.White,
+                            modifier = Modifier.size(56.dp),
+                        )
+                    }
+                }
+            } else {
+                // Only the address is known, so the rest of the item is filled with neutral values.
+                val item = remember(ref.uri) {
+                    MediaItem(
+                        id = 0L,
+                        uri = ref.uri,
+                        displayName = "",
+                        mimeType = "image/*",
+                        type = MediaType.Image,
+                        dateTakenMillis = 0L,
+                        dateAddedMillis = 0L,
+                        width = 0,
+                        height = 0,
+                        sizeBytes = 0L,
+                        durationMillis = 0L,
+                        bucketId = 0L,
+                        bucketName = "",
+                        relativePath = "",
+                        isFavorite = false,
+                    )
+                }
+                PhotoPage(
+                    item = item,
+                    isCurrent = pagerState.settledPage == page,
+                    onTap = { chromeVisible = !chromeVisible },
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = chromeVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopStart),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(surface)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onClose) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.viewer_back),
+                        tint = contentColor,
+                    )
+                }
+                Text(
+                    text = "${pagerState.currentPage + 1} / ${items.size}",
+                    color = contentColor,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                )
                 TextButton(onClick = onOpenGallery) {
                     Text(stringResource(R.string.external_open_gallery), color = contentColor)
                 }
