@@ -69,8 +69,9 @@ class VideoPlaybackService : MediaSessionService() {
         fun hasActivePlayback(): Boolean = activeSession?.player?.isPlaying == true
 
         fun getActivePlaybackUri(): String? {
-            return activeSession?.player?.currentMediaItem?.mediaId
-                ?: activeSession?.player?.currentMediaItem?.localConfiguration?.uri?.toString()
+            val item = activeSession?.player?.currentMediaItem
+            // The media id is never null in Media3, it is "" when none was set, so the fallback needs an empty check.
+            return item?.mediaId?.takeIf { it.isNotEmpty() } ?: item?.localConfiguration?.uri?.toString()
         }
 
         fun getActivePlaybackPosition(): Long? {
