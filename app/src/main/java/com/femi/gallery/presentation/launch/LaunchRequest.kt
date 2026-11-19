@@ -2,6 +2,7 @@ package com.femi.gallery.presentation.launch
 
 import android.content.Context
 import android.content.Intent
+import com.femi.gallery.domain.model.ExternalViewSets
 import com.femi.gallery.domain.model.PickerFilter
 
 /** Why the app was opened: normally from the launcher, or by another app. */
@@ -52,6 +53,9 @@ sealed interface LaunchRequest {
 
         private fun viewRequest(intent: Intent, context: Context): LaunchRequest {
             val uri = intent.data ?: return Normal
+            // MainActivity is exported: an address of this app's own providers (the Locked folder) must not be
+            // opened because another app named it, the app would read it with its own rights.
+            if (!ExternalViewSets.isAllowedPrimary(uri.toString(), context.packageName)) return Normal
             val mime = intent.type
                 ?: runCatching { context.contentResolver.getType(uri) }.getOrNull()
                 ?: return Normal
