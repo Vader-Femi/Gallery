@@ -25,6 +25,19 @@ internal object ViewerDragMath {
         return PhotoRect(x.toFloat(), y.toFloat(), (x + width).toFloat(), (y + height).toFloat())
     }
 
+    /** At full Back progress the photo has moved this fraction of the viewer's width toward the side the swipe went. */
+    const val BACK_EDGE_SHIFT_FRACTION = 0.08f
+
+    /**
+     * How far the Back gesture moves the photo sideways on top of the finger: with the swipe, so a swipe from the
+     * left edge carries it to the right and one from the right edge to the left, as the system's own back animation
+     * moves a window. Without it an edge swipe, where the finger hardly moves up or down, barely moves the photo.
+     */
+    fun backEdgeShift(fromRightEdge: Boolean, progress: Float, containerWidth: Float): Float {
+        val direction = if (fromRightEdge) -1f else 1f
+        return direction * progress.coerceIn(0f, 1f) * containerWidth * BACK_EDGE_SHIFT_FRACTION
+    }
+
     /** A flick at this speed (pixels per second) or faster gets the shortest closing flight. */
     const val CLOSE_FASTEST_SPEED = 5000f
 

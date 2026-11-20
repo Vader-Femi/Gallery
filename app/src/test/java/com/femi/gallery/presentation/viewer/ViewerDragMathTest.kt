@@ -105,4 +105,14 @@ class ViewerDragMathTest {
         // Direction does not matter, only speed.
         assertEquals(ViewerDragMath.closeMillis(3000f, 300), ViewerDragMath.closeMillis(-3000f, 300))
     }
+
+    @Test
+    fun backSwipeMovesThePhotoTowardTheSideTheSwipeWent() {
+        assertEquals(86.4f, ViewerDragMath.backEdgeShift(fromRightEdge = false, progress = 1f, containerWidth = 1080f), 0.01f)
+        assertEquals(-86.4f, ViewerDragMath.backEdgeShift(fromRightEdge = true, progress = 1f, containerWidth = 1080f), 0.01f)
+        assertEquals(0f, ViewerDragMath.backEdgeShift(fromRightEdge = true, progress = 0f, containerWidth = 1080f), 0f)
+        // Half way is half the shift; progress outside 0..1 is held to it.
+        assertEquals(43.2f, ViewerDragMath.backEdgeShift(false, 0.5f, 1080f), 0.01f)
+        assertEquals(86.4f, ViewerDragMath.backEdgeShift(false, 2f, 1080f), 0.01f)
+    }
 }

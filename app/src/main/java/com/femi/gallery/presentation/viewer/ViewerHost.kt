@@ -1,5 +1,6 @@
 package com.femi.gallery.presentation.viewer
 
+import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -137,7 +138,11 @@ fun ViewerHost(
                     }
                     session.drag.followBack(
                         progress = event.progress,
-                        dx = (event.touchX - startX) * BackDragFactor,
+                        dx = (event.touchX - startX) * BackDragFactor + ViewerDragMath.backEdgeShift(
+                            fromRightEdge = event.swipeEdge == BackEventCompat.EDGE_RIGHT,
+                            progress = event.progress,
+                            containerWidth = session.drag.containerWidth,
+                        ),
                         dy = (event.touchY - startY) * BackDragFactor,
                     )
                 }
