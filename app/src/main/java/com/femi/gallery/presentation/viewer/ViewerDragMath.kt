@@ -1,12 +1,45 @@
 package com.femi.gallery.presentation.viewer
 
+import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.roundToInt
 
 /**
  * The numbers behind dragging a photo away: how far it has been pulled, how small it gets, how the
  * background and the bars fade, and what letting go means. Pure, so it can be tested.
  */
+/** A rectangle in pixels, as the photo's page is placed on screen. */
+internal data class PhotoRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
+
 internal object ViewerDragMath {
+    /**
+     * Where the photo's page is on screen while it is pulled: the container [containerWidth] by [containerHeight],
+     * shrunk by [scale] about its centre, then moved by ([offsetX], [offsetY]). The same arithmetic as `dragTransform`
+     * places it with, so the closing flight can start from exactly there.
+     */
+    fun photoRect(containerWidth: Int, containerHeight: Int, scale: Float, offsetX: Float, offsetY: Float): PhotoRect {
+        val width = (containerWidth * scale).roundToInt().coerceAtLeast(1)
+        val height = (containerHeight * scale).roundToInt().coerceAtLeast(1)
+        val x = (containerWidth - width) / 2 + offsetX.roundToInt()
+        val y = (containerHeight - height) / 2 + offsetY.roundToInt()
+        return PhotoRect(x.toFloat(), y.toFloat(), (x + width).toFloat(), (y + height).toFloat())
+    }
+
+    /** A flick at this speed (pixels per second) or faster gets the shortest closing flight. */
+    const val CLOSE_FASTEST_SPEED = 5000f
+
+    /** The fastest closing flight lasts this fraction of the normal one. */
+    const val CLOSE_FASTEST_FRACTION = 0.67f
+
+    /**
+     * How long the photo takes to fly back to its cell: [baseMillis] for a gentle release or the Back button, down to
+     * about two thirds of it for a hard flick, so a fast throw does not linger.
+     */
+    fun closeMillis(speed: Float, baseMillis: Int): Int {
+        val fraction = (abs(speed) / CLOSE_FASTEST_SPEED).coerceIn(0f, 1f)
+        return (baseMillis * (1f - (1f - CLOSE_FASTEST_FRACTION) * fraction)).roundToInt()
+    }
+
     /** Pulling down by this fraction of the screen height takes progress from 0 to 1. */
     const val FULL_DRAG_FRACTION = 0.4f
 

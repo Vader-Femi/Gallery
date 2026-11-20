@@ -74,4 +74,35 @@ class ViewerDragMathTest {
     fun anUntouchedPhotoStaysPut() {
         assertEquals(Release.Restore, ViewerDragMath.release(0f, 0f, height))
     }
+
+    @Test
+    fun photoRectIsTheWholeContainerAtRest() {
+        val rect = ViewerDragMath.photoRect(1080, 2400, scale = 1f, offsetX = 0f, offsetY = 0f)
+        assertEquals(PhotoRect(0f, 0f, 1080f, 2400f), rect)
+    }
+
+    @Test
+    fun photoRectShrinksAboutTheCentreAndFollowsTheOffset() {
+        // Half size: 540 x 1200, centred at (540, 1200), then moved by (100, -50).
+        val rect = ViewerDragMath.photoRect(1080, 2400, scale = 0.5f, offsetX = 100f, offsetY = -50f)
+        assertEquals(PhotoRect(370f, 550f, 910f, 1750f), rect)
+    }
+
+    @Test
+    fun photoRectNeverCollapses() {
+        val rect = ViewerDragMath.photoRect(1080, 2400, scale = 0f, offsetX = 0f, offsetY = 0f)
+        assertEquals(1f, rect.right - rect.left, 0f)
+        assertEquals(1f, rect.bottom - rect.top, 0f)
+    }
+
+    @Test
+    fun closeFlightIsTheNormalOneForAGentleReleaseAndShorterForAHardFlick() {
+        assertEquals(300, ViewerDragMath.closeMillis(0f, 300))
+        assertEquals(201, ViewerDragMath.closeMillis(5000f, 300))
+        assertEquals(201, ViewerDragMath.closeMillis(20000f, 300)) // capped
+        // Half the top speed is halfway between the two, give or take a rounding.
+        assertTrue(ViewerDragMath.closeMillis(2500f, 300) in 250..251)
+        // Direction does not matter, only speed.
+        assertEquals(ViewerDragMath.closeMillis(3000f, 300), ViewerDragMath.closeMillis(-3000f, 300))
+    }
 }

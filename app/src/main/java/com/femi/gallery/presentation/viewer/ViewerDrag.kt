@@ -46,6 +46,21 @@ class ViewerDragState {
     /** The height of the viewer in pixels, set by the screen. */
     var containerHeight = 0f
 
+    /** The width of the viewer in pixels, and where its top left corner is in the window; set by the screen. */
+    var containerWidth = 0f
+    var containerLeft = 0f
+    var containerTop = 0f
+
+    /** The speed (pixels per second, down is positive) the finger had when it let go; 0 for the Back gesture or button. */
+    var releaseVelocityY = 0f
+
+    /** Where the photo's page is in the window right now, or null before the screen has been measured. */
+    fun photoBoundsInWindow(): PhotoRect? {
+        if (containerWidth <= 0f || containerHeight <= 0f) return null
+        val rect = ViewerDragMath.photoRect(containerWidth.roundToInt(), containerHeight.roundToInt(), scale, offsetX, offsetY)
+        return PhotoRect(rect.left + containerLeft, rect.top + containerTop, rect.right + containerLeft, rect.bottom + containerTop)
+    }
+
     private var rawOffsetY = 0f
 
     val scale: Float get() = ViewerDragMath.scale(progress)

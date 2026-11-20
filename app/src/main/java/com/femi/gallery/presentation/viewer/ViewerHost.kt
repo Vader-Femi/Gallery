@@ -7,12 +7,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -21,13 +23,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.femi.gallery.core.perf.ScreenTag
+import com.femi.gallery.presentation.common.PhotoClose
+import com.femi.gallery.presentation.common.PhotoCloseHint
 import com.femi.gallery.presentation.common.PhotoCloseMillis
+import com.femi.gallery.presentation.common.PhotoTravelMillis
 import com.femi.gallery.presentation.common.ViewedMedia
 import com.femi.gallery.presentation.navigation.EnterFadeMillis
 import com.femi.gallery.presentation.navigation.GalleryRoutes
 import com.femi.gallery.presentation.navigation.sharedComposable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private const val EmptyRoute = "viewer-closed"
@@ -68,10 +74,19 @@ class ViewerSession(internal val navController: NavHostController) {
         this.originRoute = originRoute
         viewed = null
         drag.reset()
+        PhotoClose.hint = null
         navController.navigate(route)
     }
 
     fun close() {
+        // The photo flies into its cell from where it is, at the speed it was thrown.
+        drag.photoBoundsInWindow()?.let { rect ->
+            PhotoClose.hint = PhotoCloseHint(
+                start = Rect(rect.left, rect.top, rect.right, rect.bottom),
+                durationMillis = ViewerDragMath.closeMillis(drag.releaseVelocityY, PhotoTravelMillis),
+            )
+        }
+        drag.releaseVelocityY = 0f
         navController.popBackStack()
     }
 
@@ -133,6 +148,14 @@ fun ViewerHost(
                 withContext(NonCancellable) { session.drag.restore() }
                 throw e
             }
+        }
+    }
+
+    // Once the viewer is gone nothing else may use the hint of its last flight.
+    LaunchedEffect(showing) {
+        if (!showing) {
+            delay(PhotoCloseMillis.toLong() + 200L)
+            PhotoClose.hint = null
         }
     }
 

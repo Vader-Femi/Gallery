@@ -94,6 +94,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isSpecified
@@ -218,7 +220,15 @@ private fun ViewerContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { drag.containerHeight = it.height.toFloat() }
+            .onSizeChanged {
+                drag.containerHeight = it.height.toFloat()
+                drag.containerWidth = it.width.toFloat()
+            }
+            .onGloballyPositioned {
+                val position = it.positionInWindow()
+                drag.containerLeft = position.x
+                drag.containerTop = position.y
+            }
             .drawBehind { drawRect(backgroundColor, alpha = drag.backgroundAlpha) },
     ) {
         if (items.itemCount > 0) {
@@ -399,6 +409,7 @@ private fun ViewerContent(
                         onDrag = drag::dragBy,
                         onEnd = { velocityY ->
                             scope.launch {
+                                drag.releaseVelocityY = velocityY
                                 when (drag.release(velocityY)) {
                                     ViewerDragMath.Release.Dismiss -> onBack()
                                     ViewerDragMath.Release.ShowInfo -> {
