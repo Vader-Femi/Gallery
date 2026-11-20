@@ -85,6 +85,7 @@ class ViewerSession(internal val navController: NavHostController) {
             PhotoClose.hint = PhotoCloseHint(
                 start = Rect(rect.left, rect.top, rect.right, rect.bottom),
                 durationMillis = ViewerDragMath.closeMillis(drag.releaseVelocityY, PhotoTravelMillis),
+                startsMoving = drag.progress > 0f,
             )
         }
         drag.releaseVelocityY = 0f
