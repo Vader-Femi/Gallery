@@ -72,6 +72,7 @@ import com.femi.gallery.domain.model.MediaPositions
 import com.femi.gallery.domain.model.TimelineSection
 import com.femi.gallery.presentation.common.GridThumbnails
 import com.femi.gallery.presentation.common.ViewedMedia
+import com.femi.gallery.presentation.common.gridCellBounds
 import com.femi.gallery.presentation.common.gridSharedBounds
 import com.femi.gallery.presentation.selection.dragToSelect
 import com.femi.gallery.presentation.viewer.formatDuration
@@ -407,6 +408,8 @@ private fun MediaCell(
     val cdPhoto = stringResource(R.string.cd_photo)
     val cdVideo = if (item?.isVideo == true) stringResource(R.string.cd_video, formatDuration(item.durationMillis)) else ""
     val sharedModifier = if (shared && item != null) Modifier.gridSharedBounds(item.id) else Modifier
+    // Lets the viewer fly a closing photo into exactly this cell.
+    val cellBoundsModifier = if (shared) Modifier.gridCellBounds(item?.id ?: 0L) else Modifier
 
     val animatedPadding by animateDpAsState(
         targetValue = if (selected) 6.dp else 0.dp,
@@ -441,6 +444,7 @@ private fun MediaCell(
     Box(
         modifier = Modifier
             .aspectRatio(1f)
+            .then(cellBoundsModifier)
             .then(sharedModifier)
             .background(animatedContainerColor)
             .semantics {

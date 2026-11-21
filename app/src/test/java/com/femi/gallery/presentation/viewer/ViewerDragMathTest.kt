@@ -115,4 +115,56 @@ class ViewerDragMathTest {
         assertEquals(43.2f, ViewerDragMath.backEdgeShift(false, 0.5f, 1080f), 0.01f)
         assertEquals(86.4f, ViewerDragMath.backEdgeShift(false, 2f, 1080f), 0.01f)
     }
+
+    @Test
+    fun fitSizeKeepsTheProportionsAndTouchesTheTighterSide() {
+        val wide = ViewerDragMath.fitSize(1080f, 2400f, 4000, 3000)
+        assertEquals(1080f, wide.width, 0.01f)
+        assertEquals(810f, wide.height, 0.01f)
+        val tall = ViewerDragMath.fitSize(1080f, 2400f, 1000, 4000)
+        assertEquals(600f, tall.width, 0.01f)
+        assertEquals(2400f, tall.height, 0.01f)
+        // Unknown size: the whole container.
+        assertEquals(PhotoSize(1080f, 2400f), ViewerDragMath.fitSize(1080f, 2400f, 0, 0))
+    }
+
+    @Test
+    fun photoRectForFollowsScaleAndOffsetAboutTheCentre() {
+        val photo = PhotoSize(1080f, 810f)
+        val atRest = ViewerDragMath.photoRectFor(1080f, 2400f, photo, 1f, 0f, 0f)
+        assertEquals(PhotoRect(0f, 795f, 1080f, 1605f), atRest)
+        val pulled = ViewerDragMath.photoRectFor(1080f, 2400f, photo, 0.5f, 100f, 200f)
+        assertEquals(PhotoRect(370f, 1197.5f, 910f, 1602.5f), pulled)
+    }
+
+    @Test
+    fun theFlightEndsCoveringTheCellAndCentredOnIt() {
+        val photo = PhotoSize(1080f, 810f)
+        val cell = PhotoRect(700f, 300f, 1000f, 600f) // a 300 px square
+        val end = ViewerDragMath.flightEnd(1080f, 2400f, photo, cell)
+        // The photo is wider than tall: its height has to reach the cell's, so it is cropped on the sides.
+        assertEquals(300f / 810f, end.scale, 0.0001f)
+        val rect = ViewerDragMath.photoRectFor(1080f, 2400f, photo, end.scale, end.offsetX, end.offsetY)
+        assertEquals(cell.centerX, rect.centerX, 0.01f)
+        assertEquals(cell.centerY, rect.centerY, 0.01f)
+        assertTrue(rect.left <= cell.left && rect.right >= cell.right)
+        assertTrue(rect.top <= cell.top + 0.01f && rect.bottom >= cell.bottom - 0.01f)
+    }
+
+    @Test
+    fun aTallPhotoIsCroppedAtTheTopAndBottomInASquareCell() {
+        val photo = PhotoSize(600f, 2400f)
+        val cell = PhotoRect(0f, 0f, 300f, 300f)
+        val end = ViewerDragMath.flightEnd(1080f, 2400f, photo, cell)
+        assertEquals(0.5f, end.scale, 0.0001f)
+    }
+
+    @Test
+    fun lerpGivesTheEndsAndTheMiddle() {
+        val a = PhotoRect(0f, 0f, 100f, 200f)
+        val b = PhotoRect(100f, 100f, 200f, 300f)
+        assertEquals(a, ViewerDragMath.lerp(a, b, 0f))
+        assertEquals(b, ViewerDragMath.lerp(a, b, 1f))
+        assertEquals(PhotoRect(50f, 50f, 150f, 250f), ViewerDragMath.lerp(a, b, 0.5f))
+    }
 }

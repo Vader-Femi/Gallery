@@ -24,6 +24,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.femi.gallery.core.perf.ScreenTag
+import com.femi.gallery.domain.model.MediaItem
+import com.femi.gallery.presentation.common.GridCells
 import com.femi.gallery.presentation.common.PhotoClose
 import com.femi.gallery.presentation.common.PhotoCloseHint
 import com.femi.gallery.presentation.common.PhotoCloseMillis
@@ -61,6 +63,24 @@ class ViewerSession(internal val navController: NavHostController) {
     /** How far the photo has been pulled away, by a finger or the Back gesture. */
     val drag = ViewerDragState()
 
+    /** The photo the viewer shows now (its address and size), so closing can fly it into its grid cell. */
+    private var currentItem: MediaItem? = null
+
+    /** A close that is flying the photo into its cell; the viewer is removed when the flight ends. */
+    internal var closeRequest by mutableStateOf<CloseRequest?>(null)
+
+    internal class CloseRequest(
+        val cell: PhotoRect,
+        val mediaWidth: Int,
+        val mediaHeight: Int,
+        val durationMillis: Int,
+        val startsMoving: Boolean,
+    )
+
+    fun onCurrentItem(item: MediaItem?) {
+        currentItem = item
+    }
+
     /** The screen that opened the viewer; only that grid follows along. */
     private var origin: String? = null
 
@@ -80,6 +100,24 @@ class ViewerSession(internal val navController: NavHostController) {
     }
 
     fun close() {
+        if (drag.closing) return
+        // The photo's grid cell, when it is on screen: the photo flies into it by itself, from exactly where it is,
+        // at the speed it was thrown. Photos that came from the map, whose cells are not in a grid, and photos
+        // whose cell is off screen use the shared-bounds flight below.
+        val item = currentItem
+        val cell = item?.let { GridCells.boundsInWindow(it.id) }
+        if (item != null && cell != null && drag.canFly() && originRoute != GalleryRoutes.MAP) {
+            drag.closing = true
+            closeRequest = CloseRequest(
+                cell = PhotoRect(cell.left, cell.top, cell.right, cell.bottom),
+                mediaWidth = item.width,
+                mediaHeight = item.height,
+                durationMillis = ViewerDragMath.closeMillis(drag.releaseVelocityY, PhotoTravelMillis),
+                startsMoving = drag.progress > 0f,
+            )
+            drag.releaseVelocityY = 0f
+            return
+        }
         // The photo flies into its cell from where it is, at the speed it was thrown.
         drag.photoBoundsInWindow()?.let { rect ->
             PhotoClose.hint = PhotoCloseHint(
@@ -119,6 +157,20 @@ fun ViewerHost(
     val navController = session.navController
     val viewerEntry by navController.currentBackStackEntryAsState()
     val showing = viewerEntry?.destination?.route == GalleryRoutes.VIEWER
+
+    // The photo flies into its grid cell, and only then is the viewer removed.
+    val closeRequest = session.closeRequest
+    LaunchedEffect(closeRequest) {
+        val request = closeRequest ?: return@LaunchedEffect
+        try {
+            session.drag.flyTo(request.cell, request.mediaWidth, request.mediaHeight, request.durationMillis, request.startsMoving)
+        } finally {
+            withContext(NonCancellable) {
+                session.closeRequest = null
+                navController.popBackStack()
+            }
+        }
+    }
 
     // Back must close the viewer before it does anything to the screen under it. Android asks the
     // handler that was registered last first, and the screens below register theirs after this host
@@ -216,6 +268,7 @@ fun ViewerHost(
                 isMapOrigin = session.originRoute == GalleryRoutes.MAP,
                 // Tells the grid under the viewer which photo we are on.
                 onViewedChange = session::onViewed,
+                onCurrentItemChange = session::onCurrentItem,
             )
         }
     }
