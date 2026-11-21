@@ -10,7 +10,8 @@ import kotlin.math.roundToInt
  * background and the bars fade, and what letting go means. Pure, so it can be tested.
  */
 /** A rectangle in pixels, as the photo's page is placed on screen. */
-internal data class PhotoRect(val left: Float, val top: Float, val right: Float, val bottom: Float) {
+/** A rectangle in pixels, as the photo's page is placed on screen. */
+data class PhotoRect(val left: Float, val top: Float, val right: Float, val bottom: Float) {
     val width: Float get() = right - left
     val height: Float get() = bottom - top
     val centerX: Float get() = (left + right) / 2f
