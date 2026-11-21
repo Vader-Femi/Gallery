@@ -22,8 +22,8 @@ android {
         minSdk = 31
         targetSdk = 37
         // The release workflow sets this to its run number, so that every published APK is newer than the last.
-        versionCode = System.getenv("RELEASE_VERSION_CODE")?.toIntOrNull() ?: 1
-        versionName = "1.0"
+        versionCode = System.getenv("RELEASE_VERSION_CODE")?.toIntOrNull() ?: 2
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
