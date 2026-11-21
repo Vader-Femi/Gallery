@@ -106,6 +106,7 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Motion photo playback**: automatic detection and playback for Google Pixel (XMP MicroVideo / Container Directory), Samsung Galaxy (SEF trailer `0x0A30` & modern XMP), iOS Live Photos (paired `.MOV`/`.MP4` companion files), and embedded MP4 fallback; interactive floating pill ("View motion photo" / "Pause motion photo") and seamless looping playback
 - [x] Tap to hide/show the interface and system bars
 - [x] **Shared-element transition**: the tapped thumbnail grows into the viewer and the photo shrinks back into the grid; when you close the viewer after swiping, the grid scrolls to the photo you ended on (from Pictures, albums, search and stories)
+- [x] **Closing photo animations & fluid gesture flight**: closing a photo (pull-down drag, flick, or Back gesture) animates directly from its real position into its cell on the grid with a narrowing clip, matching release speed and gesture direction (~150–220 ms easing); falls back to shared-bounds flight for off-screen cells and map bubbles, while the top bar back button returns smoothly from full screen
 - [x] **Details panel**: file name, date, folder, resolution, size, duration, camera, aperture, shutter speed, ISO, focal length and GPS (from EXIF)
 - [x] **Copy text from photo**: on-device ML Kit OCR extraction with clipboard copying from the viewer overflow menu and details sheet
 - [x] Share, favorite, edit, lock and move to trash (streamlined into primary actions and a "More" overflow menu)
@@ -155,29 +156,16 @@ It is a personal project, developed and tested on a **Pixel 7 running Android 17
 - [x] **Tablet & landscape layouts**: adaptive navigation rail on the start edge in landscape orientation freeing up vertical space, responsive grid column scaling (2–6 columns on tablets/landscape in Albums and Stories), and centered max-width constraints on bottom sheets
 - [x] Unit tests for the pure logic (see [Testing](#testing))
 - [x] Performance and hardening passes on the timeline, albums, search, viewer, Locked folder and batch actions
+- [x] **Baseline Profiles evaluation & startup benchmark**: measured with `tools/startup_bench.sh` on a release build on a physical Pixel 7 (`verify`: 215 ms median, `speed`: 202 ms median; ~13 ms difference on a ~200 ms cold start), confirming ahead-of-time compilation provides no meaningful speedup and cold start is already near-instantaneous. `Frames` log (`adb logcat -s Frames`) confirmed 0 dropped frames on launch
+- [x] **Hardening & regression safety net**: pure and tested launch request routing (`LaunchRouting`), guard tests ensuring Locked videos never get Picture-in-Picture or sound-only playback (`LockedPlaybackGuardTest`), Media3 session stubs in `tools/verify` for type-checking `VideoPlaybackService`, and a manual release checklist (see [Release checklist](#release-checklist))
 
 ### Still to do
-
-- [x] **Baseline Profiles evaluation & startup benchmark**: measured with `tools/startup_bench.sh` on a release build on a physical Pixel 7 (`verify`: 215 ms median, `speed`: 202 ms median; ~13 ms difference on a ~200 ms cold start), confirming ahead-of-time compilation provides no meaningful speedup and cold start is already near-instantaneous. `Frames` log (`adb logcat -s Frames`) confirmed 0 dropped frames on launch. 
-- [x] **Hardening: a safety net after the background-playback and tablet work** (regressions in that work were not caught by `tools/verify`); done in patches 123 to 127, and the type-check found one more bug (patch 126)
-  - [x] Which launch request is shown is a pure, tested function (`LaunchRouting`), after `Pick` was once dropped and other apps' file choosers opened the whole gallery (patch 123)
-  - [x] A guard test that Locked videos never get Picture-in-Picture or sound-only playback (`LockedPlaybackGuardTest`, patch 124)
-  - [x] Media3 session stubs in `tools/verify`, so `VideoPlaybackService` is type-checked (patch 125)
-  - [x] A manual release checklist for the flows no check covers (see "Release checklist" below; patch 127)
-- [x] **Features**: swipe between the photos the sender provided when another app opens one (patches 129 and 130); more ideas welcome
-- [x] ~~Remember the zoom level between launches~~: already done (the timeline zoom is stored in DataStore and restored at start); the "Known limitations" line saying otherwise was out of date (patch 128)
-- [ ] **Animations: closing a photo** (from a screen recording, the photo did not close from where it was left: after the release the flight started from a tall rectangle near the bottom right corner, the same fixed 300 ms whatever the speed, direction or way of closing)
-  - [x] The flight into the grid cell starts from the photo's real position and takes the release speed into account (patch 131); the Logcat tag `SharedPhoto` logs Compose's own start next to ours (`close flight: ...`) so a recording plus that log shows whether it worked
-  - [x] The back swipe moves the photo toward the side the swipe went (patch 132)
-  - [x] Timing and easing follow a screen recording of Google Photos as the reference: the photo is pulled with the finger and keeps its proportions, the grid shows through as it is pulled, a release (drag, Back swipe) carries on from exactly where the photo is and slows down into the cell in about 150 to 200 ms, a Back swipe from the right edge moves the photo left and from the left edge right (patch 133: 220 ms, 150 ms for a hard flick, slowing-down easing when it was moving)
-  - [x] Closing a photo of a grid is a flight of its own (patch 134): from a second recording, Compose's shared-bounds flight still started from the wrong place (the photo vanished for 3 frames, then a cell-sized copy appeared lower than its cell and rose into it, ending near the bottom for a moment), so the viewer now animates its real content from exactly where it is to the cell's real rectangle on screen (reported by the grid cells), with a clip that narrows from the photo to the cell. The shared-bounds flight stays for photos opened from the Map and for a cell that is off screen
-  - [ ] The Back button (the arrow in the top bar) has no gesture to follow, so it closes from full screen; left as it is until a new recording shows whether patches 131 and 132 are enough
+- [ ] Nothing Yet
 
 **Out of scope**
 - Samsung-exclusive AI features (Generative Edit, Object Eraser, Remaster, Portrait Studio) rely on proprietary models.
 - Cloud sync / backup of the gallery. The app is deliberately offline; backing up can be added later through a service you choose.
 - iOS. The whole point is to use Android's MediaStore, trash and scoped-storage APIs directly, which have no iOS equivalent.
-
 
 ### Release checklist
 
