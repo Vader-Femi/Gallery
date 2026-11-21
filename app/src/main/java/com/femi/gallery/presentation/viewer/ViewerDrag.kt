@@ -1,8 +1,11 @@
 package com.femi.gallery.presentation.viewer
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
@@ -14,6 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -46,9 +51,37 @@ class ViewerDragState {
     /** The height of the viewer in pixels, set by the screen. */
     var containerHeight = 0f
 
+    /** The width of the viewer in pixels, and where its top left corner is in the window; set by the screen. */
+    var containerWidth = 0f
+    var containerLeft = 0f
+    var containerTop = 0f
+
+    /** The speed (pixels per second, down is positive) the finger had when it let go; 0 for the Back gesture or button. */
+    var releaseVelocityY = 0f
+
+    /** Where the photo's page is in the window right now, or null before the screen has been measured. */
+    fun photoBoundsInWindow(): PhotoRect? {
+        if (containerWidth <= 0f || containerHeight <= 0f) return null
+        val rect = ViewerDragMath.photoRect(containerWidth.roundToInt(), containerHeight.roundToInt(), scale, offsetX, offsetY)
+        return PhotoRect(rect.left + containerLeft, rect.top + containerTop, rect.right + containerLeft, rect.bottom + containerTop)
+    }
+
     private var rawOffsetY = 0f
 
-    val scale: Float get() = ViewerDragMath.scale(progress)
+    /** Replaces the scale the pull gives while the photo flies into its grid cell; null otherwise. */
+    private var scaleOverride by mutableStateOf<Float?>(null)
+
+    val scale: Float get() = scaleOverride ?: ViewerDragMath.scale(progress)
+
+    /** True from the moment the viewer starts to close; nothing can be pulled then, and the shared bounds step aside. */
+    var closing by mutableStateOf(false)
+
+    /** While the photo flies into its cell: what of the viewer's content shows, in the container's coordinates. */
+    internal var clip by mutableStateOf<PhotoRect?>(null)
+        private set
+
+    /** Whether the content can fly into a cell from here: it is measured and not zoomed in. */
+    fun canFly(): Boolean = containerWidth > 0f && containerHeight > 0f && !zoomed
     val backgroundAlpha: Float get() = ViewerDragMath.backgroundAlpha(progress)
     val chromeAlpha: Float get() = ViewerDragMath.chromeAlpha(progress)
 
@@ -91,8 +124,51 @@ class ViewerDragState {
         reset()
     }
 
+    /**
+     * The photo flies into its grid [cellInWindow] from where it is now: the content of the viewer (the photo, whose
+     * page is shown contained) is scaled and moved until the photo covers the cell, while a clip narrows from the
+     * photo to the cell, so nothing is stretched, and the background and the bars fade. This is the real picture, moved
+     * with the same state the pull uses, so it starts exactly where the finger left it. With [startsMoving] it
+     * carries on at full speed and slows down into the cell; from rest it starts gently.
+     */
+    internal suspend fun flyTo(
+        cellInWindow: PhotoRect,
+        mediaWidth: Int,
+        mediaHeight: Int,
+        durationMillis: Int,
+        startsMoving: Boolean,
+    ) {
+        val cell = PhotoRect(
+            cellInWindow.left - containerLeft,
+            cellInWindow.top - containerTop,
+            cellInWindow.right - containerLeft,
+            cellInWindow.bottom - containerTop,
+        )
+        val photo = ViewerDragMath.fitSize(containerWidth, containerHeight, mediaWidth, mediaHeight)
+        val end = ViewerDragMath.flightEnd(containerWidth, containerHeight, photo, cell)
+        val startScale = scale
+        val startX = offsetX
+        val startY = offsetY
+        val startProgress = progress
+        val startClip = ViewerDragMath.photoRectFor(containerWidth, containerHeight, photo, startScale, startX, startY)
+        animate(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = tween(durationMillis, easing = if (startsMoving) LinearOutSlowInEasing else FastOutSlowInEasing),
+        ) { fraction, _ ->
+            scaleOverride = ViewerDragMath.lerp(startScale, end.scale, fraction)
+            offsetX = ViewerDragMath.lerp(startX, end.offsetX, fraction)
+            offsetY = ViewerDragMath.lerp(startY, end.offsetY, fraction)
+            progress = ViewerDragMath.lerp(startProgress, 1f, fraction)
+            clip = ViewerDragMath.lerp(startClip, cell, fraction)
+        }
+    }
+
     /** Puts the photo back at once. */
     fun reset() {
+        scaleOverride = null
+        clip = null
+        closing = false
         offsetX = 0f
         offsetY = 0f
         progress = 0f
@@ -119,6 +195,16 @@ internal fun Modifier.dragTransform(drag: ViewerDragState): Modifier = layout { 
             x = (constraints.maxWidth - width) / 2 + drag.offsetX.roundToInt(),
             y = (constraints.maxHeight - height) / 2 + drag.offsetY.roundToInt(),
         )
+    }
+}
+
+/** Cuts the viewer's content to [ViewerDragState.clip] while the photo flies into its cell. Goes outside `dragTransform`. */
+internal fun Modifier.flightClip(drag: ViewerDragState): Modifier = drawWithContent {
+    val clip = drag.clip
+    if (clip == null) {
+        drawContent()
+    } else {
+        clipRect(clip.left, clip.top, clip.right, clip.bottom) { this@drawWithContent.drawContent() }
     }
 }
 

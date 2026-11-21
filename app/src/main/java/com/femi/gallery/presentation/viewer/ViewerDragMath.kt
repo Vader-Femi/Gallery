@@ -1,12 +1,120 @@
 package com.femi.gallery.presentation.viewer
 
+import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 /**
  * The numbers behind dragging a photo away: how far it has been pulled, how small it gets, how the
  * background and the bars fade, and what letting go means. Pure, so it can be tested.
  */
+/** A rectangle in pixels, as the photo's page is placed on screen. */
+/** A rectangle in pixels, as the photo's page is placed on screen. */
+data class PhotoRect(val left: Float, val top: Float, val right: Float, val bottom: Float) {
+    val width: Float get() = right - left
+    val height: Float get() = bottom - top
+    val centerX: Float get() = (left + right) / 2f
+    val centerY: Float get() = (top + bottom) / 2f
+}
+
+/** The size in pixels of a photo shown whole (contained). */
+internal data class PhotoSize(val width: Float, val height: Float)
+
+/** Where the viewer's content has to be (scale, and offset of its centre) for the photo to fill a grid cell. */
+internal data class FlightEnd(val scale: Float, val offsetX: Float, val offsetY: Float)
+
 internal object ViewerDragMath {
+    /**
+     * Where the photo's page is on screen while it is pulled: the container [containerWidth] by [containerHeight],
+     * shrunk by [scale] about its centre, then moved by ([offsetX], [offsetY]). The same arithmetic as `dragTransform`
+     * places it with, so the closing flight can start from exactly there.
+     */
+    fun photoRect(containerWidth: Int, containerHeight: Int, scale: Float, offsetX: Float, offsetY: Float): PhotoRect {
+        val width = (containerWidth * scale).roundToInt().coerceAtLeast(1)
+        val height = (containerHeight * scale).roundToInt().coerceAtLeast(1)
+        val x = (containerWidth - width) / 2 + offsetX.roundToInt()
+        val y = (containerHeight - height) / 2 + offsetY.roundToInt()
+        return PhotoRect(x.toFloat(), y.toFloat(), (x + width).toFloat(), (y + height).toFloat())
+    }
+
+    /** At full Back progress the photo has moved this fraction of the viewer's width toward the side the swipe went. */
+    const val BACK_EDGE_SHIFT_FRACTION = 0.08f
+
+    /**
+     * How far the Back gesture moves the photo sideways on top of the finger: with the swipe, so a swipe from the
+     * left edge carries it to the right and one from the right edge to the left, as the system's own back animation
+     * moves a window. Without it an edge swipe, where the finger hardly moves up or down, barely moves the photo.
+     */
+    fun backEdgeShift(fromRightEdge: Boolean, progress: Float, containerWidth: Float): Float {
+        val direction = if (fromRightEdge) -1f else 1f
+        return direction * progress.coerceIn(0f, 1f) * containerWidth * BACK_EDGE_SHIFT_FRACTION
+    }
+
+    /**
+     * The size a photo of [mediaWidth] by [mediaHeight] has when it is shown whole, centred, in a container of
+     * [containerWidth] by [containerHeight] (the viewer's pages show it contained). The whole container when the
+     * photo's size is not known.
+     */
+    fun fitSize(containerWidth: Float, containerHeight: Float, mediaWidth: Int, mediaHeight: Int): PhotoSize {
+        if (mediaWidth <= 0 || mediaHeight <= 0 || containerWidth <= 0f || containerHeight <= 0f) {
+            return PhotoSize(containerWidth, containerHeight)
+        }
+        val fit = minOf(containerWidth / mediaWidth, containerHeight / mediaHeight)
+        return PhotoSize(mediaWidth * fit, mediaHeight * fit)
+    }
+
+    /**
+     * Where the photo is, in the container's coordinates, when the container's content is shown at [scale] about its
+     * centre and moved by ([offsetX], [offsetY]): the photo ([photo], shown whole and centred at rest) scaled and moved
+     * the same way. This is `dragTransform`'s placement.
+     */
+    fun photoRectFor(containerWidth: Float, containerHeight: Float, photo: PhotoSize, scale: Float, offsetX: Float, offsetY: Float): PhotoRect {
+        val centerX = containerWidth / 2f + offsetX
+        val centerY = containerHeight / 2f + offsetY
+        val halfWidth = photo.width * scale / 2f
+        val halfHeight = photo.height * scale / 2f
+        return PhotoRect(centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight)
+    }
+
+    /**
+     * The state the viewer's content ends in when the photo has flown into its grid [cell] (in the container's
+     * coordinates): centred on the cell and as small as it can be while still covering it, like the cell's own picture,
+     * which is cropped to the cell. The rest of the page is cut off by the clip.
+     */
+    fun flightEnd(containerWidth: Float, containerHeight: Float, photo: PhotoSize, cell: PhotoRect): FlightEnd {
+        val scale = max(cell.width / photo.width, cell.height / photo.height)
+        return FlightEnd(
+            scale = scale,
+            offsetX = cell.centerX - containerWidth / 2f,
+            offsetY = cell.centerY - containerHeight / 2f,
+        )
+    }
+
+    fun lerp(from: Float, to: Float, fraction: Float): Float = from + (to - from) * fraction
+
+    fun lerp(from: PhotoRect, to: PhotoRect, fraction: Float): PhotoRect = PhotoRect(
+        lerp(from.left, to.left, fraction),
+        lerp(from.top, to.top, fraction),
+        lerp(from.right, to.right, fraction),
+        lerp(from.bottom, to.bottom, fraction),
+    )
+
+    /** A flick at this speed (pixels per second) or faster gets the shortest closing flight. */
+    const val CLOSE_FASTEST_SPEED = 5000f
+
+    /** The fastest closing flight lasts this fraction of the normal one. */
+    const val CLOSE_FASTEST_FRACTION = 0.67f
+
+    /**
+     * How long the photo takes to fly back to its cell: [baseMillis] for a gentle release or the Back button, down to
+     * about two thirds of it for a hard flick, so a fast throw does not linger.
+     */
+    fun closeMillis(speed: Float, baseMillis: Int): Int {
+        val fraction = (abs(speed) / CLOSE_FASTEST_SPEED).coerceIn(0f, 1f)
+        return (baseMillis * (1f - (1f - CLOSE_FASTEST_FRACTION) * fraction)).roundToInt()
+    }
+
     /** Pulling down by this fraction of the screen height takes progress from 0 to 1. */
     const val FULL_DRAG_FRACTION = 0.4f
 

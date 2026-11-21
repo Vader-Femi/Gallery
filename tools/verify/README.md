@@ -25,6 +25,8 @@ Needs `bash`, `curl`, `unzip` and a JDK (17 or newer). Set `VERIFY_CACHE` to kee
 * `StoryTitleCodec.kt` is left out and replaced by `stubs/StoryTitleCodecStub.kt`: its `Json` and `serializer()` need
   kotlinx.serialization's compiler plugin. Its behaviour (and `StoryTitleCodecTest`) is only checked by Gradle.
 
+* `stubs/libs/media3_player.kt` and `media3_session.kt` are written from the androidx/media 1.11.1 source (clone the tag to check a signature); they hold only what `playback/VideoPlaybackService.kt` uses, which is part of the type-checked set.
+
 ## What they do not do
 
 * Compose screens are not checked (Compose's compiler plugin and libraries are not available).

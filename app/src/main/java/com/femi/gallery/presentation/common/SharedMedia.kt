@@ -6,7 +6,9 @@ import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
@@ -32,13 +34,46 @@ import androidx.compose.ui.unit.dp
  * is removed when its own exit transition ends, and that would cut the flight short, so the viewer's
  * exit must last at least this long (see [PhotoCloseMillis]).
  */
-const val PhotoTravelMillis = 300
+const val PhotoTravelMillis = 220
 
 /** The viewer's exit transition: a little longer than the photo's flight, so it is never cut off. */
 const val PhotoCloseMillis = PhotoTravelMillis + 40
 
-private val PhotoBoundsTransform = BoundsTransform { _, _ ->
-    tween<Rect>(durationMillis = PhotoTravelMillis, easing = FastOutSlowInEasing)
+/**
+ * Where the viewer's photo is, and how fast it was thrown, when the viewer starts to close. The photo's flight into its
+ * grid cell then starts from exactly there and takes the speed of the throw into account, instead of the same
+ * fixed flight whatever the person did. Set by the viewer just before it closes and cleared when it is gone, or when
+ * it is older than [MAX_AGE_NANOS], so no other transition can pick it up.
+ */
+class PhotoCloseHint(val start: Rect, val durationMillis: Int, val startsMoving: Boolean) {
+    private val createdAt = System.nanoTime()
+    val isFresh: Boolean get() = System.nanoTime() - createdAt < MAX_AGE_NANOS
+
+    private companion object {
+        const val MAX_AGE_NANOS = 1_000_000_000L
+    }
+}
+
+object PhotoClose {
+    @Volatile
+    var hint: PhotoCloseHint? = null
+}
+
+private val PhotoBoundsTransform = BoundsTransform { initial, target ->
+    val hint = PhotoClose.hint?.takeIf { it.isFresh }
+    if (hint == null) {
+        tween<Rect>(durationMillis = PhotoTravelMillis, easing = FastOutSlowInEasing)
+    } else {
+        // Compose's own start is logged next to ours, to see how far apart they are on a real device.
+        Log.d(SharedLogTag, "close flight: compose start=$initial, photo start=${hint.start}, target=$target, ${hint.durationMillis} ms")
+        keyframes<Rect> {
+            durationMillis = hint.durationMillis
+            // A photo that is already moving carries on at its speed and slows down into the cell; one closed from
+            // rest (the Back button) starts gently like the opening does.
+            hint.start at 0 using (if (hint.startsMoving) LinearOutSlowInEasing else FastOutSlowInEasing)
+            target at hint.durationMillis
+        }
+    }
 }
 
 /**

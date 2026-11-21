@@ -94,6 +94,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isSpecified
@@ -165,6 +167,8 @@ fun ViewerScreen(
     onTrim: (uri: String) -> Unit,
     /** Reports the photo shown, so the grid behind can scroll to it when the viewer closes. */
     onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit = { _, _ -> },
+    /** Reports the photo shown (its address and size), so closing can fly it into its grid cell. */
+    onCurrentItemChange: (MediaItem?) -> Unit = {},
     /** How far the photo has been pulled away; shared with the Back gesture, which is handled outside. */
     drag: ViewerDragState = remember { ViewerDragState() },
     isMapOrigin: Boolean = false,
@@ -173,10 +177,10 @@ fun ViewerScreen(
     if (viewModel.isLocked) {
         // Photos from the Locked folder only show after the user authenticates.
         LockedGate(session = viewModel.lockSession, onClose = onBack) {
-            ViewerContent(onBack, onEdit, onTrim, onViewedChange, drag, isMapOrigin, viewModel)
+            ViewerContent(onBack, onEdit, onTrim, onViewedChange, onCurrentItemChange, drag, isMapOrigin, viewModel)
         }
     } else {
-        ViewerContent(onBack, onEdit, onTrim, onViewedChange, drag, isMapOrigin, viewModel)
+        ViewerContent(onBack, onEdit, onTrim, onViewedChange, onCurrentItemChange, drag, isMapOrigin, viewModel)
     }
 }
 
@@ -187,6 +191,7 @@ private fun ViewerContent(
     onEdit: (uri: String) -> Unit,
     onTrim: (uri: String) -> Unit,
     onViewedChange: (mediaIndex: Int, mediaId: Long) -> Unit,
+    onCurrentItemChange: (MediaItem?) -> Unit,
     drag: ViewerDragState,
     isMapOrigin: Boolean,
     viewModel: ViewerViewModel,
@@ -218,7 +223,15 @@ private fun ViewerContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { drag.containerHeight = it.height.toFloat() }
+            .onSizeChanged {
+                drag.containerHeight = it.height.toFloat()
+                drag.containerWidth = it.width.toFloat()
+            }
+            .onGloballyPositioned {
+                val position = it.positionInWindow()
+                drag.containerLeft = position.x
+                drag.containerTop = position.y
+            }
             .drawBehind { drawRect(backgroundColor, alpha = drag.backgroundAlpha) },
     ) {
         if (items.itemCount > 0) {
@@ -242,6 +255,7 @@ private fun ViewerContent(
             }
 
             val current = items.peekOrNull(pagerState.currentPage)
+            LaunchedEffect(current?.id) { onCurrentItemChange(current) }
             var isMotionPlaying by remember(current?.id) { mutableStateOf(false) }
             LaunchedEffect(current?.id) {
                 viewModel.checkTextFor(current)
@@ -395,10 +409,11 @@ private fun ViewerContent(
                 Modifier
                     .fillMaxSize()
                     .viewerDrag(
-                        enabled = { !drag.zoomed && fullPlayerUri == null },
+                        enabled = { !drag.zoomed && !drag.closing && fullPlayerUri == null },
                         onDrag = drag::dragBy,
                         onEnd = { velocityY ->
                             scope.launch {
+                                drag.releaseVelocityY = velocityY
                                 when (drag.release(velocityY)) {
                                     ViewerDragMath.Release.Dismiss -> onBack()
                                     ViewerDragMath.Release.ShowInfo -> {
@@ -412,7 +427,7 @@ private fun ViewerContent(
                         onCancel = { scope.launch { drag.restore() } },
                     ),
             ) {
-                Box(Modifier.fillMaxSize().dragTransform(drag)) {
+                Box(Modifier.fillMaxSize().flightClip(drag).dragTransform(drag)) {
                     CompositionLocalProvider(LocalViewerDrag provides drag) {
                         HorizontalPager(
                             state = pagerState,
@@ -782,7 +797,10 @@ internal fun PhotoPage(
 ) {
     val context = LocalContext.current
     val latestOnTap by rememberUpdatedState(onTap)
-    val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id, clipInOverlay = clipInOverlay) else Modifier
+    // Once the viewer starts to close, the photo flies into its cell by itself (ViewerDragState.flyTo); the shared bounds
+    // would start a second flight.
+    val closing = LocalViewerDrag.current?.closing == true
+    val sharedModifier = if (isCurrent && !closing) Modifier.mediaSharedBounds(item.id, clipInOverlay = clipInOverlay) else Modifier
 
     val viewerDrag = LocalViewerDrag.current
 
@@ -900,7 +918,10 @@ internal fun VideoPage(
 ) {
     val context = LocalContext.current
     val thumbnail = remember(item.uri) { thumbnailRequest(context, item) }
-    val sharedModifier = if (isCurrent) Modifier.mediaSharedBounds(item.id, clipInOverlay = clipInOverlay) else Modifier
+    // Once the viewer starts to close, the photo flies into its cell by itself (ViewerDragState.flyTo); the shared bounds
+    // would start a second flight.
+    val closing = LocalViewerDrag.current?.closing == true
+    val sharedModifier = if (isCurrent && !closing) Modifier.mediaSharedBounds(item.id, clipInOverlay = clipInOverlay) else Modifier
     val settled = rememberTransitionSettled()
 
     ZoomableBox(

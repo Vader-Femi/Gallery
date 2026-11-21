@@ -2,6 +2,8 @@ package com.femi.gallery.presentation.launch
 
 import android.content.Context
 import android.content.Intent
+import com.femi.gallery.domain.model.ExternalMediaRef
+import com.femi.gallery.domain.model.ExternalViewSets
 import com.femi.gallery.domain.model.PickerFilter
 
 /** Why the app was opened: normally from the launcher, or by another app. */
@@ -10,8 +12,17 @@ sealed interface LaunchRequest {
     /** Opened from the launcher. */
     data object Normal : LaunchRequest
 
-    /** Another app wants to show one photo or video ("Open with"). */
-    data class ViewExternal(val uri: String, val isVideo: Boolean) : LaunchRequest
+    /**
+     * Another app wants to show one photo or video ("Open with"). [items] are the photos and videos the sender
+     * provided with it (its clip), in its order, [startIndex] being the one opened; empty or one item when it sent
+     * only that one.
+     */
+    data class ViewExternal(
+        val uri: String,
+        val isVideo: Boolean,
+        val items: List<ExternalMediaRef> = emptyList(),
+        val startIndex: Int = 0,
+    ) : LaunchRequest
 
     /** Video playback opened directly from system notification. */
     data class ViewPlayback(val uri: String, val timestamp: Long = System.currentTimeMillis()) : LaunchRequest
@@ -52,14 +63,24 @@ sealed interface LaunchRequest {
 
         private fun viewRequest(intent: Intent, context: Context): LaunchRequest {
             val uri = intent.data ?: return Normal
+            // MainActivity is exported: an address of this app's own providers (the Locked folder) must not be
+            // opened because another app named it, the app would read it with its own rights.
+            if (!ExternalViewSets.isAllowedPrimary(uri.toString(), context.packageName)) return Normal
             val mime = intent.type
                 ?: runCatching { context.contentResolver.getType(uri) }.getOrNull()
                 ?: return Normal
-            return when {
-                mime.startsWith("video/") -> ViewExternal(uri.toString(), isVideo = true)
-                mime.startsWith("image/") -> ViewExternal(uri.toString(), isVideo = false)
-                else -> Normal // not something a gallery can show
-            }
+            val isVideo = mime.startsWith("video/")
+            if (!isVideo && !mime.startsWith("image/")) return Normal // not something a gallery can show
+            val selected = uri.toString()
+            // Only what the sender provided can be swiped to, never other photos of the library.
+            val clip = intent.clipData
+            val clipUris = if (clip == null) emptyList() else (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri?.toString() }
+            val set = ExternalViewSets.assemble(
+                selectedUri = selected,
+                selectedIsVideo = isVideo,
+                candidates = ExternalViewSets.candidates(selected, clipUris, context.packageName),
+            ) { candidate -> runCatching { context.contentResolver.getType(android.net.Uri.parse(candidate)) }.getOrNull() }
+            return ViewExternal(selected, isVideo, set.items, set.startIndex)
         }
 
         private fun pickRequest(intent: Intent): LaunchRequest {
